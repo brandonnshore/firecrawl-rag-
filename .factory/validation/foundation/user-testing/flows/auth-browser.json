@@ -1,0 +1,115 @@
+{
+  "assertionResults": [
+    {
+      "id": "VAL-AUTH-001",
+      "status": "pass",
+      "reason": "Login page loaded at /login with email input and submit button visible; no error banner on initial load.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-001-login-page.png",
+        "DOM snapshot showed textbox 'Email address' and button 'Send Magic Link'",
+        "Console/errors check: none on initial load"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-002",
+      "status": "blocked",
+      "reason": "Supabase OTP endpoint returned over_email_send_rate_limit (HTTP 429) for valid email submissions, so the confirmation state could not be reached for known/unknown email comparison.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-002-error-429.png",
+        "UI showed 'Something went wrong. Please try again.' after submit",
+        "Diagnostic API call: /auth/v1/otp -> 429 {\"error_code\":\"over_email_send_rate_limit\"}",
+        "Browser console captured failed resource with status 429"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-003",
+      "status": "fail",
+      "reason": "Navigating to a fresh valid Admin-generated magic link (redirect_to=/auth/callback) did not land on /dashboard; app ended on /login?error=auth_callback_error with URL hash tokens and no sb auth cookies.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-003-callback-error.png",
+        "Observed URL: /login?error=auth_callback_error#access_token=...&refresh_token=...",
+        "Cookie inspection after link navigation showed no sb-*-auth-token cookies"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-007",
+      "status": "blocked",
+      "reason": "Could not establish an authenticated browser session because magic-link callback flow did not produce a valid dashboard session.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-007-010-redirect-login.png",
+        "Opening /dashboard redirected to /login"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-008",
+      "status": "blocked",
+      "reason": "Session persistence on refresh is not testable without a successful authenticated session.",
+      "evidence": [
+        "Blocked by failed authentication precondition (VAL-AUTH-003)"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-009",
+      "status": "blocked",
+      "reason": "Sign-out flow is not testable without reaching an authenticated dashboard state with sign-out control available.",
+      "evidence": [
+        "Blocked by failed authentication precondition (VAL-AUTH-003)"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-010",
+      "status": "blocked",
+      "reason": "Post-logout dashboard access check depends on a successful logout sequence from an authenticated session, which could not be established.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-007-010-redirect-login.png",
+        "Unauthenticated /dashboard -> /login observed"
+      ]
+    },
+    {
+      "id": "VAL-DASH-001",
+      "status": "blocked",
+      "reason": "Dashboard sidebar link verification requires authenticated access to /dashboard routes; auth precondition failed.",
+      "evidence": [
+        "foundation/auth-browser/VAL-AUTH-007-010-redirect-login.png",
+        "Attempt to open /dashboard redirected to /login"
+      ]
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser",
+    "execute (node + Supabase Admin API)"
+  ],
+  "frictions": [
+    {
+      "description": "Login form submissions repeatedly returned backend 429 rate-limit responses instead of reaching confirmation state.",
+      "resolved": false,
+      "resolution": "Retried with cooldown and alternate email namespace; still rate-limited."
+    },
+    {
+      "description": "Admin-generated magic link navigated to /login?error=auth_callback_error with hash tokens, not /dashboard.",
+      "resolved": false,
+      "resolution": "Validated with fresh links generated immediately before navigation; behavior persisted."
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Supabase email send rate limit (over_email_send_rate_limit) prevented successful OTP submission in browser flow.",
+      "affectedAssertions": [
+        "VAL-AUTH-002"
+      ],
+      "quickFixAttempted": "Retried after cooldown and with alternate unique email; still 429."
+    },
+    {
+      "description": "Could not obtain authenticated dashboard session from valid Admin-generated magic link callback flow.",
+      "affectedAssertions": [
+        "VAL-AUTH-007",
+        "VAL-AUTH-008",
+        "VAL-AUTH-009",
+        "VAL-AUTH-010",
+        "VAL-DASH-001"
+      ],
+      "quickFixAttempted": "Generated fresh single-use links with redirect_to=/auth/callback and retried navigation; still redirected to login error state."
+    }
+  ],
+  "summary": "Tested 8 assigned assertions: 1 passed (VAL-AUTH-001), 1 failed (VAL-AUTH-003), and 6 blocked due auth flow prerequisites not satisfiable in this run."
+}

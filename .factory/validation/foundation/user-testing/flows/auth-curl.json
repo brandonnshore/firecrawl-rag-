@@ -1,0 +1,54 @@
+{
+  "assertionResults": [
+    {
+      "id": "VAL-AUTH-004",
+      "status": "pass",
+      "reason": "Both /auth/callback (missing code) and /auth/callback?code=invalid returned HTTP 307 redirects to /login?error=auth_callback_error with no 500.",
+      "evidence": [
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/VAL-AUTH-004.txt"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-005",
+      "status": "blocked",
+      "reason": "Supabase Admin generate_link produced redirect to /auth/callback with token fragment (#...) but no ?code= query param, so a valid callback code could not be obtained for the curl open-redirect check.",
+      "evidence": [
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/VAL-AUTH-005.txt"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-006",
+      "status": "pass",
+      "reason": "Unauthenticated GET /dashboard with isolated empty cookie jar returned HTTP 307 with Location: /login.",
+      "evidence": [
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/VAL-AUTH-006.txt"
+      ]
+    },
+    {
+      "id": "VAL-AUTH-011",
+      "status": "pass",
+      "reason": ".env.local contains server-only SUPABASE_SERVICE_ROLE_KEY (no NEXT_PUBLIC_ service-role key), and no actual service-role key value was found in downloaded client bundles.",
+      "evidence": [
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/VAL-AUTH-011-env-check.txt",
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/VAL-AUTH-011-bundle-scan.txt",
+        "/Users/brandonshore/.factory/missions/29bec127-4051-4648-afa5-1a8b9bcd37a8/evidence/foundation/auth-curl/client-bundle-paths.txt"
+      ]
+    }
+  ],
+  "toolsUsed": [
+    "curl",
+    "python3",
+    "rg"
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Unable to produce a valid callback ?code= via Supabase Admin magic-link generation for curl testing; generated links redirect with hash fragment tokens instead.",
+      "affectedAssertions": [
+        "VAL-AUTH-005"
+      ],
+      "quickFixAttempted": "Retried generate_link with options.redirect_to, top-level redirect_to, options.redirectTo, and PKCE challenge variants; all returned fragment token flow without query code."
+    }
+  ],
+  "summary": "Tested 4 assigned assertions: 3 passed (VAL-AUTH-004, VAL-AUTH-006, VAL-AUTH-011) and 1 blocked (VAL-AUTH-005)."
+}

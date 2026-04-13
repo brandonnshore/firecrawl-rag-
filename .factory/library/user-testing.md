@@ -36,3 +36,24 @@ Testing surface, required testing skills/tools, and resource cost classification
 ### curl
 - Negligible resource usage
 - **Max concurrent validators: 5**
+
+## Flow Validator Guidance: agent-browser
+
+- Use a dedicated browser session per validator; do not reuse another validator's browser state.
+- Use a unique email namespace per validator run (for example, `utv.foundation.browser.<timestamp>@example.com`).
+- Stay on `http://localhost:3000` only; do not interact with unrelated local services.
+- Do not modify global app configuration or seeded production-like data; only execute the auth/dashboard assertions assigned.
+- Keep all screenshots and notes under the assigned evidence directory only.
+
+## Flow Validator Guidance: curl
+
+- Use isolated cookie jars per validator (`.factory/validation/foundation/user-testing/tmp/<group>.cookies`).
+- For assertions requiring a valid auth callback code, generate a fresh magic link via Supabase Admin API in-process using `.env.local` service-role credentials.
+- Scope all requests to `http://localhost:3000` and assigned assertion IDs only.
+- Do not reuse single-use auth codes across assertions; generate a fresh code when needed.
+- Save command transcripts/evidence in the assigned flow report and evidence directory.
+
+## Known Frictions (foundation round 1)
+
+- Supabase OTP submissions can hit `over_email_send_rate_limit` (`429`) during repeated validation runs, which blocks confirmation-state checks that depend on successful `signInWithOtp`.
+- Supabase Admin `generateLink` for magic links may return fragment-token redirects (`#access_token=...`) instead of callback `?code=` links; assertions that explicitly require `code`-query callback behavior may be blocked in curl-only execution.
