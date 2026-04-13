@@ -1,0 +1,15 @@
+{
+  "featureId": "dashboard-shell",
+  "reviewedAt": "2026-04-13T20:35:30.000Z",
+  "commitId": "0028b5b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Dashboard shell provides the required sidebar navigation set, sign-out affordance, and authenticated empty-state shell. Added tests and manual checks indicate expected behavior.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Pass: feature satisfies foundation dashboard-shell scope without blocking issues."
+}
