@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SignOutButton } from './sign-out-button'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -13,21 +13,31 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
-      <div className="w-full max-w-md text-center">
-        <h1 className="mb-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Dashboard
         </h1>
-        <p className="mb-1 text-zinc-600 dark:text-zinc-400">
-          Welcome back!
-        </p>
-        <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           {user.email}
         </p>
-        <p className="mb-8 text-zinc-600 dark:text-zinc-400">
-          No site yet — set up your chatbot to get started.
+      </div>
+
+      <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-4 text-4xl">💬</div>
+        <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          No site yet
+        </h2>
+        <p className="mb-6 max-w-sm text-zinc-600 dark:text-zinc-400">
+          Set up your chatbot to get started. Paste your website URL and
+          we&apos;ll train an AI chatbot on your content in minutes.
         </p>
-        <SignOutButton />
+        <Link
+          href="/dashboard/setup"
+          className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          Build your chatbot
+        </Link>
       </div>
     </div>
   )
