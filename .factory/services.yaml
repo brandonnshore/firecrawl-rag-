@@ -1,0 +1,24 @@
+commands:
+  install: pnpm install
+  dev: pnpm dev
+  build: pnpm build
+  typecheck: pnpm run typecheck
+  lint: pnpm run lint
+  test: pnpm vitest run
+  widget-build: cd widget && pnpm install && pnpm build
+  widget-test: cd widget && pnpm vitest run
+
+services:
+  nextjs:
+    start: PORT=3000 pnpm dev
+    stop: lsof -ti :3000 | xargs kill -9 2>/dev/null || true
+    healthcheck: curl -sf http://localhost:3000 || curl -sf http://localhost:3000/login
+    port: 3000
+    depends_on: []
+
+  redis:
+    start: redis-server --daemonize yes --port 6379
+    stop: redis-cli -p 6379 shutdown nosave 2>/dev/null || true
+    healthcheck: redis-cli -p 6379 ping
+    port: 6379
+    depends_on: []
