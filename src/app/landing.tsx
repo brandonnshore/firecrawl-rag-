@@ -621,9 +621,9 @@ function StageItem({
 }) {
   // Current vertical offset from center: starts at `offset`, reaches 0 at merge=1
   const currentY = offset * (1 - merge)
-  // Fade only kicks in during pill-form (not during merge).  Entry-hidden
-  // means the item hasn't appeared yet in the cascade (opacity stays 0).
-  const opacity = entryHidden ? 0 : 1 - pillForm
+  // The moment pill-form starts (i.e. merge hit 1), back items snap out
+  // instantly so the lone "Home" card can morph cleanly into the pill.
+  const opacity = entryHidden || pillForm > 0 ? 0 : 1
   return (
     <div
       className="absolute left-0 right-0 will-change-transform"
@@ -632,9 +632,11 @@ function StageItem({
         transform: `translateY(calc(-50% + ${currentY}px))`,
         opacity,
         transition:
-          merge > 0 || pillForm > 0
-            ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
-            : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
+          pillForm > 0
+            ? 'none'
+            : merge > 0
+              ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
+              : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
       }}
     >
       {children}
@@ -672,11 +674,13 @@ function UrlBar({
       style={{
         top: '50%',
         transform: `translateY(calc(-50% + ${currentY}px))`,
-        opacity: 1 - pillForm,
+        opacity: pillForm > 0 ? 0 : 1,
         transition:
-          merge > 0 || pillForm > 0
-            ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
-            : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
+          pillForm > 0
+            ? 'none'
+            : merge > 0
+              ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
+              : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
       }}
     >
       <div
