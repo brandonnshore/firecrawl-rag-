@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase/service'
 import { cleanMarkdown } from './clean'
 import { chunkMarkdown } from './chunk'
 import crypto from 'crypto'
@@ -15,17 +15,6 @@ export interface CrawledPage {
     sourceURL?: string
     statusCode?: number
   }
-}
-
-/**
- * Create a Supabase client with service role key for bypassing RLS.
- * Only used in crawl webhook, chat API, and lead capture.
- */
-function createServiceClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
 }
 
 /**

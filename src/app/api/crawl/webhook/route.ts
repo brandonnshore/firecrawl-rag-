@@ -1,17 +1,7 @@
 import { after } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase/service'
 import { processCrawlData, markCrawlFailed } from '@/lib/crawl/process'
 import type { CrawledPage } from '@/lib/crawl/process'
-
-/**
- * Create a Supabase client with service role key for bypassing RLS.
- */
-function createServiceClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 /**
  * Webhook payload shape from Firecrawl
