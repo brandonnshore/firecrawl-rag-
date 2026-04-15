@@ -501,45 +501,26 @@ function PinnedPromise() {
             </ol>
           </div>
 
-          {/* Demo stage — every item anchored at top 50% with a resting Y
-              offset.  At merge=0 items render at their natural positions
-              (URL up top, 8 cards stacked, counter at bottom).  At merge=1
-              the offsets are zeroed and every item is at the exact center. */}
+          {/* Demo stage.  Merge=0 → natural layout.  Merge=1 → everything
+              stacked at center line, URL secretly shrunk to card height so
+              the pile reads as a single card.  pillForm then morphs card 0
+              (the top one) into the pill while cards 1-7 fade behind it. */}
           <div
             className="relative"
             style={{ height: STAGE_H }}
           >
-            {/* URL input */}
-            <StageItem offset={REST_OFFSET.url} merge={merge} pillForm={pillForm}>
-              <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
-                  Website URL
-                </p>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
-                  <span className="inline-flex items-baseline">
-                    <span>{typedUrl}</span>
-                    {!readyVisible && typedUrl.length < DEMO_URL.length && (
-                      <span className="landing-cursor" aria-hidden />
-                    )}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
-                      readyVisible
-                        ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
-                        : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
-                    />
-                    {readyVisible ? 'Ready' : 'Crawling'}
-                  </span>
-                </div>
-              </div>
-            </StageItem>
+            {/* URL bar — height silently shrinks in the last 30% of merge
+                so it matches card height by the time everything stacks. */}
+            <UrlBar
+              typedUrl={typedUrl}
+              readyVisible={readyVisible}
+              merge={merge}
+              pillForm={pillForm}
+            />
 
-            {/* 8 crawl cards */}
-            {CRAWL_PAGES.map((p, i) => {
+            {/* Cards 1-7 — plain StageItems that fade out during pillForm */}
+            {CRAWL_PAGES.slice(1).map((p, arrIdx) => {
+              const i = arrIdx + 1
               const shown = i < pagesVisible
               return (
                 <StageItem
@@ -547,10 +528,6 @@ function PinnedPromise() {
                   offset={REST_OFFSET.cards[i]}
                   merge={merge}
                   pillForm={pillForm}
-                  /* During cascade (before merge starts), cards drop in one
-                     at a time.  Before "shown" they sit 12px below with
-                     opacity 0.  CSS transition handles the drop-in motion;
-                     the transform we pass only kicks in once merge > 0. */
                   entryHidden={!shown && merge === 0}
                 >
                   <div
@@ -596,13 +573,24 @@ function PinnedPromise() {
               </div>
             </StageItem>
 
-            {/* Pill → chat panel */}
-            <ChatMorph
-              pillForm={pillForm}
+            {/* Chat messages — layer above the pill, reveals after pillDrop */}
+            <ChatMessages
               pillDrop={pillDrop}
               userShown={userShown}
               typedChars={typedChars}
               citationShown={citationShown}
+            />
+
+            {/* Card 0 → morphs into the pill.  Rendered last so it sits on
+                top of the stack.  Contains all the morph state (bg interp,
+                radius interp, width, drop, composer cross-fade). */}
+            <MorphingCard
+              card={CRAWL_PAGES[0]}
+              offset={REST_OFFSET.cards[0]}
+              shown={pagesVisible > 0}
+              merge={merge}
+              pillForm={pillForm}
+              pillDrop={pillDrop}
             />
           </div>
         </div>
@@ -655,129 +643,247 @@ function StageItem({
 }
 
 /**
- * Pill → composer + messages.
- *
- * Pill appears at stage center at 100% width (matching the stacked cards).
- * As pillForm 0→1 it shrinks horizontally to composer width — "sides come
- * in."  As pillDrop 0→1 it translates from center to the bottom of the
- * stage.  Chat messages fade in once the pill has cleared the center.
+ * URL bar.  Lives in its own component because it has unique height-shrink
+ * behavior: during the last 30% of merge (merge 0.7 → 1) its height
+ * animates down from ~90px to CARD_H (44px) and its inner content fades,
+ * so by the time it arrives at center it matches card footprint exactly.
  */
-function ChatMorph({
+function UrlBar({
+  typedUrl,
+  readyVisible,
+  merge,
   pillForm,
+}: {
+  typedUrl: string
+  readyVisible: boolean
+  merge: number
+  pillForm: number
+}) {
+  const shrink = clamp01((merge - 0.7) / 0.3) // 0 → 1 in last 30% of merge
+  const currentY = REST_OFFSET.url * (1 - merge)
+  // 90px natural height → CARD_H (44) at merge=1
+  const height = 90 - shrink * (90 - CARD_H)
+  // Padding shrinks alongside height so the inner content doesn't overflow
+  const padding = 20 - shrink * 14 // p-5 (20) → p-[6]
+  const contentOpacity = 1 - shrink
+  return (
+    <div
+      className="absolute left-0 right-0 will-change-transform"
+      style={{
+        top: '50%',
+        transform: `translateY(calc(-50% + ${currentY}px))`,
+        opacity: 1 - pillForm,
+        transition:
+          merge > 0 || pillForm > 0
+            ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
+            : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
+      }}
+    >
+      <div
+        className="surface-hairline overflow-hidden rounded-xl shadow-[var(--shadow-md)]"
+        style={{ height, padding }}
+      >
+        <div style={{ opacity: contentOpacity }}>
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+            Website URL
+          </p>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
+            <span className="inline-flex items-baseline">
+              <span>{typedUrl}</span>
+              {!readyVisible && typedUrl.length < DEMO_URL.length && (
+                <span className="landing-cursor" aria-hidden />
+              )}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
+                readyVisible
+                  ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
+                  : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
+              />
+              {readyVisible ? 'Ready' : 'Crawling'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Card 0 → morphs directly into the pill → drops to composer position.
+ *
+ * During merge: slides to center like the other cards.  During pillForm
+ * (0→1): width 100%→68%, background white→ink, radius card→fully-rounded,
+ * card text fades out AS bg darkens.  Composer content (sparkle, prompt
+ * placeholder, arrow) fades in in the final 40% of pillForm, so once the
+ * black pill exists its text appears within.  During pillDrop: translates
+ * from center to bottom of the stage.
+ */
+function MorphingCard({
+  card,
+  offset,
+  shown,
+  merge,
+  pillForm,
+  pillDrop,
+}: {
+  card: { path: string; title: string }
+  offset: number
+  shown: boolean
+  merge: number
+  pillForm: number
+  pillDrop: number
+}) {
+  const slideY = offset * (1 - merge)
+  const dropY = pillDrop * PILL_DROP_PX
+
+  // Width: 100% → 68% during pillForm
+  const widthPct = 100 - pillForm * 32
+
+  // Color interp white (255) → ink (10)
+  const bgChannel = Math.round(255 + (10 - 255) * pillForm)
+  const bgColor = `rgb(${bgChannel}, ${bgChannel}, ${bgChannel})`
+
+  // Radius: 8px (rounded-lg) → 26px (fully rounded on 44px-tall pill)
+  const radius = 8 + pillForm * 18
+
+  // Border fades
+  const borderAlpha = 0.08 * (1 - pillForm)
+
+  // Card content fades 0 → 0.6 of pillForm
+  const cardContentOpacity = clamp01(1 - pillForm * 1.67)
+  // Composer fades in 0.55 → 1.0 of pillForm
+  const composerOpacity = clamp01((pillForm - 0.55) / 0.45)
+
+  return (
+    <div
+      className="absolute left-0 right-0 z-10 flex justify-center will-change-transform"
+      style={{
+        top: '50%',
+        transform: `translateY(calc(-50% + ${slideY + dropY}px))`,
+        opacity: shown ? 1 : 0,
+        transition: shown
+          ? 'opacity 280ms cubic-bezier(0.32,0.72,0,1)'
+          : 'opacity 120ms linear',
+      }}
+    >
+      <div
+        className="relative overflow-hidden shadow-[var(--shadow-sm)]"
+        style={{
+          width: `${widthPct}%`,
+          height: CARD_H,
+          backgroundColor: bgColor,
+          borderRadius: `${radius}px`,
+          border: `1px solid rgba(10, 10, 10, ${borderAlpha})`,
+        }}
+      >
+        {/* Card content — fades as bg darkens */}
+        <div
+          className="absolute inset-0 flex items-center justify-between gap-3 px-4"
+          style={{ opacity: cardContentOpacity }}
+        >
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium text-[color:var(--ink-primary)]">
+              {card.title}
+            </p>
+            <p className="truncate font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+              {card.path}
+            </p>
+          </div>
+          <IconCheck
+            width={13}
+            height={13}
+            className="shrink-0 text-[color:var(--accent-success)]"
+          />
+        </div>
+
+        {/* Composer content — appears once the shape is mostly ink */}
+        <div
+          className="absolute inset-0 flex items-center gap-3 px-5"
+          style={{ opacity: composerOpacity }}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[color:var(--bg-surface)]">
+            <IconSparkle width={13} height={13} />
+          </span>
+          <span className="flex-1 truncate text-[13px] text-white/60">
+            Ask about your returns, hours, services…
+          </span>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/15 text-[color:var(--bg-surface)]">
+            <IconArrowRight width={13} height={13} />
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Chat message stack — reveals once the pill has dropped past center. */
+function ChatMessages({
   pillDrop,
   userShown,
   typedChars,
   citationShown,
 }: {
-  pillForm: number
   pillDrop: number
   userShown: boolean
   typedChars: number
   citationShown: boolean
 }) {
-  // Pill begins to show at the start of pillForm.
-  const pillVisible = pillForm > 0
-
-  // Width morphs: 100% of column (matching the stacked card visual) down to
-  // composer width ~68%.  "Sides come in."
-  const PILL_WIDTH_END = 68
-  const pillWidthPct = 100 - pillForm * (100 - PILL_WIDTH_END)
-
-  // Inner content (composer text + icons) fades in only after the pill has
-  // finished forming — we want the morph to look like a shape change first.
-  const composerInnerOpacity = clamp01(pillForm * 1.3 - 0.5)
-
-  // Vertical position: center (top:50%, translate -50%) → bottom.
-  // Stage is 600px tall, pill is 52px.  Travel distance from center to
-  // bottom = (stageHeight/2 - pillHeight/2 - padding) = 300 - 26 - 10 = 264px.
-  const PILL_DROP_PX = 264
-
-  // Chat messages reveal as pill moves away from center (clears space above)
   const panelRevealed = pillDrop > 0.5
-
   return (
-    <>
-      {/* Chat messages — absolute stack at the top of the stage */}
-      <div
-        className="absolute inset-x-0 top-0 flex flex-col gap-3 px-1 pt-6 transition-opacity duration-300"
-        style={{
-          opacity: panelRevealed ? 1 : 0,
-          pointerEvents: 'none',
-        }}
-      >
-        {userShown && (
-          <div className="flex justify-end rc-enter">
-            <div className="max-w-[78%] rounded-xl bg-[color:var(--ink-primary)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--bg-surface)]">
-              What&apos;s your return policy?
-            </div>
-          </div>
-        )}
-        {userShown && (
-          <div className="flex justify-start">
-            <div className="max-w-[82%] rounded-xl bg-[color:var(--bg-subtle)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--ink-primary)]">
-              {typedChars === 0 ? (
-                <span className="inline-flex items-center gap-0.5 text-[color:var(--ink-tertiary)]">
-                  <Dot />
-                  <Dot delay={120} />
-                  <Dot delay={240} />
-                </span>
-              ) : (
-                <>
-                  {CHAT_ANSWER.slice(0, typedChars)}
-                  {typedChars < CHAT_ANSWER.length && (
-                    <span className="landing-cursor" aria-hidden />
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        {citationShown && (
-          <div className="flex items-center gap-2 pl-2 text-xs text-[color:var(--ink-tertiary)] rc-enter">
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[color:var(--border-strong)] font-mono text-[10px] text-[color:var(--ink-secondary)]">
-              1
-            </span>
-            <span className="font-mono">yourbusiness.com/returns</span>
-          </div>
-        )}
-      </div>
-
-      {/* The pill — anchored at top:50%, translates down as pillDrop → 1.
-          Width shrinks 100% → 68% during pillForm (sides come in). */}
-      {pillVisible && (
-        <div
-          className="pointer-events-auto absolute left-1/2 flex items-center overflow-hidden rounded-full bg-[color:var(--ink-primary)] shadow-[var(--shadow-md)] will-change-transform"
-          style={{
-            top: '50%',
-            width: `${pillWidthPct}%`,
-            height: 52,
-            transform: `translate(-50%, calc(-50% + ${pillDrop * PILL_DROP_PX}px))`,
-            opacity: pillForm,
-            transition: 'none',
-          }}
-        >
-          <div
-            className="flex h-full w-full items-center gap-3 px-5"
-            style={{
-              opacity: composerInnerOpacity,
-              transition: 'opacity 220ms cubic-bezier(0.32,0.72,0,1)',
-            }}
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[color:var(--bg-surface)]">
-              <IconSparkle width={13} height={13} />
-            </span>
-            <span className="flex-1 truncate text-[13px] text-white/60">
-              Ask about your returns, hours, services…
-            </span>
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/15 text-[color:var(--bg-surface)]">
-              <IconArrowRight width={13} height={13} />
-            </span>
+    <div
+      className="absolute inset-x-0 top-0 flex flex-col gap-3 px-1 pt-6 transition-opacity duration-300"
+      style={{
+        opacity: panelRevealed ? 1 : 0,
+        pointerEvents: 'none',
+      }}
+    >
+      {userShown && (
+        <div className="flex justify-end rc-enter">
+          <div className="max-w-[78%] rounded-xl bg-[color:var(--ink-primary)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--bg-surface)]">
+            What&apos;s your return policy?
           </div>
         </div>
       )}
-    </>
+      {userShown && (
+        <div className="flex justify-start">
+          <div className="max-w-[82%] rounded-xl bg-[color:var(--bg-subtle)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--ink-primary)]">
+            {typedChars === 0 ? (
+              <span className="inline-flex items-center gap-0.5 text-[color:var(--ink-tertiary)]">
+                <Dot />
+                <Dot delay={120} />
+                <Dot delay={240} />
+              </span>
+            ) : (
+              <>
+                {CHAT_ANSWER.slice(0, typedChars)}
+                {typedChars < CHAT_ANSWER.length && (
+                  <span className="landing-cursor" aria-hidden />
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {citationShown && (
+        <div className="flex items-center gap-2 pl-2 text-xs text-[color:var(--ink-tertiary)] rc-enter">
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[color:var(--border-strong)] font-mono text-[10px] text-[color:var(--ink-secondary)]">
+            1
+          </span>
+          <span className="font-mono">yourbusiness.com/returns</span>
+        </div>
+      )}
+    </div>
   )
 }
+
+/** Travel distance for pillDrop — from stage center to near the bottom. */
+const PILL_DROP_PX = 264
+
 
 function Narration({
   index,
