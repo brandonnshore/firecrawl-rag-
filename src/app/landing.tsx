@@ -531,15 +531,15 @@ function PinnedPromise() {
                   entryHidden={!shown && merge === 0}
                 >
                   <div
-                    className="surface-hairline rounded-lg px-4 py-2.5 shadow-[var(--shadow-sm)]"
+                    className="surface-hairline flex items-center rounded-lg px-4 shadow-[var(--shadow-sm)]"
                     style={{ height: CARD_H }}
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex w-full items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-medium text-[color:var(--ink-primary)]">
+                        <p className="truncate text-[13px] font-medium leading-[1.15] text-[color:var(--ink-primary)]">
                           {p.title}
                         </p>
-                        <p className="truncate font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+                        <p className="truncate font-mono text-[11px] leading-[1.15] text-[color:var(--ink-tertiary)]">
                           {p.path}
                         </p>
                       </div>
@@ -787,10 +787,10 @@ function MorphingCard({
           style={{ opacity: cardContentOpacity }}
         >
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-[color:var(--ink-primary)]">
+            <p className="truncate text-[13px] font-medium leading-[1.15] text-[color:var(--ink-primary)]">
               {card.title}
             </p>
-            <p className="truncate font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+            <p className="truncate font-mono text-[11px] leading-[1.15] text-[color:var(--ink-tertiary)]">
               {card.path}
             </p>
           </div>
