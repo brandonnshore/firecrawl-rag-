@@ -25,7 +25,6 @@ export default function Landing() {
       <Nav />
       <Hero />
       <PinnedPromise />
-      <ChatDemo />
       <EmbedScene />
       <DashboardTeaser />
       <Pricing />
@@ -210,7 +209,13 @@ function HeroLine({ line, muted = false }: { line: string; muted?: boolean }) {
 }
 
 /* --------------------------------------------------------------------------
-   Pinned promise — scroll scrubs a 3-phase timeline
+   Pinned promise — one long pinned scene that scrubs through six phases:
+   1. URL types itself
+   2. Crawl cards cascade
+   3. Ready beat (hold on the full tableau)
+   4. Amoeba merge — everything shrinks + blurs toward center
+   5. Orb blooms, then opens sideways into a ChatGPT-style composer pill
+   6. Chat demo — user message, typewriter answer, citation chip
    -------------------------------------------------------------------------- */
 
 const DEMO_URL = 'https://yourbusiness.com'
@@ -225,11 +230,44 @@ const CRAWL_PAGES = [
   { path: '/team', title: 'Team' },
 ]
 
+const CHAT_ANSWER =
+  "We offer 30-day returns on any unworn item. Just drop us a note at the contact page and we'll send you a prepaid label. [1]"
+
+/* Phase thresholds (progress 0 → 1 across 3000px of scroll) */
+const P = {
+  typeEnd: 0.1,
+  cardsStart: 0.1,
+  cardsEnd: 0.45,
+  readyStart: 0.45,
+  readyEnd: 0.55,
+  mergeStart: 0.55,
+  mergeEnd: 0.68,
+  orbPulseEnd: 0.72,
+  pillStart: 0.72,
+  pillEnd: 0.82,
+  userStart: 0.84,
+  typeChatStart: 0.87,
+  typeChatEnd: 0.96,
+  citationStart: 0.97,
+}
+
+function clamp01(n: number) {
+  return Math.max(0, Math.min(1, n))
+}
+
 function PinnedPromise() {
   const rootRef = useRef<HTMLElement>(null)
+
+  // Scrubbed state
+  const [typedUrl, setTypedUrl] = useState('')
   const [pagesVisible, setPagesVisible] = useState(0)
   const [readyVisible, setReadyVisible] = useState(false)
-  const [typedUrl, setTypedUrl] = useState('')
+  const [merge, setMerge] = useState(0)
+  const [orbVisible, setOrbVisible] = useState(false)
+  const [pillProgress, setPillProgress] = useState(0)
+  const [userShown, setUserShown] = useState(false)
+  const [typedChars, setTypedChars] = useState(0)
+  const [citationShown, setCitationShown] = useState(false)
 
   useEffect(() => {
     const root = rootRef.current
@@ -244,42 +282,104 @@ function PinnedPromise() {
       setTypedUrl(DEMO_URL)
       setPagesVisible(CRAWL_PAGES.length)
       setReadyVisible(true)
+      setMerge(1)
+      setOrbVisible(true)
+      setPillProgress(1)
+      setUserShown(true)
+      setTypedChars(CHAT_ANSWER.length)
+      setCitationShown(true)
       /* eslint-enable react-hooks/set-state-in-effect */
       return
     }
 
     gsap.registerPlugin(ScrollTrigger)
 
-    let typedSoFar = 0
-    let pagesSoFar = 0
+    let lastTyped = 0
+    let lastPages = 0
+    let lastReady = false
+    let lastMerge = 0
+    let lastOrb = false
+    let lastPill = 0
+    let lastUser = false
+    let lastChars = 0
+    let lastCitation = false
 
     const st = ScrollTrigger.create({
       trigger: root,
       start: 'top top',
-      end: '+=1500',
+      end: '+=3000',
       pin: true,
       scrub: 0.4,
       onUpdate: (self) => {
         const p = self.progress
 
-        // Phase 1 (0 — 0.18): type URL (quick)
-        const typeP = Math.min(1, p / 0.18)
+        // Phase 1 — URL types
+        const typeP = clamp01(p / P.typeEnd)
         const chars = Math.floor(typeP * DEMO_URL.length)
-        if (chars !== typedSoFar) {
-          typedSoFar = chars
+        if (chars !== lastTyped) {
+          lastTyped = chars
           setTypedUrl(DEMO_URL.slice(0, chars))
         }
 
-        // Phase 2 (0.18 — 0.78): crawl cards cascade
-        const crawlP = Math.max(0, Math.min(1, (p - 0.18) / 0.6))
-        const pageCount = Math.floor(crawlP * CRAWL_PAGES.length + 0.0001)
-        if (pageCount !== pagesSoFar) {
-          pagesSoFar = pageCount
-          setPagesVisible(pageCount)
+        // Phase 2 — Cards cascade
+        const crawlP = clamp01((p - P.cardsStart) / (P.cardsEnd - P.cardsStart))
+        const pc = Math.floor(crawlP * CRAWL_PAGES.length + 0.0001)
+        if (pc !== lastPages) {
+          lastPages = pc
+          setPagesVisible(pc)
         }
 
-        // Phase 3 (> 0.78): ready state
-        setReadyVisible(p > 0.78)
+        // Phase 3 — Ready beat
+        const ready = p > P.readyStart
+        if (ready !== lastReady) {
+          lastReady = ready
+          setReadyVisible(ready)
+        }
+
+        // Phase 4 — Merge
+        const m = clamp01((p - P.mergeStart) / (P.mergeEnd - P.mergeStart))
+        if (Math.abs(m - lastMerge) > 0.001) {
+          lastMerge = m
+          setMerge(m)
+        }
+
+        // Phase 5 — Orb visible
+        const orb = p > P.mergeEnd * 0.85
+        if (orb !== lastOrb) {
+          lastOrb = orb
+          setOrbVisible(orb)
+        }
+
+        // Phase 6 — Pill opens sideways
+        const pill = clamp01((p - P.pillStart) / (P.pillEnd - P.pillStart))
+        if (Math.abs(pill - lastPill) > 0.001) {
+          lastPill = pill
+          setPillProgress(pill)
+        }
+
+        // Phase 7 — User message
+        const user = p > P.userStart
+        if (user !== lastUser) {
+          lastUser = user
+          setUserShown(user)
+        }
+
+        // Phase 8 — Typewriter
+        const typeP2 = clamp01(
+          (p - P.typeChatStart) / (P.typeChatEnd - P.typeChatStart)
+        )
+        const chars2 = Math.floor(typeP2 * CHAT_ANSWER.length)
+        if (chars2 !== lastChars) {
+          lastChars = chars2
+          setTypedChars(chars2)
+        }
+
+        // Phase 9 — Citation
+        const cite = p > P.citationStart
+        if (cite !== lastCitation) {
+          lastCitation = cite
+          setCitationShown(cite)
+        }
       },
     })
 
@@ -287,6 +387,9 @@ function PinnedPromise() {
       st.kill()
     }
   }, [])
+
+  // Narration switches from "crawl" to "chat" at the merge point.
+  const chatPhase = merge > 0.4
 
   return (
     <section
@@ -296,6 +399,7 @@ function PinnedPromise() {
     >
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col justify-center px-6 py-24">
         <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+          {/* Narration rail */}
           <div className="lg:sticky lg:top-32">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink-tertiary)]">
               How it works
@@ -307,7 +411,15 @@ function PinnedPromise() {
                 We do the rest.
               </span>
             </h2>
-            <ol className="mt-10 space-y-4 text-sm text-[color:var(--ink-secondary)]">
+
+            {/* Crawl rail */}
+            <ol
+              className="absolute-rail mt-10 space-y-4 text-sm transition-opacity duration-500"
+              style={{
+                opacity: chatPhase ? 0 : 1,
+                pointerEvents: chatPhase ? 'none' : 'auto',
+              }}
+            >
               <Narration
                 index="01"
                 label="Paste"
@@ -325,89 +437,258 @@ function PinnedPromise() {
               <Narration
                 index="03"
                 label="Ready"
-                body="One script tag. Any platform. Live in minutes."
-                active={readyVisible}
+                body="Everything your site knows, packaged into a chatbot."
+                active={readyVisible && merge < 0.2}
+                done={merge > 0.2}
+              />
+            </ol>
+
+            {/* Chat rail */}
+            <ol
+              className="mt-10 space-y-4 text-sm transition-opacity duration-500"
+              style={{
+                opacity: chatPhase ? 1 : 0,
+                marginTop: chatPhase ? '2.5rem' : '-15rem',
+                pointerEvents: chatPhase ? 'auto' : 'none',
+              }}
+              aria-hidden={!chatPhase}
+            >
+              <Narration
+                index="01"
+                label="Trained on your pages"
+                body="Answers only from what it read. No generic fluff, no hallucinations."
+                active={chatPhase && !userShown}
+                done={userShown}
+              />
+              <Narration
+                index="02"
+                label="Cites every claim"
+                body="Visitors see the source for each answer. Builds trust instantly."
+                active={userShown && typedChars < CHAT_ANSWER.length}
+                done={typedChars >= CHAT_ANSWER.length}
+              />
+              <Narration
+                index="03"
+                label="Captures leads"
+                body="When it doesn't know, it offers to collect an email for you."
+                active={citationShown}
                 done={false}
               />
             </ol>
           </div>
 
-          <div className="relative">
-            <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
-                Website URL
-              </p>
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
-                <span className="inline-flex items-baseline">
-                  <span>{typedUrl}</span>
-                  {!readyVisible && typedUrl.length < DEMO_URL.length && (
-                    <span className="landing-cursor" aria-hidden />
-                  )}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
-                    readyVisible
-                      ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
-                      : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
-                  }`}
-                >
+          {/* Demo stage */}
+          <div className="relative min-h-[460px]">
+            {/* Layer 1: URL + crawl cards (collapsing during merge) */}
+            <div
+              className="relative"
+              style={{
+                opacity: 1 - merge,
+                transform: `scale(${1 - merge * 0.88})`,
+                transformOrigin: 'center center',
+                filter: `blur(${merge * 3}px)`,
+                transition: 'none',
+                pointerEvents: merge > 0.1 ? 'none' : 'auto',
+              }}
+            >
+              {/* URL input */}
+              <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+                  Website URL
+                </p>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
+                  <span className="inline-flex items-baseline">
+                    <span>{typedUrl}</span>
+                    {!readyVisible && typedUrl.length < DEMO_URL.length && (
+                      <span className="landing-cursor" aria-hidden />
+                    )}
+                  </span>
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
-                  />
-                  {readyVisible ? 'Ready' : 'Crawling'}
-                </span>
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
+                      readyVisible
+                        ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
+                        : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
+                    />
+                    {readyVisible ? 'Ready' : 'Crawling'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Crawl cards */}
+              <div className="mt-4 flex flex-col gap-2">
+                {CRAWL_PAGES.map((p, i) => {
+                  const shown = i < pagesVisible
+                  return (
+                    <div
+                      key={p.path}
+                      className="surface-hairline rounded-lg px-4 py-2.5 shadow-[var(--shadow-sm)]"
+                      style={{
+                        transform: shown
+                          ? 'translateY(0)'
+                          : 'translateY(12px)',
+                        opacity: shown ? 1 : 0,
+                        transition:
+                          'transform 380ms cubic-bezier(0.32,0.72,0,1), opacity 280ms cubic-bezier(0.32,0.72,0,1)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-medium text-[color:var(--ink-primary)]">
+                            {p.title}
+                          </p>
+                          <p className="truncate font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+                            {p.path}
+                          </p>
+                        </div>
+                        <IconCheck
+                          width={13}
+                          height={13}
+                          className="shrink-0 text-[color:var(--accent-success)]"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+                  Pages indexed
+                </p>
+                <p className="font-mono text-2xl tracking-tight text-[color:var(--ink-primary)]">
+                  <span>{pagesVisible.toString().padStart(2, '0')}</span>
+                  <span className="text-[color:var(--ink-tertiary)]">
+                    /{CRAWL_PAGES.length}
+                  </span>
+                </p>
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-2">
-              {CRAWL_PAGES.map((p, i) => {
-                const shown = i < pagesVisible
-                return (
-                  <div
-                    key={p.path}
-                    className="surface-hairline rounded-lg px-4 py-2.5 shadow-[var(--shadow-sm)]"
-                    style={{
-                      transform: shown ? 'translateY(0)' : 'translateY(12px)',
-                      opacity: shown ? 1 : 0,
-                      transition:
-                        'transform 380ms cubic-bezier(0.32,0.72,0,1), opacity 280ms cubic-bezier(0.32,0.72,0,1)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-medium text-[color:var(--ink-primary)]">
-                          {p.title}
-                        </p>
-                        <p className="truncate font-mono text-[11px] text-[color:var(--ink-tertiary)]">
-                          {p.path}
-                        </p>
-                      </div>
-                      <IconCheck
-                        width={13}
-                        height={13}
-                        className="shrink-0 text-[color:var(--accent-success)]"
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="mt-5 flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
-                Pages indexed
-              </p>
-              <p className="font-mono text-2xl tracking-tight text-[color:var(--ink-primary)]">
-                <span>{pagesVisible.toString().padStart(2, '0')}</span>
-                <span className="text-[color:var(--ink-tertiary)]">
-                  /{CRAWL_PAGES.length}
-                </span>
-              </p>
-            </div>
+            {/* Layer 2: Orb → Pill → Chat panel (absolute overlay) */}
+            {orbVisible && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <ChatMorph
+                  merge={merge}
+                  pillProgress={pillProgress}
+                  userShown={userShown}
+                  typedChars={typedChars}
+                  citationShown={citationShown}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
     </section>
+  )
+}
+
+/* Orb → pill → composer + messages.  Width scales from 40px (orb) to 100%
+   of the demo column as pillProgress goes 0 → 1.  Once pillProgress hits ~1,
+   messages fade in above the composer. */
+function ChatMorph({
+  merge,
+  pillProgress,
+  userShown,
+  typedChars,
+  citationShown,
+}: {
+  merge: number
+  pillProgress: number
+  userShown: boolean
+  typedChars: number
+  citationShown: boolean
+}) {
+  // Orb opacity: fades in during the last 40% of merge, stays at 1
+  const orbIn = clamp01((merge - 0.6) / 0.4)
+  // Pill width: 40px → 100%.
+  const pillWidthPct = 0.18 + pillProgress * 0.82 // start as small pill (≈18% of container), expand to 100%
+  const panelRevealed = pillProgress > 0.85
+  const composerFill = panelRevealed ? 1 : clamp01(pillProgress * 1.2 - 0.2)
+
+  return (
+    <div
+      className="relative w-full"
+      style={{ minHeight: 460 }}
+    >
+      {/* Message stack (above composer) — fades in once pill is mostly open */}
+      <div
+        className="absolute inset-x-0 top-0 flex flex-col gap-3 px-1 pt-2 transition-opacity duration-300"
+        style={{
+          opacity: panelRevealed ? 1 : 0,
+          pointerEvents: 'none',
+        }}
+      >
+        {userShown && (
+          <div className="flex justify-end rc-enter">
+            <div className="max-w-[78%] rounded-xl bg-[color:var(--ink-primary)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--bg-surface)]">
+              What&apos;s your return policy?
+            </div>
+          </div>
+        )}
+        {userShown && (
+          <div className="flex justify-start">
+            <div className="max-w-[82%] rounded-xl bg-[color:var(--bg-subtle)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--ink-primary)]">
+              {typedChars === 0 ? (
+                <span className="inline-flex items-center gap-0.5 text-[color:var(--ink-tertiary)]">
+                  <Dot />
+                  <Dot delay={120} />
+                  <Dot delay={240} />
+                </span>
+              ) : (
+                <>
+                  {CHAT_ANSWER.slice(0, typedChars)}
+                  {typedChars < CHAT_ANSWER.length && (
+                    <span className="landing-cursor" aria-hidden />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {citationShown && (
+          <div className="flex items-center gap-2 pl-2 text-xs text-[color:var(--ink-tertiary)] rc-enter">
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[color:var(--border-strong)] font-mono text-[10px] text-[color:var(--ink-secondary)]">
+              1
+            </span>
+            <span className="font-mono">yourbusiness.com/returns</span>
+          </div>
+        )}
+      </div>
+
+      {/* Composer — orb that opens sideways into a pill */}
+      <div
+        className="pointer-events-auto absolute left-1/2 bottom-6 flex items-center overflow-hidden rounded-full bg-[color:var(--ink-primary)] shadow-[var(--shadow-md)]"
+        style={{
+          width: `${pillWidthPct * 100}%`,
+          maxWidth: '100%',
+          height: 52,
+          transform: 'translateX(-50%)',
+          transition:
+            'width 520ms cubic-bezier(0.32,0.72,0,1), opacity 320ms cubic-bezier(0.32,0.72,0,1)',
+          opacity: orbIn,
+        }}
+      >
+        <div
+          className="flex h-full w-full items-center gap-3 px-5 transition-opacity duration-300"
+          style={{ opacity: composerFill }}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[color:var(--bg-surface)]">
+            <IconSparkle width={13} height={13} />
+          </span>
+          <span className="flex-1 truncate text-[13px] text-white/60">
+            Ask about your returns, hours, services…
+          </span>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/15 text-[color:var(--bg-surface)]">
+            <IconArrowRight width={13} height={13} />
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -460,123 +741,6 @@ function Narration({
         </p>
       </div>
     </li>
-  )
-}
-
-/* --------------------------------------------------------------------------
-   Chat demo — typewriter answer on enter
-   -------------------------------------------------------------------------- */
-
-const CHAT_ANSWER =
-  "We offer 30-day returns on any unworn item. Just drop us a note at the contact page and we'll send you a prepaid label. [1]"
-
-function ChatDemo() {
-  const rootRef = useRef<HTMLElement>(null)
-  const [typed, setTyped] = useState(0)
-  const [userShown, setUserShown] = useState(false)
-  const [citationShown, setCitationShown] = useState(false)
-
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches
-    if (reducedMotion) {
-      /* eslint-disable react-hooks/set-state-in-effect --
-         One-shot sync with prefers-reduced-motion; no animation loop. */
-      setUserShown(true)
-      setTyped(CHAT_ANSWER.length)
-      setCitationShown(true)
-      /* eslint-enable react-hooks/set-state-in-effect */
-      return
-    }
-
-    gsap.registerPlugin(ScrollTrigger)
-
-    const proxy = { n: 0 }
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: root,
-        start: 'top 70%',
-        end: 'bottom 30%',
-        toggleActions: 'play none none reverse',
-      },
-    })
-    tl.call(() => setUserShown(true))
-      .to(proxy, {
-        n: CHAT_ANSWER.length,
-        duration: 2.4,
-        ease: 'none',
-        onUpdate: () => setTyped(Math.floor(proxy.n)),
-      }, '+=0.6')
-      .call(() => setCitationShown(true), [], '+=0.15')
-
-    return () => {
-      tl.scrollTrigger?.kill()
-      tl.kill()
-    }
-  }, [])
-
-  return (
-    <section ref={rootRef} className="relative px-6 py-40">
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink-tertiary)]">
-            What visitors see
-          </p>
-          <h2 className="mt-4 text-[clamp(1.75rem,3.5vw,2.75rem)] font-semibold leading-[1.05] tracking-tight">
-            It answers like someone
-            <br />
-            who works there.
-          </h2>
-          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
-            Trained only on your pages. Every claim cites a source. When it
-            doesn&apos;t know, it offers to collect the visitor&apos;s email
-            instead of hallucinating.
-          </p>
-        </div>
-
-        <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
-          <div className="space-y-3">
-            {userShown && (
-              <div className="flex justify-end">
-                <div className="max-w-[82%] rounded-xl bg-[color:var(--ink-primary)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--bg-surface)] rc-enter">
-                  What&apos;s your return policy?
-                </div>
-              </div>
-            )}
-            <div className="flex justify-start">
-              <div className="max-w-[82%] rounded-xl bg-[color:var(--bg-subtle)] px-3.5 py-2 text-[14px] leading-relaxed text-[color:var(--ink-primary)]">
-                {typed === 0 ? (
-                  <span className="inline-flex items-center gap-0.5 text-[color:var(--ink-tertiary)]">
-                    <Dot />
-                    <Dot delay={120} />
-                    <Dot delay={240} />
-                  </span>
-                ) : (
-                  <>
-                    {CHAT_ANSWER.slice(0, typed)}
-                    {typed < CHAT_ANSWER.length && (
-                      <span className="landing-cursor" aria-hidden />
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-            {citationShown && (
-              <div className="ml-2 flex items-center gap-2 text-xs text-[color:var(--ink-tertiary)] rc-enter">
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[color:var(--border-strong)] font-mono text-[10px] text-[color:var(--ink-secondary)]">
-                  1
-                </span>
-                <span className="font-mono">yourbusiness.com/returns</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
   )
 }
 
