@@ -207,7 +207,7 @@ export default function SetupPage() {
           Building your chatbot.
         </h1>
         <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
-          This usually takes 2–3 minutes. You can safely leave this
+          This usually takes two to three minutes. You can safely leave this
           page — we&apos;ll keep working.
         </p>
 
@@ -246,7 +246,7 @@ export default function SetupPage() {
       <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight text-[color:var(--ink-primary)] md:text-5xl">
         Your AI chatbot
         <br />
-        is 3 minutes away.
+        is three minutes away.
       </h1>
       <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
         We crawl every page, embed the content, and hand you a chatbot that

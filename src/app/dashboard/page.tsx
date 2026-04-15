@@ -33,7 +33,7 @@ export default async function DashboardPage() {
           chatbot.
         </h1>
         <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
-          Paste a URL, we crawl every page, and 3 minutes later your site
+          Paste a URL, we crawl every page, and three minutes later your site
           has an AI chatbot that knows your business. Embed with one line.
         </p>
 
