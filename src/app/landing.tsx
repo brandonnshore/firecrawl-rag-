@@ -130,7 +130,7 @@ function Hero() {
   return (
     <section
       ref={rootRef}
-      className="relative flex min-h-[100dvh] flex-col justify-center px-6 pb-32 pt-20"
+      className="relative flex min-h-[100dvh] flex-col justify-center px-6 pb-28 pt-24"
     >
       <div className="mx-auto w-full max-w-6xl">
         <p
