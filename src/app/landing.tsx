@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
+import { useEffect, useRef, useState } from 'react'
+import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SmoothScroll } from '@/components/smooth-scroll'
 import {
@@ -12,14 +12,10 @@ import {
   IconSparkle,
 } from '@/components/icons'
 
-/* SSR-safe layout effect */
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect
-
 /* --------------------------------------------------------------------------
-   Landing — the scroll movie.  One long page broken into scenes; the only
-   pinned scene is the "3 minutes" promise.  Everything else flows, but every
-   scene has a scroll-linked reveal with the right easing curve.
+   Landing — scroll movie.  One pinned scene ("3 minutes" promise) plus a
+   sequence of scroll-triggered flow sections.  Cleanup is manual (no
+   gsap.context) — we track our ScrollTriggers and kill them on unmount.
    -------------------------------------------------------------------------- */
 
 export default function Landing() {
@@ -61,58 +57,75 @@ function Nav() {
 }
 
 /* --------------------------------------------------------------------------
-   Hero — typographic, character-stagger on headline, line-mask sub, subtle
-   below-fold "scroll on" cue that itself animates.
+   Hero — typographic, character-stagger on headline
    -------------------------------------------------------------------------- */
 
 function Hero() {
   const rootRef = useRef<HTMLElement>(null)
 
-  useIsomorphicLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const chars = rootRef.current?.querySelectorAll<HTMLElement>(
-        '[data-hero-char]'
-      )
-      if (!chars || !chars.length) return
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const chars = root.querySelectorAll<HTMLElement>('[data-hero-char]')
+    const tweens: gsap.core.Tween[] = []
+
+    if (chars.length) {
       gsap.set(chars, { yPercent: 110, opacity: 0 })
-      gsap.to(chars, {
-        yPercent: 0,
-        opacity: 1,
-        duration: 0.9,
-        ease: 'expo.out',
-        stagger: 0.012,
-        delay: 0.1,
-      })
+      tweens.push(
+        gsap.to(chars, {
+          yPercent: 0,
+          opacity: 1,
+          duration: 0.9,
+          ease: 'expo.out',
+          stagger: 0.012,
+          delay: 0.1,
+        })
+      )
+    }
 
-      gsap.from('[data-hero-eyebrow]', {
-        y: 12,
-        opacity: 0,
-        duration: 0.7,
-        ease: 'power3.out',
-      })
-      gsap.from('[data-hero-sub]', {
-        y: 14,
-        opacity: 0,
-        duration: 0.8,
-        ease: 'power3.out',
-        delay: 0.6,
-      })
-      gsap.from('[data-hero-cta]', {
-        y: 14,
-        opacity: 0,
-        duration: 0.8,
-        ease: 'power3.out',
-        delay: 0.75,
-      })
-      gsap.from('[data-hero-meta]', {
-        opacity: 0,
-        duration: 1,
-        ease: 'power2.out',
-        delay: 0.9,
-      })
-    }, rootRef)
+    const eyebrow = root.querySelector('[data-hero-eyebrow]')
+    const sub = root.querySelector('[data-hero-sub]')
+    const cta = root.querySelector('[data-hero-cta]')
+    const meta = root.querySelector('[data-hero-meta]')
 
-    return () => ctx.revert()
+    if (eyebrow)
+      tweens.push(
+        gsap.from(eyebrow, { y: 12, opacity: 0, duration: 0.7, ease: 'power3.out' })
+      )
+    if (sub)
+      tweens.push(
+        gsap.from(sub, {
+          y: 14,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+          delay: 0.6,
+        })
+      )
+    if (cta)
+      tweens.push(
+        gsap.from(cta, {
+          y: 14,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+          delay: 0.75,
+        })
+      )
+    if (meta)
+      tweens.push(
+        gsap.from(meta, {
+          opacity: 0,
+          duration: 1,
+          ease: 'power2.out',
+          delay: 0.9,
+        })
+      )
+
+    return () => {
+      tweens.forEach((t) => t.kill())
+    }
   }, [])
 
   return (
@@ -197,10 +210,7 @@ function HeroLine({ line, muted = false }: { line: string; muted?: boolean }) {
 }
 
 /* --------------------------------------------------------------------------
-   Pinned promise — the hero beat of the page.  Scroll scrubs a timeline:
-     1. URL input types itself character by character
-     2. Crawl "page" cards cascade down with a counter ticking up
-     3. Emerald "Ready" pill appears
+   Pinned promise — scroll scrubs a 3-phase timeline
    -------------------------------------------------------------------------- */
 
 const DEMO_URL = 'https://yourbusiness.com'
@@ -217,13 +227,11 @@ const CRAWL_PAGES = [
 
 function PinnedPromise() {
   const rootRef = useRef<HTMLElement>(null)
-  const urlRef = useRef<HTMLSpanElement>(null)
-  const counterRef = useRef<HTMLSpanElement>(null)
   const [pagesVisible, setPagesVisible] = useState(0)
   const [readyVisible, setReadyVisible] = useState(false)
   const [typedUrl, setTypedUrl] = useState('')
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
 
@@ -231,48 +239,50 @@ function PinnedPromise() {
       '(prefers-reduced-motion: reduce)'
     ).matches
     if (reducedMotion) {
+      /* eslint-disable react-hooks/set-state-in-effect --
+         One-shot sync with prefers-reduced-motion; no animation loop. */
       setTypedUrl(DEMO_URL)
       setPagesVisible(CRAWL_PAGES.length)
       setReadyVisible(true)
+      /* eslint-enable react-hooks/set-state-in-effect */
       return
     }
 
-    const ctx = gsap.context(() => {
-      const progress = { t: 0, typed: 0, count: 0 }
+    gsap.registerPlugin(ScrollTrigger)
 
-      ScrollTrigger.create({
-        trigger: root,
-        start: 'top top',
-        end: '+=2400',
-        pin: true,
-        scrub: 0.6,
-        onUpdate: (self) => {
-          const p = self.progress
-          progress.t = p
+    let typedSoFar = 0
+    let pagesSoFar = 0
 
-          // Phase 1 (0 — 0.25): type URL
-          const typeP = Math.min(1, p / 0.25)
-          const chars = Math.floor(typeP * DEMO_URL.length)
-          if (chars !== progress.typed) {
-            progress.typed = chars
-            setTypedUrl(DEMO_URL.slice(0, chars))
-          }
+    const st = ScrollTrigger.create({
+      trigger: root,
+      start: 'top top',
+      end: '+=2400',
+      pin: true,
+      scrub: 0.6,
+      onUpdate: (self) => {
+        const p = self.progress
 
-          // Phase 2 (0.25 — 0.75): crawl cards cascade + counter
-          const crawlP = Math.max(0, Math.min(1, (p - 0.25) / 0.5))
-          const pageCount = Math.floor(crawlP * CRAWL_PAGES.length + 0.0001)
-          if (pageCount !== progress.count) {
-            progress.count = pageCount
-            setPagesVisible(pageCount)
-          }
+        const typeP = Math.min(1, p / 0.25)
+        const chars = Math.floor(typeP * DEMO_URL.length)
+        if (chars !== typedSoFar) {
+          typedSoFar = chars
+          setTypedUrl(DEMO_URL.slice(0, chars))
+        }
 
-          // Phase 3 (> 0.85): ready state
-          setReadyVisible(p > 0.82)
-        },
-      })
-    }, root)
+        const crawlP = Math.max(0, Math.min(1, (p - 0.25) / 0.5))
+        const pageCount = Math.floor(crawlP * CRAWL_PAGES.length + 0.0001)
+        if (pageCount !== pagesSoFar) {
+          pagesSoFar = pageCount
+          setPagesVisible(pageCount)
+        }
 
-    return () => ctx.revert()
+        setReadyVisible(p > 0.82)
+      },
+    })
+
+    return () => {
+      st.kill()
+    }
   }, [])
 
   return (
@@ -283,7 +293,6 @@ function PinnedPromise() {
     >
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col justify-center px-6 py-24">
         <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-          {/* Left: narration */}
           <div className="lg:sticky lg:top-32">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink-tertiary)]">
               How it works
@@ -320,16 +329,14 @@ function PinnedPromise() {
             </ol>
           </div>
 
-          {/* Right: the demo */}
           <div className="relative">
-            {/* URL input */}
             <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
               <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
                 Website URL
               </p>
               <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
                 <span className="inline-flex items-baseline">
-                  <span ref={urlRef}>{typedUrl}</span>
+                  <span>{typedUrl}</span>
                   {!readyVisible && typedUrl.length < DEMO_URL.length && (
                     <span className="landing-cursor" aria-hidden />
                   )}
@@ -349,7 +356,6 @@ function PinnedPromise() {
               </div>
             </div>
 
-            {/* Crawl cards — stack below */}
             <div className="relative mt-5 h-[320px]">
               {CRAWL_PAGES.map((p, i) => {
                 const shown = i < pagesVisible
@@ -365,7 +371,9 @@ function PinnedPromise() {
                       transform: shown
                         ? `translateX(${offsetX}px) rotate(${rot}deg)`
                         : `translateX(${offsetX}px) translateY(24px) rotate(${rot}deg)`,
-                      opacity: shown ? 1 - Math.max(0, i - pagesVisible + 2) * 0.15 : 0,
+                      opacity: shown
+                        ? 1 - Math.max(0, i - pagesVisible + 2) * 0.15
+                        : 0,
                       zIndex: CRAWL_PAGES.length - i,
                       transitionTimingFunction:
                         'cubic-bezier(0.32, 0.72, 0, 1)',
@@ -391,13 +399,12 @@ function PinnedPromise() {
               })}
             </div>
 
-            {/* Counter footer */}
             <div className="mt-5 flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
                 Pages indexed
               </p>
               <p className="font-mono text-2xl tracking-tight text-[color:var(--ink-primary)]">
-                <span ref={counterRef}>{pagesVisible.toString().padStart(2, '0')}</span>
+                <span>{pagesVisible.toString().padStart(2, '0')}</span>
                 <span className="text-[color:var(--ink-tertiary)]">
                   /{CRAWL_PAGES.length}
                 </span>
@@ -463,8 +470,7 @@ function Narration({
 }
 
 /* --------------------------------------------------------------------------
-   Chat demo — a mocked conversation that typewriters into place as the
-   section scrolls into view.  Not pinned; plays on enter.
+   Chat demo — typewriter answer on enter
    -------------------------------------------------------------------------- */
 
 const CHAT_ANSWER =
@@ -476,7 +482,7 @@ function ChatDemo() {
   const [userShown, setUserShown] = useState(false)
   const [citationShown, setCitationShown] = useState(false)
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
 
@@ -484,46 +490,43 @@ function ChatDemo() {
       '(prefers-reduced-motion: reduce)'
     ).matches
     if (reducedMotion) {
+      /* eslint-disable react-hooks/set-state-in-effect --
+         One-shot sync with prefers-reduced-motion; no animation loop. */
       setUserShown(true)
       setTyped(CHAT_ANSWER.length)
       setCitationShown(true)
+      /* eslint-enable react-hooks/set-state-in-effect */
       return
     }
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: root,
-          start: 'top 70%',
-          end: 'bottom 30%',
-          toggleActions: 'play none none reverse',
-        },
-      })
+    gsap.registerPlugin(ScrollTrigger)
 
-      tl.call(() => setUserShown(true))
-        .to(
-          { n: 0 },
-          {
-            n: CHAT_ANSWER.length,
-            duration: 2.4,
-            ease: 'none',
-            onUpdate() {
-              setTyped(Math.floor(this.targets()[0].n))
-            },
-          },
-          '+=0.6'
-        )
-        .call(() => setCitationShown(true), [], '+=0.15')
-    }, root)
+    const proxy = { n: 0 }
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: root,
+        start: 'top 70%',
+        end: 'bottom 30%',
+        toggleActions: 'play none none reverse',
+      },
+    })
+    tl.call(() => setUserShown(true))
+      .to(proxy, {
+        n: CHAT_ANSWER.length,
+        duration: 2.4,
+        ease: 'none',
+        onUpdate: () => setTyped(Math.floor(proxy.n)),
+      }, '+=0.6')
+      .call(() => setCitationShown(true), [], '+=0.15')
 
-    return () => ctx.revert()
+    return () => {
+      tl.scrollTrigger?.kill()
+      tl.kill()
+    }
   }, [])
 
   return (
-    <section
-      ref={rootRef}
-      className="relative px-6 py-40"
-    >
+    <section ref={rootRef} className="relative px-6 py-40">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink-tertiary)]">
@@ -573,9 +576,7 @@ function ChatDemo() {
                 <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[color:var(--border-strong)] font-mono text-[10px] text-[color:var(--ink-secondary)]">
                   1
                 </span>
-                <span className="font-mono">
-                  yourbusiness.com/returns
-                </span>
+                <span className="font-mono">yourbusiness.com/returns</span>
               </div>
             )}
           </div>
@@ -595,7 +596,7 @@ function Dot({ delay = 0 }: { delay?: number }) {
 }
 
 /* --------------------------------------------------------------------------
-   Embed scene — code block, line-by-line reveal.
+   Embed scene — line-by-line code reveal
    -------------------------------------------------------------------------- */
 
 const EMBED_LINES = [
@@ -611,7 +612,7 @@ function EmbedScene() {
   const rootRef = useRef<HTMLElement>(null)
   const [linesShown, setLinesShown] = useState(0)
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
 
@@ -619,31 +620,33 @@ function EmbedScene() {
       '(prefers-reduced-motion: reduce)'
     ).matches
     if (reducedMotion) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot sync with prefers-reduced-motion
       setLinesShown(EMBED_LINES.length)
       return
     }
 
-    const ctx = gsap.context(() => {
-      gsap.timeline({
-        scrollTrigger: {
-          trigger: root,
-          start: 'top 70%',
-          toggleActions: 'play none none reverse',
-        },
-      }).to(
-        { n: 0 },
-        {
-          n: EMBED_LINES.length,
-          duration: 1.4,
-          ease: 'power2.out',
-          onUpdate() {
-            setLinesShown(Math.ceil(this.targets()[0].n))
-          },
-        }
-      )
-    }, root)
+    gsap.registerPlugin(ScrollTrigger)
 
-    return () => ctx.revert()
+    const proxy = { n: 0 }
+    const tween = gsap.to(proxy, {
+      n: EMBED_LINES.length,
+      duration: 1.4,
+      ease: 'power2.out',
+      paused: true,
+      onUpdate: () => setLinesShown(Math.ceil(proxy.n)),
+    })
+
+    const st = ScrollTrigger.create({
+      trigger: root,
+      start: 'top 70%',
+      onEnter: () => tween.play(),
+      onLeaveBack: () => tween.reverse(),
+    })
+
+    return () => {
+      st.kill()
+      tween.kill()
+    }
   }, [])
 
   return (
@@ -707,14 +710,14 @@ function Feat({ children }: { children: React.ReactNode }) {
 }
 
 /* --------------------------------------------------------------------------
-   Dashboard teaser — parallax a mocked dashboard bento.  Soft rise on enter.
+   Dashboard teaser — parallax rise
    -------------------------------------------------------------------------- */
 
 function DashboardTeaser() {
   const rootRef = useRef<HTMLElement>(null)
   const artRef = useRef<HTMLDivElement>(null)
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const root = rootRef.current
     const art = artRef.current
     if (!root || !art) return
@@ -724,36 +727,41 @@ function DashboardTeaser() {
     ).matches
     if (reducedMotion) return
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        art,
-        { y: 60, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 1.1,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: root,
-            start: 'top 75%',
-            toggleActions: 'play none none reverse',
-          },
-        }
-      )
+    gsap.registerPlugin(ScrollTrigger)
 
-      gsap.to(art, {
-        y: -40,
-        ease: 'none',
+    const rise = gsap.fromTo(
+      art,
+      { y: 60, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 1.1,
+        ease: 'power3.out',
         scrollTrigger: {
           trigger: root,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 0.8,
+          start: 'top 75%',
+          toggleActions: 'play none none reverse',
         },
-      })
-    }, root)
+      }
+    )
 
-    return () => ctx.revert()
+    const drift = gsap.to(art, {
+      y: -40,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: root,
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 0.8,
+      },
+    })
+
+    return () => {
+      rise.scrollTrigger?.kill()
+      rise.kill()
+      drift.scrollTrigger?.kill()
+      drift.kill()
+    }
   }, [])
 
   return (
@@ -831,7 +839,7 @@ function MockMetric({
 }
 
 /* --------------------------------------------------------------------------
-   Pricing — single committed card, no comparison gymnastics.
+   Pricing
    -------------------------------------------------------------------------- */
 
 function Pricing() {
