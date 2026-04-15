@@ -240,30 +240,40 @@ const P = {
   cardsEnd: 0.42,
   readyStart: 0.42,
   readyEnd: 0.50,
-  mergeStart: 0.50,       // cards + URL physically converge to center
-  mergeEnd: 0.62,         // everything collapsed into a small pill at center
-  pillOpenStart: 0.62,    // pill opens sideways (still at center)
-  pillOpenEnd: 0.72,      // pill full width at center
+  mergeStart: 0.50,       // cards + URL + counter slide toward center (no scale, no fade)
+  mergeEnd: 0.62,         // all stacked at center Y, perfectly overlapping
+  pillFormStart: 0.62,    // stack fades out; pill fades in at 100% width, shrinks to composer width
+  pillFormEnd: 0.72,      // pill at final width, still at center
   pillDropStart: 0.72,    // pill drops from center to bottom
-  pillDropEnd: 0.78,      // pill parked at bottom, chat area revealed
+  pillDropEnd: 0.78,      // pill parked at bottom
   userStart: 0.80,        // user question pops in
-  typeChatStart: 0.82,    // assistant typewriter begins
-  typeChatEnd: 0.96,      // typewriter done
-  citationStart: 0.97,    // citation chip drops
+  typeChatStart: 0.82,    // typewriter begins
+  typeChatEnd: 0.96,
+  citationStart: 0.97,
 }
 
 function clamp01(n: number) {
   return Math.max(0, Math.min(1, n))
 }
 
-/* Geometry used by the merge animation — tuned to the 520px demo stage.
-   CARDS_CENTER_INDEX is the visual middle of the 8-card stack (between
-   index 3 and 4), so cards above translate down, cards below translate
-   up, meeting at the center line. */
-const CARD_ROW_HEIGHT = 52 // card height (44px) + gap (8px)
-const CARDS_CENTER_INDEX = (CRAWL_PAGES.length - 1) / 2 // 3.5
-const URL_MERGE_Y = 180  // URL bar sits ~180px above center — travels down
-const COUNTER_MERGE_Y = 150 // counter sits below center — travels up
+/* Stage geometry — items absolute-positioned with top:50% and an initial
+   translateY offset that reflects their resting distance from center.
+   At merge=1 the offsets zero out and every item lands on the center Y. */
+const STAGE_H = 600
+const CARD_PITCH = 48      // card height + gap
+const CARD_H = 44
+
+/** Resting offset (px) from stage center for each item.  Negative = above,
+    positive = below.  The URL is 250px above center; card 0 is 168px above,
+    card 7 is 168px below; counter sits just below card 7. */
+const REST_OFFSET = {
+  url: -250,
+  cards: Array.from(
+    { length: CRAWL_PAGES.length },
+    (_, i) => (i - (CRAWL_PAGES.length - 1) / 2) * CARD_PITCH
+  ), // [-168, -120, -72, -24, 24, 72, 120, 168]
+  counter: 234,
+} as const
 
 function PinnedPromise() {
   const rootRef = useRef<HTMLElement>(null)
@@ -272,9 +282,9 @@ function PinnedPromise() {
   const [typedUrl, setTypedUrl] = useState('')
   const [pagesVisible, setPagesVisible] = useState(0)
   const [readyVisible, setReadyVisible] = useState(false)
-  const [merge, setMerge] = useState(0)       // 0 → 1 : cards/URL converge to center
-  const [pillOpen, setPillOpen] = useState(0) // 0 → 1 : small pill opens wide
-  const [pillDrop, setPillDrop] = useState(0) // 0 → 1 : pill drops from center to bottom
+  const [merge, setMerge] = useState(0)       // 0 → 1 : cards + URL + counter slide to center
+  const [pillForm, setPillForm] = useState(0) // 0 → 1 : stack fades; pill shrinks 100% → composer width
+  const [pillDrop, setPillDrop] = useState(0) // 0 → 1 : pill drops center → bottom
   const [userShown, setUserShown] = useState(false)
   const [typedChars, setTypedChars] = useState(0)
   const [citationShown, setCitationShown] = useState(false)
@@ -293,7 +303,7 @@ function PinnedPromise() {
       setPagesVisible(CRAWL_PAGES.length)
       setReadyVisible(true)
       setMerge(1)
-      setPillOpen(1)
+      setPillForm(1)
       setPillDrop(1)
       setUserShown(true)
       setTypedChars(CHAT_ANSWER.length)
@@ -308,7 +318,7 @@ function PinnedPromise() {
     let lastPages = 0
     let lastReady = false
     let lastMerge = 0
-    let lastPillOpen = 0
+    let lastPillForm = 0
     let lastPillDrop = 0
     let lastUser = false
     let lastChars = 0
@@ -353,13 +363,13 @@ function PinnedPromise() {
           setMerge(m)
         }
 
-        // Pill opens sideways (still at center)
-        const po = clamp01(
-          (p - P.pillOpenStart) / (P.pillOpenEnd - P.pillOpenStart)
+        // Pill-form: stack fades, pill fades in and shrinks 100% → composer
+        const pf = clamp01(
+          (p - P.pillFormStart) / (P.pillFormEnd - P.pillFormStart)
         )
-        if (Math.abs(po - lastPillOpen) > 0.001) {
-          lastPillOpen = po
-          setPillOpen(po)
+        if (Math.abs(pf - lastPillForm) > 0.001) {
+          lastPillForm = pf
+          setPillForm(pf)
         }
 
         // Pill drops from center to bottom
@@ -491,72 +501,61 @@ function PinnedPromise() {
             </ol>
           </div>
 
-          {/* Demo stage — fixed height so center is predictable */}
-          <div className="relative h-[520px]">
-            {/* URL input — translates DOWN toward center as merge progresses */}
-            <div
-              className="surface-hairline absolute inset-x-0 top-0 rounded-xl p-5 shadow-[var(--shadow-md)]"
-              style={{
-                transform: `translateY(${merge * URL_MERGE_Y}px) scale(${1 - merge * 0.85})`,
-                transformOrigin: 'center center',
-                opacity: 1 - clamp01((merge - 0.7) / 0.3),
-                transition: 'none',
-                pointerEvents: merge > 0.1 ? 'none' : 'auto',
-              }}
-            >
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
-                Website URL
-              </p>
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
-                <span className="inline-flex items-baseline">
-                  <span>{typedUrl}</span>
-                  {!readyVisible && typedUrl.length < DEMO_URL.length && (
-                    <span className="landing-cursor" aria-hidden />
-                  )}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
-                    readyVisible
-                      ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
-                      : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
-                  }`}
-                >
+          {/* Demo stage — every item anchored at top 50% with a resting Y
+              offset.  At merge=0 items render at their natural positions
+              (URL up top, 8 cards stacked, counter at bottom).  At merge=1
+              the offsets are zeroed and every item is at the exact center. */}
+          <div
+            className="relative"
+            style={{ height: STAGE_H }}
+          >
+            {/* URL input */}
+            <StageItem offset={REST_OFFSET.url} merge={merge} pillForm={pillForm}>
+              <div className="surface-hairline rounded-xl p-5 shadow-[var(--shadow-md)]">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+                  Website URL
+                </p>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
+                  <span className="inline-flex items-baseline">
+                    <span>{typedUrl}</span>
+                    {!readyVisible && typedUrl.length < DEMO_URL.length && (
+                      <span className="landing-cursor" aria-hidden />
+                    )}
+                  </span>
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
-                  />
-                  {readyVisible ? 'Ready' : 'Crawling'}
-                </span>
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-300 ${
+                      readyVisible
+                        ? 'bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
+                        : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-tertiary)]'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${readyVisible ? 'bg-[color:var(--accent-success)]' : 'bg-[color:var(--ink-tertiary)] rc-pulse'}`}
+                    />
+                    {readyVisible ? 'Ready' : 'Crawling'}
+                  </span>
+                </div>
               </div>
-            </div>
+            </StageItem>
 
-            {/* Crawl cards — each converges to center based on its index */}
-            <div
-              className="absolute inset-x-0 flex flex-col gap-2"
-              style={{ top: '120px' }}
-            >
-              {CRAWL_PAGES.map((p, i) => {
-                const shown = i < pagesVisible
-                /* offset from center of the 8-card stack (cards 0..7).
-                   Positive = this card moves DOWN toward center (top cards).
-                   Negative = this card moves UP toward center (bottom cards). */
-                const offsetFromCenter =
-                  (CARDS_CENTER_INDEX - i) * CARD_ROW_HEIGHT
-                const mergeY = offsetFromCenter * merge
-                const mergeScale = 1 - merge * 0.82
-                const mergeOpacity = 1 - clamp01((merge - 0.7) / 0.3)
-                return (
+            {/* 8 crawl cards */}
+            {CRAWL_PAGES.map((p, i) => {
+              const shown = i < pagesVisible
+              return (
+                <StageItem
+                  key={p.path}
+                  offset={REST_OFFSET.cards[i]}
+                  merge={merge}
+                  pillForm={pillForm}
+                  /* During cascade (before merge starts), cards drop in one
+                     at a time.  Before "shown" they sit 12px below with
+                     opacity 0.  CSS transition handles the drop-in motion;
+                     the transform we pass only kicks in once merge > 0. */
+                  entryHidden={!shown && merge === 0}
+                >
                   <div
-                    key={p.path}
                     className="surface-hairline rounded-lg px-4 py-2.5 shadow-[var(--shadow-sm)]"
-                    style={{
-                      transform: `translateY(${shown ? mergeY : 12}px) scale(${merge > 0 ? mergeScale : 1})`,
-                      transformOrigin: 'center center',
-                      opacity: shown ? mergeOpacity : 0,
-                      transition:
-                        merge > 0
-                          ? 'none'
-                          : 'transform 380ms cubic-bezier(0.32,0.72,0,1), opacity 280ms cubic-bezier(0.32,0.72,0,1)',
-                    }}
+                    style={{ height: CARD_H }}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -574,35 +573,32 @@ function PinnedPromise() {
                       />
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                </StageItem>
+              )
+            })}
 
-            {/* Counter — also translates toward center + fades */}
-            <div
-              className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-4"
-              style={{
-                transform: `translateY(${merge * -COUNTER_MERGE_Y}px) scale(${1 - merge * 0.85})`,
-                transformOrigin: 'center center',
-                opacity: 1 - clamp01((merge - 0.6) / 0.3),
-                transition: 'none',
-              }}
-            >
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
-                Pages indexed
-              </p>
-              <p className="font-mono text-2xl tracking-tight text-[color:var(--ink-primary)]">
-                <span>{pagesVisible.toString().padStart(2, '0')}</span>
-                <span className="text-[color:var(--ink-tertiary)]">
-                  /{CRAWL_PAGES.length}
-                </span>
-              </p>
-            </div>
-
-            {/* Pill → Chat panel layer (absolute, sits on top) */}
-            <ChatMorph
+            {/* Counter */}
+            <StageItem
+              offset={REST_OFFSET.counter}
               merge={merge}
-              pillOpen={pillOpen}
+              pillForm={pillForm}
+            >
+              <div className="flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+                  Pages indexed
+                </p>
+                <p className="font-mono text-2xl tracking-tight text-[color:var(--ink-primary)]">
+                  <span>{pagesVisible.toString().padStart(2, '0')}</span>
+                  <span className="text-[color:var(--ink-tertiary)]">
+                    /{CRAWL_PAGES.length}
+                  </span>
+                </p>
+              </div>
+            </StageItem>
+
+            {/* Pill → chat panel */}
+            <ChatMorph
+              pillForm={pillForm}
               pillDrop={pillDrop}
               userShown={userShown}
               typedChars={typedChars}
@@ -616,52 +612,92 @@ function PinnedPromise() {
 }
 
 /**
+ * Stage item — positions a child at `top: 50%` with an initial translateY
+ * offset equal to its resting distance from center.  As `merge` goes 0→1
+ * the offset is interpolated toward 0, so the item physically slides to
+ * the stage center.  No scale, no fade during slide.  Once merge hits 1
+ * and `pillForm` starts, the item fades out to make room for the pill.
+ */
+function StageItem({
+  offset,
+  merge,
+  pillForm,
+  entryHidden = false,
+  children,
+}: {
+  offset: number
+  merge: number
+  pillForm: number
+  entryHidden?: boolean
+  children: React.ReactNode
+}) {
+  // Current vertical offset from center: starts at `offset`, reaches 0 at merge=1
+  const currentY = offset * (1 - merge)
+  // Fade only kicks in during pill-form (not during merge).  Entry-hidden
+  // means the item hasn't appeared yet in the cascade (opacity stays 0).
+  const opacity = entryHidden ? 0 : 1 - pillForm
+  return (
+    <div
+      className="absolute left-0 right-0 will-change-transform"
+      style={{
+        top: '50%',
+        transform: `translateY(calc(-50% + ${currentY}px))`,
+        opacity,
+        transition:
+          merge > 0 || pillForm > 0
+            ? 'opacity 260ms cubic-bezier(0.32,0.72,0,1)'
+            : 'opacity 280ms cubic-bezier(0.32,0.72,0,1), transform 420ms cubic-bezier(0.32,0.72,0,1)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
  * Pill → composer + messages.
  *
- * At merge=1 the pill is born at the vertical center of the stage as a
- * small rounded-full ink shape, like the cards' converged essence.  As
- * pillOpen goes 0→1 it expands sideways to the full column width.  Then
- * as pillDrop goes 0→1 it translates from center to the bottom of the
- * stage, revealing the chat area above.  Messages and typewriter answer
- * fade in once pillDrop ≥ 0.4.
+ * Pill appears at stage center at 100% width (matching the stacked cards).
+ * As pillForm 0→1 it shrinks horizontally to composer width — "sides come
+ * in."  As pillDrop 0→1 it translates from center to the bottom of the
+ * stage.  Chat messages fade in once the pill has cleared the center.
  */
 function ChatMorph({
-  merge,
-  pillOpen,
+  pillForm,
   pillDrop,
   userShown,
   typedChars,
   citationShown,
 }: {
-  merge: number
-  pillOpen: number
+  pillForm: number
   pillDrop: number
   userShown: boolean
   typedChars: number
   citationShown: boolean
 }) {
-  // Pill only starts to show at merge > 0.8 (so the cards finish converging
-  // visually before the pill takes over).
-  const pillVisible = merge > 0.75
-  const pillOpacity = clamp01((merge - 0.75) / 0.25)
+  // Pill begins to show at the start of pillForm.
+  const pillVisible = pillForm > 0
 
-  // Width: small pill at merge end (64px equivalent ≈ 12% of container),
-  // expanding to full width as pillOpen → 1.
-  const pillWidthPct = 12 + pillOpen * 88 // percent
+  // Width morphs: 100% of column (matching the stacked card visual) down to
+  // composer width ~68%.  "Sides come in."
+  const PILL_WIDTH_END = 68
+  const pillWidthPct = 100 - pillForm * (100 - PILL_WIDTH_END)
 
-  // Vertical position: center (50%) → bottom (calc(100% - pillHeight/2 - padding))
-  // Center = 260px (half of 520). Bottom target = 520 - 52/2 - 12 = 482.
-  // So translate from 260 → 482, delta = 222.
-  const CENTER_TOP = 260
-  const BOTTOM_DELTA = 222
-  const pillTopPx = CENTER_TOP + BOTTOM_DELTA * pillDrop - 26 // -26 centers the 52px pill on that point
+  // Inner content (composer text + icons) fades in only after the pill has
+  // finished forming — we want the morph to look like a shape change first.
+  const composerInnerOpacity = clamp01(pillForm * 1.3 - 0.5)
 
-  // Chat panel reveals as pill drops away from center
-  const panelRevealed = pillDrop > 0.4
+  // Vertical position: center (top:50%, translate -50%) → bottom.
+  // Stage is 600px tall, pill is 52px.  Travel distance from center to
+  // bottom = (stageHeight/2 - pillHeight/2 - padding) = 300 - 26 - 10 = 264px.
+  const PILL_DROP_PX = 264
+
+  // Chat messages reveal as pill moves away from center (clears space above)
+  const panelRevealed = pillDrop > 0.5
 
   return (
     <>
-      {/* Message stack — sits in the space ABOVE the pill once it's dropped */}
+      {/* Chat messages — absolute stack at the top of the stage */}
       <div
         className="absolute inset-x-0 top-0 flex flex-col gap-3 px-1 pt-6 transition-opacity duration-300"
         style={{
@@ -706,24 +742,26 @@ function ChatMorph({
         )}
       </div>
 
-      {/* The pill — absolute-positioned so it can move from center to bottom.
-          Initially starts tiny (like an orb but pill-shaped), opens sideways,
-          then drops down as a composer bar. */}
+      {/* The pill — anchored at top:50%, translates down as pillDrop → 1.
+          Width shrinks 100% → 68% during pillForm (sides come in). */}
       {pillVisible && (
         <div
-          className="pointer-events-auto absolute left-1/2 flex items-center overflow-hidden rounded-full bg-[color:var(--ink-primary)] shadow-[var(--shadow-md)]"
+          className="pointer-events-auto absolute left-1/2 flex items-center overflow-hidden rounded-full bg-[color:var(--ink-primary)] shadow-[var(--shadow-md)] will-change-transform"
           style={{
-            top: `${pillTopPx}px`,
+            top: '50%',
             width: `${pillWidthPct}%`,
             height: 52,
-            transform: 'translateX(-50%)',
-            opacity: pillOpacity,
+            transform: `translate(-50%, calc(-50% + ${pillDrop * PILL_DROP_PX}px))`,
+            opacity: pillForm,
             transition: 'none',
           }}
         >
           <div
-            className="flex h-full w-full items-center gap-3 px-5 transition-opacity duration-300"
-            style={{ opacity: clamp01(pillOpen * 1.3 - 0.3) }}
+            className="flex h-full w-full items-center gap-3 px-5"
+            style={{
+              opacity: composerInnerOpacity,
+              transition: 'opacity 220ms cubic-bezier(0.32,0.72,0,1)',
+            }}
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[color:var(--bg-surface)]">
               <IconSparkle width={13} height={13} />
