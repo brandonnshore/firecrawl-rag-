@@ -683,8 +683,11 @@ function UrlBar({
         className="surface-hairline overflow-hidden rounded-xl shadow-[var(--shadow-md)]"
         style={{ height, padding }}
       >
-        <div style={{ opacity: contentOpacity }}>
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+        <div
+          className="flex h-full flex-col justify-center"
+          style={{ opacity: contentOpacity }}
+        >
+          <p className="mb-2 font-mono text-[10px] leading-none uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
             Website URL
           </p>
           <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2.5 font-mono text-[14px] text-[color:var(--ink-primary)]">
