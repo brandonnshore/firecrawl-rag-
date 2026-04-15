@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:widget": "cd widget && pnpm install && pnpm build && cp dist/rubycrawl-loader.js dist/rubycrawl-widget.js ../public/",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"

@@ -1,0 +1,21 @@
+{
+  "name": "rubycrawl-widget",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:loader": "vite build --config vite.config.ts",
+    "build:widget": "vite build --config vite.widget.config.ts",
+    "build": "pnpm build:loader && pnpm build:widget",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "preact": "^10.25.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "vite": "^6.3.0",
+    "vitest": "^4.1.0",
+    "terser": "^5.37.0",
+    "typescript": "^5.0.0"
+  }
+}
