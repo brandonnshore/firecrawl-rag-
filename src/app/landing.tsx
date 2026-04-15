@@ -130,7 +130,7 @@ function Hero() {
   return (
     <section
       ref={rootRef}
-      className="relative flex min-h-[100dvh] flex-col justify-center px-6 pb-24 pt-32"
+      className="relative flex min-h-[100dvh] flex-col justify-center px-6 pb-32 pt-20"
     >
       <div className="mx-auto w-full max-w-6xl">
         <p
@@ -411,7 +411,7 @@ function PinnedPromise() {
     }
   }, [])
 
-  // Narration switches from "crawl" to "chat" at the merge point.
+  // Single rail of 6 steps; each lights as its scroll milestone fires.
   const chatPhase = merge > 0.4
 
   return (
@@ -435,25 +435,20 @@ function PinnedPromise() {
               </span>
             </h2>
 
-            {/* Crawl rail */}
-            <ol
-              className="absolute-rail mt-10 space-y-4 text-sm transition-opacity duration-500"
-              style={{
-                opacity: chatPhase ? 0 : 1,
-                pointerEvents: chatPhase ? 'none' : 'auto',
-              }}
-            >
+            {/* Unified rail — all 6 steps visible from the start, each
+                lights `active` then `done` as scroll milestones fire. */}
+            <ol className="mt-10 space-y-3 text-sm">
               <Narration
                 index="01"
                 label="Paste"
-                body="Any public URL. We validate, fetch the sitemap, kick off the crawl."
+                body="Any public URL. We fetch the sitemap and start crawling."
                 active={typedUrl.length > 0 && pagesVisible === 0}
                 done={pagesVisible > 0}
               />
               <Narration
                 index="02"
                 label="Crawl & index"
-                body="Every page read, cleaned, embedded. Up to 100 pages per site."
+                body="Every page read, cleaned, embedded. Up to 100 per site."
                 active={pagesVisible > 0 && !readyVisible}
                 done={readyVisible}
               />
@@ -461,39 +456,27 @@ function PinnedPromise() {
                 index="03"
                 label="Ready"
                 body="Everything your site knows, packaged into a chatbot."
-                active={readyVisible && merge < 0.2}
-                done={merge > 0.2}
+                active={readyVisible && !chatPhase}
+                done={chatPhase}
               />
-            </ol>
-
-            {/* Chat rail */}
-            <ol
-              className="mt-10 space-y-4 text-sm transition-opacity duration-500"
-              style={{
-                opacity: chatPhase ? 1 : 0,
-                marginTop: chatPhase ? '2.5rem' : '-15rem',
-                pointerEvents: chatPhase ? 'auto' : 'none',
-              }}
-              aria-hidden={!chatPhase}
-            >
               <Narration
-                index="01"
+                index="04"
                 label="Trained on your pages"
-                body="Answers only from what it read. No generic fluff, no hallucinations."
+                body="Answers only from what it read. No fluff, no hallucinations."
                 active={chatPhase && !userShown}
                 done={userShown}
               />
               <Narration
-                index="02"
+                index="05"
                 label="Cites every claim"
-                body="Visitors see the source for each answer. Builds trust instantly."
+                body="Visitors see the source for each answer. Builds trust."
                 active={userShown && typedChars < CHAT_ANSWER.length}
                 done={typedChars >= CHAT_ANSWER.length}
               />
               <Narration
-                index="03"
+                index="06"
                 label="Captures leads"
-                body="When it doesn't know, it offers to collect an email for you."
+                body="When it doesn't know, it offers to collect an email."
                 active={citationShown}
                 done={false}
               />
