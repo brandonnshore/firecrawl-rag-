@@ -245,3 +245,6 @@ as $$
   order by similarity desc
   limit least(match_count, 20);
 $$;
+
+-- Enable Realtime for sites table (required for live crawl status updates on setup page)
+alter publication supabase_realtime add table sites;

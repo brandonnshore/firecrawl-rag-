@@ -9,8 +9,6 @@ vi.mock('next/server', () => ({
 }))
 
 // Mock Supabase service client
-const mockSelect = vi.fn()
-const mockUpdate = vi.fn()
 const mockFrom = vi.fn()
 
 vi.mock('@supabase/supabase-js', () => ({
