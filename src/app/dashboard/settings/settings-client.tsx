@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { IconCheck, IconSpinner } from '@/components/icons'
 
 interface Site {
   id: string
@@ -43,7 +44,7 @@ export default function SettingsClient({ site }: { site: Site }) {
   const handleRecrawl = async () => {
     if (
       !confirm(
-        'This will re-crawl your website. Your current chatbot will keep working during the process. Continue?'
+        'Re-crawl your website? Your current chatbot keeps working during the new crawl.'
       )
     )
       return
@@ -54,7 +55,7 @@ export default function SettingsClient({ site }: { site: Site }) {
   const handleRotateKey = async () => {
     if (
       !confirm(
-        'This will generate a new site key. Your existing widget embed code will stop working. Continue?'
+        'Generate a new site key? Your existing embed code will stop working until you update it on your site.'
       )
     )
       return
@@ -68,75 +69,137 @@ export default function SettingsClient({ site }: { site: Site }) {
   }
 
   return (
-    <div className="mx-auto max-w-xl py-8">
-      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
-      <div className="space-y-6">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Calendly URL</label>
+    <div className="mx-auto max-w-xl rc-enter">
+      <header className="mb-10">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Settings
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Tune your chatbot.
+        </h1>
+      </header>
+
+      <section className="space-y-6">
+        <h2 className="border-b border-[color:var(--border-hairline)] pb-2 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+          Integrations
+        </h2>
+
+        <Field
+          label="Calendly URL"
+          hint="Shared when visitors ask to book a call or meeting."
+        >
           <input
             value={calendly}
             onChange={(e) => setCalendly(e.target.value)}
             placeholder="https://calendly.com/you/30min"
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="focus-ring block w-full rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2 text-[14px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)]"
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Google Maps URL
-          </label>
+        </Field>
+
+        <Field
+          label="Google Maps URL"
+          hint="Shared when visitors ask for directions or location."
+        >
           <input
             value={maps}
             onChange={(e) => setMaps(e.target.value)}
-            placeholder="https://maps.google.com/..."
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="https://maps.google.com/…"
+            className="focus-ring block w-full rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2 text-[14px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)]"
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Greeting message
-          </label>
+        </Field>
+
+        <Field
+          label="Greeting"
+          hint="The first message visitors see when they open the chat."
+        >
           <textarea
             value={greeting}
             onChange={(e) => setGreeting(e.target.value)}
             rows={2}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="focus-ring block w-full resize-none rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2 text-[14px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)]"
           />
-        </div>
+        </Field>
+
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
+          className="btn-press focus-ring inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-4 py-2 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save settings'}
+          {saving ? (
+            <>
+              <IconSpinner width={13} height={13} />
+              <span>Saving…</span>
+            </>
+          ) : saved ? (
+            <>
+              <IconCheck width={13} height={13} />
+              <span>Saved</span>
+            </>
+          ) : (
+            <span>Save settings</span>
+          )}
         </button>
+      </section>
 
-        <hr className="border-zinc-200 dark:border-zinc-700" />
+      <section className="mt-12 space-y-6">
+        <h2 className="border-b border-[color:var(--border-hairline)] pb-2 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]">
+          Advanced
+        </h2>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">Site key</label>
+        <Field
+          label="Site key"
+          hint="Embedded in your widget script. Rotating invalidates the current embed."
+        >
           <div className="flex items-center gap-2">
-            <code className="rounded bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">
-              {siteKey.slice(0, 8)}...{siteKey.slice(-4)}
+            <code className="flex-1 rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2 font-mono text-xs text-[color:var(--ink-primary)]">
+              {siteKey.slice(0, 10)}…{siteKey.slice(-6)}
             </code>
             <button
               onClick={handleRotateKey}
-              className="text-xs text-red-500 hover:underline"
+              className="btn-press focus-ring rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs font-medium text-[color:var(--accent-danger)] hover:border-[color:var(--accent-danger)]/30"
             >
               Rotate key
             </button>
           </div>
-        </div>
+        </Field>
 
-        <div>
+        <Field
+          label="Re-crawl website"
+          hint="Pulls your site again. The current chatbot keeps answering while the new index is built."
+        >
           <button
             onClick={handleRecrawl}
             disabled={site.crawl_status !== 'ready'}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600"
+            className="btn-press focus-ring rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-4 py-2 text-sm font-medium text-[color:var(--ink-primary)] hover:bg-[color:var(--bg-subtle)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Re-crawl website
+            Start a new crawl
           </button>
-        </div>
-      </div>
+        </Field>
+      </section>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium tracking-tight text-[color:var(--ink-secondary)]">
+        {label}
+      </label>
+      {children}
+      {hint && (
+        <p className="mt-1.5 text-xs text-[color:var(--ink-tertiary)]">
+          {hint}
+        </p>
+      )}
     </div>
   )
 }

@@ -3,6 +3,13 @@
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  IconArrowRight,
+  IconCheck,
+  IconAlert,
+  IconSparkle,
+  IconSpinner,
+} from '@/components/icons'
 
 type CrawlStatus = 'idle' | 'crawling' | 'indexing' | 'ready' | 'failed'
 
@@ -87,15 +94,12 @@ export default function SetupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       })
-
       const data = await res.json()
-
       if (!res.ok) {
         setError(data.error || 'Failed to start crawl')
         setLoading(false)
         return
       }
-
       setSiteId(data.site_id)
       setCrawlStatus('crawling')
     } catch {
@@ -109,7 +113,6 @@ export default function SetupPage() {
     setError(null)
     setErrorMessage(null)
     setCrawlStatus('idle')
-
     try {
       const res = await fetch('/api/crawl/retry', { method: 'POST' })
       const data = await res.json()
@@ -125,40 +128,68 @@ export default function SetupPage() {
 
   if (crawlStatus === 'ready') {
     return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <div className="mb-6 text-6xl">🎉</div>
-        <h1 className="mb-4 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          Your chatbot is ready!
-        </h1>
-        <p className="mb-8 text-zinc-600 dark:text-zinc-400">
-          We crawled {pageCount} pages and trained your chatbot on your website content.
+      <div className="mx-auto max-w-xl py-16 rc-enter">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--accent-success)]">
+          Crawl complete
         </p>
-        <button
-          onClick={() => router.push('/dashboard/preview')}
-          className="rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          Preview your chatbot →
-        </button>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Your chatbot
+          <br />
+          is ready.
+        </h1>
+        <p className="mt-6 text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+          We read{' '}
+          <span className="font-mono text-[color:var(--ink-primary)]">
+            {pageCount}
+          </span>{' '}
+          {pageCount === 1 ? 'page' : 'pages'} and trained the chatbot on your
+          content. Try it, then embed it.
+        </p>
+
+        <div className="mt-10 flex flex-wrap gap-3">
+          <button
+            onClick={() => router.push('/dashboard/preview')}
+            className="btn-press focus-ring group inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-5 py-2.5 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
+          >
+            <span>Preview your chatbot</span>
+            <IconArrowRight
+              width={14}
+              height={14}
+              className="transition-transform duration-200 group-hover:translate-x-0.5"
+            />
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/embed')}
+            className="btn-press focus-ring rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-2.5 text-sm font-medium text-[color:var(--ink-primary)] hover:bg-[color:var(--bg-subtle)]"
+          >
+            Embed it
+          </button>
+        </div>
       </div>
     )
   }
 
   if (crawlStatus === 'failed') {
     return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <div className="mb-6 text-6xl">😞</div>
-        <h1 className="mb-4 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Something went wrong
+      <div className="mx-auto max-w-xl py-16 rc-enter">
+        <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--accent-danger)]/30 bg-[color:var(--accent-danger-bg)] text-[color:var(--accent-danger)]">
+          <IconAlert width={18} height={18} />
+        </div>
+        <h1 className="text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Crawl didn&apos;t finish.
         </h1>
-        <p className="mb-4 text-zinc-600 dark:text-zinc-400">
-          {errorMessage || 'The crawl failed. Please try again.'}
+        <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+          {errorMessage ||
+            'Something went wrong while reading your site. You can try again.'}
         </p>
         {error && (
-          <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p className="mt-3 text-sm text-[color:var(--accent-danger)]">
+            {error}
+          </p>
         )}
         <button
           onClick={handleRetry}
-          className="rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="btn-press focus-ring mt-8 inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-5 py-2.5 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
         >
           Try again
         </button>
@@ -168,98 +199,150 @@ export default function SetupPage() {
 
   if (crawlStatus === 'crawling' || crawlStatus === 'indexing') {
     return (
-      <div className="mx-auto max-w-lg py-16">
-        <h1 className="mb-8 text-center text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Building your chatbot...
+      <div className="mx-auto max-w-xl py-16 rc-enter">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          In progress
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Building your chatbot.
         </h1>
-        <div className="space-y-4">
-          <ProgressStep label="Website found" done={true} />
-          <ProgressStep
+        <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+          This usually takes two to three minutes. You can safely leave this
+          page — we&apos;ll keep working.
+        </p>
+
+        <ol className="mt-10 space-y-0">
+          <StepRow label="Website found" state="done" />
+          <StepRow
             label={
               pageCount > 0
-                ? `Reading your pages... (Found ${pageCount} pages)`
-                : 'Reading your pages...'
+                ? `Reading your pages · ${pageCount} so far`
+                : 'Reading your pages'
             }
-            done={crawlStatus === 'indexing'}
-            active={crawlStatus === 'crawling'}
+            state={crawlStatus === 'crawling' ? 'active' : 'done'}
           />
-          <ProgressStep
-            label="Training on your content..."
-            done={false}
-            active={crawlStatus === 'indexing'}
+          <StepRow
+            label="Training on your content"
+            state={
+              crawlStatus === 'indexing'
+                ? 'active'
+                : crawlStatus === 'crawling'
+                  ? 'pending'
+                  : 'done'
+            }
           />
-          <ProgressStep label="Chatbot ready!" done={false} />
-        </div>
+          <StepRow label="Chatbot ready" state="pending" />
+        </ol>
       </div>
     )
   }
 
+  // Default: URL input form
   return (
-    <div className="mx-auto max-w-lg py-16 text-center">
-      <h1 className="mb-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-        Your AI chatbot is 3 minutes away
-      </h1>
-      <p className="mb-8 text-zinc-600 dark:text-zinc-400">
-        Paste your website URL and we&apos;ll build a chatbot that knows everything
-        about your business.
+    <div className="mx-auto max-w-xl py-16 rc-enter">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+        Step 1 · Paste a URL
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://yourbusiness.com"
-          required
-          className="block w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-        />
+      <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight text-[color:var(--ink-primary)] md:text-5xl">
+        Your AI chatbot
+        <br />
+        is three minutes away.
+      </h1>
+      <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+        We crawl every page, embed the content, and hand you a chatbot that
+        knows your business.
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-10 space-y-4">
+        <div>
+          <label
+            htmlFor="url"
+            className="mb-1.5 block text-xs font-medium tracking-tight text-[color:var(--ink-secondary)]"
+          >
+            Website URL
+          </label>
+          <input
+            id="url"
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://yourbusiness.com"
+            required
+            className="focus-ring block w-full rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3.5 py-2.5 text-[15px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)]"
+          />
+          <p className="mt-1.5 text-xs text-[color:var(--ink-tertiary)]">
+            Must be public and reachable. We crawl up to 100 pages.
+          </p>
+        </div>
+
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p role="alert" className="text-sm text-[color:var(--accent-danger)]">
+            {error}
+          </p>
         )}
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="btn-press focus-ring group inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-5 py-2.5 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? 'Starting...' : 'Build my chatbot'}
+          {loading ? (
+            <>
+              <IconSpinner width={14} height={14} />
+              <span>Starting crawl…</span>
+            </>
+          ) : (
+            <>
+              <IconSparkle width={14} height={14} />
+              <span>Build my chatbot</span>
+              <IconArrowRight
+                width={14}
+                height={14}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </>
+          )}
         </button>
       </form>
     </div>
   )
 }
 
-function ProgressStep({
+function StepRow({
   label,
-  done,
-  active,
+  state,
 }: {
   label: string
-  done: boolean
-  active?: boolean
+  state: 'pending' | 'active' | 'done'
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div
-        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-          done
-            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-            : active
-              ? 'bg-zinc-200 text-zinc-700 animate-pulse dark:bg-zinc-700 dark:text-zinc-300'
-              : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
+    <li className="flex items-center gap-3 border-t border-[color:var(--border-hairline)] py-3 first:border-t-0">
+      <span
+        className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+          state === 'done'
+            ? 'border-[color:var(--accent-success)] bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
+            : state === 'active'
+              ? 'border-[color:var(--ink-primary)] text-[color:var(--ink-primary)]'
+              : 'border-[color:var(--border-strong)] text-[color:var(--ink-tertiary)]'
         }`}
       >
-        {done ? '✓' : active ? '...' : '○'}
-      </div>
+        {state === 'done' ? (
+          <IconCheck width={11} height={11} />
+        ) : state === 'active' ? (
+          <span className="h-1.5 w-1.5 rounded-full bg-current rc-pulse" />
+        ) : null}
+      </span>
       <span
         className={`text-sm ${
-          done
-            ? 'text-green-700 dark:text-green-300'
-            : active
-              ? 'text-zinc-900 font-medium dark:text-zinc-100'
-              : 'text-zinc-400 dark:text-zinc-600'
+          state === 'active'
+            ? 'font-medium text-[color:var(--ink-primary)]'
+            : state === 'done'
+              ? 'text-[color:var(--ink-secondary)]'
+              : 'text-[color:var(--ink-tertiary)]'
         }`}
       >
         {label}
       </span>
-    </div>
+    </li>
   )
 }

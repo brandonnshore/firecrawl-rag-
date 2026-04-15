@@ -19,8 +19,13 @@ export default async function SettingsPage() {
 
   if (!site) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-zinc-500">Set up your chatbot first.</p>
+      <div className="rc-enter py-16">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Settings
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Set up your chatbot first.
+        </h1>
       </div>
     )
   }

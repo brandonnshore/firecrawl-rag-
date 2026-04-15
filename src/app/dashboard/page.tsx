@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import {
+  IconArrowRight,
+  IconCheck,
+  IconSparkle,
+} from '@/components/icons'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -15,17 +20,45 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .maybeSingle()
 
+  // First-run empty state — no site yet.
   if (!site) {
     return (
-      <div className="py-16 text-center">
-        <h1 className="mb-4 text-2xl font-bold">Welcome to RubyCrawl</h1>
-        <p className="mb-6 text-zinc-500">Let&apos;s get your AI chatbot set up.</p>
+      <div className="rc-enter">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Welcome, {user.email}
+        </p>
+        <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight text-[color:var(--ink-primary)] md:text-5xl">
+          Let&apos;s build your
+          <br />
+          chatbot.
+        </h1>
+        <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+          Paste a URL, we crawl every page, and three minutes later your site
+          has an AI chatbot that knows your business. Embed with one line.
+        </p>
+
         <Link
           href="/dashboard/setup"
-          className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-600"
+          className="btn-press focus-ring group mt-10 inline-flex items-center gap-2.5 rounded-lg bg-[color:var(--ink-primary)] px-5 py-2.5 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
         >
-          Build your chatbot →
+          <IconSparkle width={15} height={15} />
+          <span>Start the build</span>
+          <IconArrowRight
+            width={14}
+            height={14}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
         </Link>
+
+        <div className="mt-16 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-3">
+          <Step n="01" title="Paste URL" body="We validate, kick off the crawl." />
+          <Step n="02" title="Train" body="Every page embedded for retrieval." />
+          <Step
+            n="03"
+            title="Embed"
+            body="One script tag. Ship to your site."
+          />
+        </div>
       </div>
     )
   }
@@ -35,7 +68,7 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('site_id', site.id)
 
-  const hasSite = site.crawl_status === 'ready'
+  const hasReady = site.crawl_status === 'ready'
   const hasConversations = (convCount ?? 0) > 0
 
   const { data: conversations } = await supabase
@@ -56,19 +89,35 @@ export default async function DashboardPage() {
     .size
 
   return (
-    <div className="py-8">
-      {(!hasSite || !hasConversations) && (
-        <div className="mb-8 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-          <h3 className="mb-3 font-medium">Getting started</h3>
-          <div className="space-y-2">
+    <div className="rc-enter space-y-12">
+      {/* Header row */}
+      <header className="flex flex-wrap items-baseline justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+            Overview
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+            {hostnameOf(site.url)}
+          </h1>
+        </div>
+        <StatusPill status={site.crawl_status} />
+      </header>
+
+      {/* Setup checklist — collapses when done */}
+      {(!hasReady || !hasConversations) && (
+        <section className="surface-hairline rounded-xl p-6">
+          <h3 className="text-sm font-semibold tracking-tight text-[color:var(--ink-primary)]">
+            Getting started
+          </h3>
+          <ol className="mt-4 divide-y divide-[color:var(--border-hairline)]">
             <ChecklistItem
-              done={hasSite}
+              done={hasReady}
               label="Build your chatbot"
               href="/dashboard/setup"
             />
             <ChecklistItem
-              done={hasSite}
-              label="Add to your website"
+              done={hasReady}
+              label="Add it to your website"
               href="/dashboard/embed"
             />
             <ChecklistItem
@@ -76,63 +125,220 @@ export default async function DashboardPage() {
               label="Test with a question"
               href="/dashboard/preview"
             />
-          </div>
-        </div>
+          </ol>
+        </section>
       )}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <MetricCard label="People your chatbot helped" value={uniqueVisitors} />
-        <MetricCard label="Questions answered" value={totalMessages} />
+      {/* Metrics — asymmetric bento (big + two small + wide) */}
+      <section className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-[color:var(--border-hairline)] bg-[color:var(--border-hairline)] sm:grid-cols-3">
+        <MetricCard
+          label="Visitors helped"
+          value={uniqueVisitors}
+          hint="Unique site visitors"
+          span="sm:col-span-1 sm:row-span-2"
+          emphasis
+        />
+        <MetricCard label="Messages answered" value={totalMessages} />
         <MetricCard label="Leads captured" value={totalLeads ?? 0} />
-      </div>
-
-      <div className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold">Recent conversations</h2>
-        {conversations && conversations.length > 0 ? (
-          <div className="space-y-2">
-            {conversations.map((c) => (
-              <Link
-                key={c.id}
-                href={`/dashboard/conversations/${c.id}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 text-sm hover:bg-zinc-50 dark:border-zinc-700"
-              >
-                <span>
-                  {c.visitor_id} · {c.message_count} messages
-                </span>
-                <span className="text-xs text-zinc-400">
-                  {new Date(c.last_message_at).toLocaleString()}
-                </span>
-              </Link>
-            ))}
+        <div className="col-span-full bg-[color:var(--bg-surface)] p-6 sm:col-span-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+                Subscription
+              </p>
+              <p className="mt-1 text-base font-medium text-[color:var(--ink-primary)]">
+                RubyCrawl Standard
+              </p>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-secondary)]">
+                <span className="font-mono">$24.99</span>
+                <span className="text-[color:var(--ink-tertiary)]">/month</span>
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-success-bg)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--accent-success)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-success)] rc-pulse" />
+              Active
+            </span>
           </div>
-        ) : (
-          <p className="text-sm text-zinc-500">
-            No conversations yet. Once your chatbot is live, you&apos;ll see
-            every question visitors ask.
-          </p>
-        )}
-      </div>
-
-      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">Subscription</p>
-            <p className="text-sm text-zinc-500">$24.99/month</p>
-          </div>
-          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-            Active
-          </span>
         </div>
-      </div>
+      </section>
+
+      {/* Recent conversations */}
+      <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold tracking-tight text-[color:var(--ink-primary)]">
+            Recent conversations
+          </h2>
+          {conversations && conversations.length > 0 && (
+            <Link
+              href="/dashboard/conversations"
+              className="btn-press focus-ring group inline-flex items-center gap-1 text-xs font-medium text-[color:var(--ink-secondary)] hover:text-[color:var(--ink-primary)]"
+            >
+              <span>View all</span>
+              <IconArrowRight
+                width={12}
+                height={12}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </Link>
+          )}
+        </div>
+        {conversations && conversations.length > 0 ? (
+          <ul className="surface-hairline divide-y divide-[color:var(--border-hairline)] overflow-hidden rounded-xl">
+            {conversations.map((c, i) => (
+              <li
+                key={c.id}
+                className="rc-enter"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <Link
+                  href={`/dashboard/conversations/${c.id}`}
+                  className="btn-press focus-ring flex items-center justify-between gap-4 px-5 py-3 hover:bg-[color:var(--bg-subtle)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-[12px] text-[color:var(--ink-primary)]">
+                      {c.visitor_id}
+                    </p>
+                    <p className="text-xs text-[color:var(--ink-tertiary)]">
+                      {c.message_count}{' '}
+                      {c.message_count === 1 ? 'message' : 'messages'}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+                    {relTime(c.last_message_at)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="surface-hairline rounded-xl px-5 py-10 text-center">
+            <p className="text-sm text-[color:var(--ink-secondary)]">
+              Once your chatbot goes live, every question a visitor asks shows
+              up here.
+            </p>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function hostnameOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+function relTime(iso: string) {
+  const d = new Date(iso).getTime()
+  const diff = Math.max(0, Date.now() - d)
+  const m = Math.floor(diff / 60_000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const days = Math.floor(h / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString()
+}
+
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-sm text-zinc-500">{label}</p>
+    <div className="border-t border-[color:var(--border-hairline)] pt-4">
+      <p className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+        {n}
+      </p>
+      <p className="mt-1.5 text-sm font-medium text-[color:var(--ink-primary)]">
+        {title}
+      </p>
+      <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+        {body}
+      </p>
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<
+    string,
+    { label: string; color: string; bg: string; dot: boolean }
+  > = {
+    ready: {
+      label: 'Ready',
+      color: 'var(--accent-success)',
+      bg: 'var(--accent-success-bg)',
+      dot: true,
+    },
+    crawling: {
+      label: 'Crawling',
+      color: 'var(--ink-primary)',
+      bg: 'var(--bg-subtle)',
+      dot: true,
+    },
+    indexing: {
+      label: 'Indexing',
+      color: 'var(--ink-primary)',
+      bg: 'var(--bg-subtle)',
+      dot: true,
+    },
+    failed: {
+      label: 'Failed',
+      color: 'var(--accent-danger)',
+      bg: 'var(--accent-danger-bg)',
+      dot: false,
+    },
+    pending: {
+      label: 'Pending',
+      color: 'var(--ink-secondary)',
+      bg: 'var(--bg-subtle)',
+      dot: false,
+    },
+  }
+  const s = map[status] ?? map.pending
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {s.dot && (
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${status === 'crawling' || status === 'indexing' ? 'rc-pulse' : ''}`}
+          style={{ background: s.color }}
+        />
+      )}
+      {s.label}
+    </span>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+  span,
+  emphasis = false,
+}: {
+  label: string
+  value: number
+  hint?: string
+  span?: string
+  emphasis?: boolean
+}) {
+  return (
+    <div className={`bg-[color:var(--bg-surface)] p-6 ${span ?? ''}`}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+        {label}
+      </p>
+      <p
+        className={`mt-2 font-mono tracking-tight text-[color:var(--ink-primary)] ${emphasis ? 'text-5xl' : 'text-3xl'}`}
+      >
+        {value.toLocaleString()}
+      </p>
+      {hint && (
+        <p className="mt-1 text-xs text-[color:var(--ink-tertiary)]">{hint}</p>
+      )}
     </div>
   )
 }
@@ -147,14 +353,33 @@ function ChecklistItem({
   href: string
 }) {
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-2 text-sm hover:underline"
-    >
-      <span className={done ? 'text-green-500' : 'text-zinc-400'}>
-        {done ? '✓' : '○'}
-      </span>
-      <span className={done ? 'text-zinc-500 line-through' : ''}>{label}</span>
-    </Link>
+    <li>
+      <Link
+        href={href}
+        className="btn-press focus-ring group flex items-center justify-between gap-3 py-3"
+      >
+        <span className="flex items-center gap-3">
+          <span
+            className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+              done
+                ? 'border-[color:var(--accent-success)] bg-[color:var(--accent-success-bg)] text-[color:var(--accent-success)]'
+                : 'border-[color:var(--border-strong)] text-[color:var(--ink-tertiary)]'
+            }`}
+          >
+            {done ? <IconCheck width={11} height={11} /> : null}
+          </span>
+          <span
+            className={`text-sm ${done ? 'text-[color:var(--ink-tertiary)] line-through' : 'text-[color:var(--ink-primary)]'}`}
+          >
+            {label}
+          </span>
+        </span>
+        <IconArrowRight
+          width={14}
+          height={14}
+          className="text-[color:var(--ink-tertiary)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[color:var(--ink-secondary)]"
+        />
+      </Link>
+    </li>
   )
 }

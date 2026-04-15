@@ -9,35 +9,45 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="flex h-16 items-center border-b border-zinc-200 px-6 dark:border-zinc-800">
+    <aside className="flex h-full w-60 flex-col border-r border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
+      <div className="flex h-14 items-center px-5">
         <Link
           href="/dashboard"
-          className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+          className="focus-ring btn-press text-[15px] font-semibold tracking-tight text-[color:var(--ink-primary)]"
         >
           RubyCrawl
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {NAV_ITEMS.map((item) => {
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+        <ul className="space-y-0.5">
+          {NAV_ITEMS.map(({ label, href, Icon }) => {
             const isActive =
-              item.href === '/dashboard'
+              href === '/dashboard'
                 ? pathname === '/dashboard'
-                : pathname.startsWith(item.href)
+                : pathname.startsWith(href)
 
             return (
-              <li key={item.href}>
+              <li key={href}>
                 <Link
-                  href={item.href}
-                  className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  href={href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`btn-press focus-ring group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium ${
                     isActive
-                      ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
-                      : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
+                      ? 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-primary)]'
+                      : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink-primary)]'
                   }`}
                 >
-                  {item.label}
+                  <Icon
+                    width={15}
+                    height={15}
+                    className={
+                      isActive
+                        ? 'text-[color:var(--ink-primary)]'
+                        : 'text-[color:var(--ink-tertiary)] group-hover:text-[color:var(--ink-secondary)]'
+                    }
+                  />
+                  <span>{label}</span>
                 </Link>
               </li>
             )
@@ -45,7 +55,7 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="border-t border-[color:var(--border-hairline)] p-3">
         <SignOutButton />
       </div>
     </aside>

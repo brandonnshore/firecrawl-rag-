@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { IconDownload, IconExternal } from '@/components/icons'
 
 interface Lead {
   id: number
@@ -35,81 +36,125 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
 
   if (leads.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <div className="mb-4 text-4xl">📧</div>
-        <h2 className="mb-2 text-xl font-semibold">No leads yet</h2>
-        <p className="text-zinc-500">
-          Once your chatbot is live, visitor emails will appear here.
+      <div className="rc-enter py-16">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Leads
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          No leads yet.
+        </h1>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+          Visitors drop their email inside the chat after a few messages — we
+          collect it here with the conversation attached.
         </p>
       </div>
     )
   }
 
   return (
-    <div className="py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Leads ({leads.length})</h1>
+    <div className="rc-enter">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+            Leads
+          </p>
+          <h1 className="mt-2 flex items-baseline gap-3 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+            <span>Captured</span>
+            <span className="font-mono text-base font-normal text-[color:var(--ink-tertiary)]">
+              {leads.length}
+            </span>
+          </h1>
+        </div>
         <a
           href="/api/leads/export"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600"
+          className="btn-press focus-ring inline-flex items-center gap-2 rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-3.5 py-1.5 text-xs font-medium text-[color:var(--ink-primary)] hover:bg-[color:var(--bg-subtle)]"
         >
-          Export CSV
+          <IconDownload width={13} height={13} />
+          <span>Export CSV</span>
         </a>
-      </div>
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+      </header>
+
+      <div className="surface-hairline overflow-hidden rounded-xl">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 dark:bg-zinc-800">
-            <tr>
-              <th
-                className="cursor-pointer px-4 py-3 text-left hover:bg-zinc-100"
-                onClick={() => handleSort('name')}
-              >
-                Name {sortKey === 'name' && (sortAsc ? '↑' : '↓')}
-              </th>
-              <th
-                className="cursor-pointer px-4 py-3 text-left hover:bg-zinc-100"
+          <thead>
+            <tr className="border-b border-[color:var(--border-hairline)]">
+              <Th onClick={() => handleSort('name')} active={sortKey === 'name'} asc={sortAsc}>
+                Name
+              </Th>
+              <Th
                 onClick={() => handleSort('email')}
+                active={sortKey === 'email'}
+                asc={sortAsc}
               >
-                Email {sortKey === 'email' && (sortAsc ? '↑' : '↓')}
-              </th>
-              <th className="px-4 py-3 text-left">Message</th>
-              <th className="px-4 py-3 text-left">Source</th>
-              <th
-                className="cursor-pointer px-4 py-3 text-left hover:bg-zinc-100"
+                Email
+              </Th>
+              <Th>Message</Th>
+              <Th>Source</Th>
+              <Th
                 onClick={() => handleSort('created_at')}
+                active={sortKey === 'created_at'}
+                asc={sortAsc}
               >
-                Date {sortKey === 'created_at' && (sortAsc ? '↑' : '↓')}
-              </th>
-              <th className="px-4 py-3 text-left">Chat</th>
+                Date
+              </Th>
+              <Th>Chat</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {sorted.map((lead) => (
+          <tbody className="divide-y divide-[color:var(--border-hairline)]">
+            {sorted.map((lead, i) => (
               <tr
                 key={lead.id}
-                className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                className="rc-enter hover:bg-[color:var(--bg-subtle)]"
+                style={{ animationDelay: `${Math.min(i * 15, 200)}ms` }}
               >
-                <td className="px-4 py-3">{lead.name || '—'}</td>
-                <td className="px-4 py-3 font-mono text-xs">{lead.email}</td>
-                <td className="max-w-[200px] truncate px-4 py-3">
-                  {lead.message || '—'}
+                <td className="px-4 py-3 align-top text-[color:var(--ink-primary)]">
+                  {lead.name || (
+                    <span className="text-[color:var(--ink-tertiary)]">—</span>
+                  )}
                 </td>
-                <td className="max-w-[150px] truncate px-4 py-3 text-zinc-500">
-                  {lead.source_page || '—'}
+                <td className="px-4 py-3 align-top font-mono text-[12px] text-[color:var(--ink-primary)]">
+                  {lead.email}
                 </td>
-                <td className="px-4 py-3 text-zinc-500">
-                  {new Date(lead.created_at).toLocaleDateString()}
+                <td className="max-w-[220px] truncate px-4 py-3 align-top text-[color:var(--ink-secondary)]">
+                  {lead.message || (
+                    <span className="text-[color:var(--ink-tertiary)]">—</span>
+                  )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="max-w-[180px] truncate px-4 py-3 align-top">
+                  {lead.source_page ? (
+                    <a
+                      href={lead.source_page}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="focus-ring inline-flex items-center gap-1 text-[color:var(--ink-secondary)] hover:text-[color:var(--ink-primary)]"
+                    >
+                      <span className="truncate">
+                        {lead.source_page.replace(/^https?:\/\//, '')}
+                      </span>
+                      <IconExternal width={11} height={11} />
+                    </a>
+                  ) : (
+                    <span className="text-[color:var(--ink-tertiary)]">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 align-top font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+                  {new Date(lead.created_at).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </td>
+                <td className="px-4 py-3 align-top">
                   {lead.conversation_id ? (
                     <a
                       href={`/dashboard/conversations/${lead.conversation_id}`}
-                      className="text-indigo-500 hover:underline"
+                      className="btn-press focus-ring inline-flex items-center gap-1 text-[color:var(--ink-primary)] underline-offset-4 hover:underline"
                     >
                       View
+                      <IconExternal width={11} height={11} />
                     </a>
                   ) : (
-                    '—'
+                    <span className="text-[color:var(--ink-tertiary)]">—</span>
                   )}
                 </td>
               </tr>
@@ -118,5 +163,36 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
         </table>
       </div>
     </div>
+  )
+}
+
+function Th({
+  children,
+  onClick,
+  active,
+  asc,
+}: {
+  children: React.ReactNode
+  onClick?: () => void
+  active?: boolean
+  asc?: boolean
+}) {
+  const cls =
+    'px-4 py-2.5 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]'
+  if (!onClick) return <th className={cls}>{children}</th>
+  return (
+    <th className={cls}>
+      <button
+        onClick={onClick}
+        className="focus-ring btn-press inline-flex items-center gap-1 hover:text-[color:var(--ink-primary)]"
+      >
+        {children}
+        {active && (
+          <span className="text-[color:var(--ink-secondary)]">
+            {asc ? '↑' : '↓'}
+          </span>
+        )}
+      </button>
+    </th>
   )
 }

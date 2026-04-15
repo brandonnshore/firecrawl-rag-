@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { IconSignOut } from '@/components/icons'
 
 export function SignOutButton() {
   const router = useRouter()
@@ -9,17 +10,9 @@ export function SignOutButton() {
 
   const handleSignOut = async () => {
     setLoading(true)
-
-    const response = await fetch('/api/auth/signout', {
-      method: 'POST',
-    })
-
-    if (response.redirected) {
-      router.push('/login')
-    } else {
-      // Fallback: manually navigate to login
-      router.push('/login')
-    }
+    const response = await fetch('/api/auth/signout', { method: 'POST' })
+    if (response.redirected) router.push('/login')
+    else router.push('/login')
   }
 
   return (
@@ -27,9 +20,14 @@ export function SignOutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={loading}
-      className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      className="btn-press focus-ring flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink-primary)] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {loading ? 'Signing out...' : 'Sign out'}
+      <IconSignOut
+        width={15}
+        height={15}
+        className="text-[color:var(--ink-tertiary)]"
+      />
+      <span>{loading ? 'Signing out…' : 'Sign out'}</span>
     </button>
   )
 }

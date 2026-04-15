@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
+import { IconArrowRight, IconSend, IconSpinner } from '@/components/icons'
 
 interface Site {
   id: string
@@ -87,11 +89,18 @@ export default function PreviewClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl py-8">
-      <h1 className="mb-2 text-2xl font-bold">Preview your chatbot</h1>
-      <p className="mb-6 text-zinc-500">
-        Test your chatbot before adding it to your website.
-      </p>
+    <div className="rc-enter">
+      <header className="mb-8">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Preview
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Test your chatbot.
+        </h1>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+          Talk to it as a visitor would. Uses the same API your widget will.
+        </p>
+      </header>
 
       {messages.length <= 1 && suggestedQuestions.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -99,7 +108,8 @@ export default function PreviewClient({
             <button
               key={i}
               onClick={() => sendMessage(q)}
-              className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="btn-press focus-ring rc-enter rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-1.5 text-xs text-[color:var(--ink-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--ink-primary)]"
+              style={{ animationDelay: `${i * 60}ms` }}
             >
               {q}
             </button>
@@ -107,21 +117,28 @@ export default function PreviewClient({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <div className="h-96 space-y-3 overflow-y-auto bg-white p-4 dark:bg-zinc-900">
+      <div className="surface-hairline overflow-hidden rounded-xl">
+        <div className="flex h-[28rem] flex-col gap-3 overflow-y-auto bg-[color:var(--bg-surface)] p-5">
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex rc-enter ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              style={{ animationDelay: `${Math.min(i * 20, 120)}ms` }}
             >
               <div
-                className={`max-w-[80%] rounded-xl px-4 py-2 text-sm ${
+                className={`max-w-[78%] rounded-xl px-3.5 py-2 text-[14px] leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200'
+                    ? 'bg-[color:var(--ink-primary)] text-[color:var(--bg-surface)]'
+                    : 'bg-[color:var(--bg-subtle)] text-[color:var(--ink-primary)]'
                 }`}
               >
-                {msg.content || '...'}
+                {msg.content || (
+                  <span className="inline-flex gap-0.5">
+                    <Dot />
+                    <Dot delay={120} />
+                    <Dot delay={240} />
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -132,34 +149,56 @@ export default function PreviewClient({
             e.preventDefault()
             sendMessage(input)
           }}
-          className="flex border-t border-zinc-200 dark:border-zinc-700"
+          className="flex items-center gap-2 border-t border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2.5"
         >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question..."
+            placeholder="Ask a question…"
             disabled={isStreaming}
-            className="flex-1 bg-transparent px-4 py-3 text-sm outline-none"
+            className="focus-ring flex-1 bg-transparent px-2 py-1.5 text-[14px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)] disabled:opacity-60"
           />
           <button
             type="submit"
             disabled={isStreaming || !input.trim()}
-            className="px-4 text-sm font-medium text-indigo-500 disabled:opacity-50"
+            aria-label="Send"
+            className="btn-press focus-ring flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--ink-primary)] text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Send
+            {isStreaming ? (
+              <IconSpinner width={13} height={13} />
+            ) : (
+              <IconSend width={13} height={13} />
+            )}
           </button>
         </form>
       </div>
 
-      <div className="mt-6 text-center">
-        <a
+      <div className="mt-8 flex items-center justify-between border-t border-[color:var(--border-hairline)] pt-6">
+        <p className="text-sm text-[color:var(--ink-secondary)]">
+          Happy with it?
+        </p>
+        <Link
           href="/dashboard/embed"
-          className="inline-block rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-600"
+          className="btn-press focus-ring group inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-4 py-2 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
         >
-          Love it? Add it to your website →
-        </a>
+          <span>Add it to your website</span>
+          <IconArrowRight
+            width={14}
+            height={14}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
+        </Link>
       </div>
     </div>
+  )
+}
+
+function Dot({ delay = 0 }: { delay?: number }) {
+  return (
+    <span
+      className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--ink-tertiary)] rc-pulse"
+      style={{ animationDelay: `${delay}ms` }}
+    />
   )
 }
 
@@ -169,7 +208,6 @@ function generateSuggestions(
   if (chunks.length === 0) return []
   const suggestions: string[] = []
   const topics = new Set<string>()
-
   for (const chunk of chunks) {
     const text = chunk.chunk_text.toLowerCase()
     if (
@@ -222,10 +260,6 @@ function generateSuggestions(
     }
     if (suggestions.length >= 3) break
   }
-
-  if (suggestions.length === 0) {
-    suggestions.push('Tell me about your business')
-  }
-
+  if (suggestions.length === 0) suggestions.push('Tell me about your business')
   return suggestions.slice(0, 3)
 }

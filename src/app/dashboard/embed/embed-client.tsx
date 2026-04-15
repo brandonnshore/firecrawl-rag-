@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { IconCheck, IconCopy, IconMail } from '@/components/icons'
 
 const platforms = [
   'WordPress',
@@ -9,24 +10,26 @@ const platforms = [
   'Shopify',
   'Webflow',
   'HTML / Custom',
-]
+] as const
 
-const platformInstructions: Record<string, string> = {
+type Platform = (typeof platforms)[number]
+
+const platformInstructions: Record<Platform, string> = {
   WordPress:
-    '1. Go to Appearance → Editor (or use a plugin like "Insert Headers and Footers")\n2. Paste the code before the closing </body> tag\n3. Save and publish',
+    'Appearance → Editor (or the "Insert Headers and Footers" plugin).\nPaste the code before the closing </body> tag.\nSave and publish.',
   Squarespace:
-    '1. Go to Settings → Advanced → Code Injection\n2. Paste the code in the "Footer" section\n3. Save',
-  Wix: '1. Go to Settings → Custom Code\n2. Click "Add Code"\n3. Paste the code, set placement to "Body - end"\n4. Apply',
+    'Settings → Advanced → Code Injection.\nPaste in the "Footer" field.\nSave.',
+  Wix: 'Settings → Custom Code → Add Code.\nPaste the code. Placement: "Body — end".\nApply.',
   Shopify:
-    '1. Go to Online Store → Themes → Actions → Edit code\n2. Open theme.liquid\n3. Paste the code before </body>\n4. Save',
+    'Online Store → Themes → Actions → Edit code.\nOpen theme.liquid. Paste before </body>.\nSave.',
   Webflow:
-    '1. Go to Project Settings → Custom Code\n2. Paste in the "Footer Code" section\n3. Publish your site',
+    'Project Settings → Custom Code.\nPaste in the "Footer Code" field.\nPublish.',
   'HTML / Custom':
-    '1. Open your HTML file\n2. Paste the code before the closing </body> tag\n3. Save and deploy',
+    'Open your HTML file.\nPaste the code before </body>.\nDeploy.',
 }
 
 export default function EmbedClient({ siteKey }: { siteKey: string }) {
-  const [platform, setPlatform] = useState('HTML / Custom')
+  const [platform, setPlatform] = useState<Platform>('HTML / Custom')
   const [copied, setCopied] = useState(false)
   const [origin] = useState(() =>
     typeof window !== 'undefined' ? window.location.origin : ''
@@ -50,73 +53,115 @@ export default function EmbedClient({ siteKey }: { siteKey: string }) {
     'Add RubyCrawl chatbot to our website'
   )
   const emailBody = encodeURIComponent(
-    `Hi,\n\nPlease add this chat widget to our website. Paste the following code before the closing </body> tag:\n\n${embedCode}\n\n${platformInstructions[platform] || ''}\n\nCSP Note: If the site uses a Content Security Policy, add:\nscript-src ${origin};\nconnect-src ${origin};\n\nThanks!`
+    `Hi,\n\nPlease add this chat widget to our website. Paste the code before the closing </body> tag:\n\n${embedCode}\n\nInstructions for ${platform}:\n${platformInstructions[platform]}\n\nCSP note: if the site uses a Content Security Policy, add:\n  script-src ${origin};\n  connect-src ${origin};\n\nThanks!`
   )
 
   return (
-    <div className="mx-auto max-w-2xl py-8">
-      <h1 className="mb-2 text-2xl font-bold">Add to your website</h1>
-      <p className="mb-6 text-zinc-500">
-        Choose your platform and follow the instructions.
-      </p>
+    <div className="rc-enter">
+      <header className="mb-8">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Embed
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          Add it to your website.
+        </h1>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+          One script tag, any platform. Loads lazily — it won&apos;t slow your
+          site.
+        </p>
+      </header>
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        {platforms.map((p) => (
-          <button
-            key={p}
-            onClick={() => setPlatform(p)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-              platform === p
-                ? 'bg-indigo-500 text-white'
-                : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300'
-            }`}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
+      <section className="mb-8">
+        <p className="mb-3 text-xs font-medium tracking-tight text-[color:var(--ink-secondary)]">
+          Platform
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {platforms.map((p) => (
+            <button
+              key={p}
+              onClick={() => setPlatform(p)}
+              className={`btn-press focus-ring rounded-full px-3.5 py-1.5 text-xs font-medium ${
+                platform === p
+                  ? 'bg-[color:var(--ink-primary)] text-[color:var(--bg-surface)]'
+                  : 'border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--ink-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--ink-primary)]'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div className="mb-6 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800">
-        <h3 className="mb-2 font-medium">Instructions for {platform}</h3>
-        <pre className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">
-          {platformInstructions[platform]}
-        </pre>
-      </div>
+      <section className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.3fr]">
+        <div>
+          <p className="mb-3 text-xs font-medium tracking-tight text-[color:var(--ink-secondary)]">
+            Instructions for {platform}
+          </p>
+          <ol className="space-y-2 text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+            {platformInstructions[platform].split('\n').map((line, i) => (
+              <li key={i} className="flex gap-2.5">
+                <span className="font-mono text-[11px] text-[color:var(--ink-tertiary)]">
+                  0{i + 1}
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-      <div className="mb-4">
-        <label className="mb-2 block text-sm font-medium">Embed code</label>
-        <pre className="overflow-x-auto rounded-lg bg-zinc-900 p-4 text-sm text-green-400">
-          {embedCode}
-        </pre>
-      </div>
+        <div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium tracking-tight text-[color:var(--ink-secondary)]">
+              Embed code
+            </p>
+            <button
+              onClick={handleCopy}
+              className="btn-press focus-ring inline-flex items-center gap-1.5 rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--ink-primary)] hover:border-[color:var(--border-strong)]"
+            >
+              {copied ? (
+                <>
+                  <IconCheck width={12} height={12} />
+                  <span>Copied</span>
+                </>
+              ) : (
+                <>
+                  <IconCopy width={12} height={12} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <pre className="mt-2 overflow-x-auto rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] p-4 text-[12px] leading-relaxed text-[color:var(--ink-primary)]">
+            <code className="font-mono">{embedCode}</code>
+          </pre>
+        </div>
+      </section>
 
-      <div className="mb-6 flex flex-wrap gap-3">
-        <button
-          onClick={handleCopy}
-          className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
-        >
-          {copied ? '✓ Copied!' : 'Copy code'}
-        </button>
+      <section className="flex flex-wrap items-center justify-between gap-4 border-t border-[color:var(--border-hairline)] pt-6">
         <a
           href={`mailto:?subject=${emailSubject}&body=${emailBody}`}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300"
+          className="btn-press focus-ring inline-flex items-center gap-2 text-sm font-medium text-[color:var(--ink-secondary)] hover:text-[color:var(--ink-primary)]"
         >
-          Email to developer
+          <IconMail width={14} height={14} />
+          <span>Email these instructions to your developer</span>
         </a>
-      </div>
 
-      <details className="text-sm text-zinc-500">
-        <summary className="cursor-pointer hover:text-zinc-700">
-          Content Security Policy (CSP) requirements
-        </summary>
-        <p className="mt-2">
-          If your website uses a Content Security Policy, add these directives:
-        </p>
-        <code className="mt-1 block rounded bg-zinc-100 p-2 text-xs dark:bg-zinc-800">
-          script-src {origin || 'https://your-app.com'}; connect-src{' '}
-          {origin || 'https://your-app.com'};
-        </code>
-      </details>
+        <details className="group text-xs text-[color:var(--ink-tertiary)]">
+          <summary className="cursor-pointer list-none select-none hover:text-[color:var(--ink-secondary)]">
+            Content Security Policy (CSP) requirements
+          </summary>
+          <div className="mt-3 space-y-2 rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] p-3">
+            <p className="text-[color:var(--ink-secondary)]">
+              If your site uses a Content Security Policy, add:
+            </p>
+            <code className="block font-mono text-[11px] text-[color:var(--ink-primary)]">
+              script-src {origin || 'https://your-app.com'};
+              <br />
+              connect-src {origin || 'https://your-app.com'};
+            </code>
+          </div>
+        </details>
+      </section>
     </div>
   )
 }

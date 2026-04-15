@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { IconChevronLeft } from '@/components/icons'
 
 export default async function ConversationDetail({
   params,
@@ -36,29 +37,44 @@ export default async function ConversationDetail({
   }>
 
   return (
-    <div className="mx-auto max-w-2xl py-8">
+    <div className="mx-auto max-w-2xl rc-enter">
       <Link
         href="/dashboard/conversations"
-        className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-700"
+        className="btn-press focus-ring inline-flex items-center gap-1 text-xs font-medium text-[color:var(--ink-tertiary)] hover:text-[color:var(--ink-primary)]"
       >
-        ← Back to conversations
+        <IconChevronLeft width={12} height={12} />
+        <span>Back to conversations</span>
       </Link>
-      <h1 className="mb-1 text-xl font-bold">Conversation</h1>
-      <p className="mb-6 text-sm text-zinc-500">
-        {conversation.visitor_id} ·{' '}
-        {new Date(conversation.created_at).toLocaleString()}
-      </p>
+
+      <header className="mt-6 mb-8">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Transcript
+        </p>
+        <h1 className="mt-2 font-mono text-base font-medium tracking-tight text-[color:var(--ink-primary)]">
+          {conversation.visitor_id}
+        </h1>
+        <p className="mt-1 text-xs text-[color:var(--ink-tertiary)]">
+          Started{' '}
+          {new Date(conversation.created_at).toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          })}{' '}
+          · {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+        </p>
+      </header>
+
       <div className="space-y-3">
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex rc-enter ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            style={{ animationDelay: `${Math.min(i * 25, 300)}ms` }}
           >
             <div
-              className={`max-w-[80%] rounded-xl px-4 py-2 text-sm ${
+              className={`max-w-[78%] rounded-xl px-3.5 py-2 text-[14px] leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800'
+                  ? 'bg-[color:var(--ink-primary)] text-[color:var(--bg-surface)]'
+                  : 'surface-hairline text-[color:var(--ink-primary)]'
               }`}
             >
               {msg.content}

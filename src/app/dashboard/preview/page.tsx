@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import PreviewClient from './preview-client'
+import { IconArrowRight } from '@/components/icons'
 
 export default async function PreviewPage() {
   const supabase = await createClient()
@@ -19,19 +21,28 @@ export default async function PreviewPage() {
 
   if (!site || site.crawl_status !== 'ready') {
     return (
-      <div className="py-16 text-center">
-        <h2 className="mb-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-          No chatbot yet
-        </h2>
-        <p className="mb-4 text-zinc-500">
-          Set up your website first to preview the chatbot.
+      <div className="rc-enter py-16">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+          Preview
         </p>
-        <a
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
+          No chatbot to preview yet.
+        </h1>
+        <p className="mt-2 max-w-md text-sm text-[color:var(--ink-secondary)]">
+          Build your chatbot first. We&apos;ll crawl your site and come back
+          here in a few minutes.
+        </p>
+        <Link
           href="/dashboard/setup"
-          className="text-indigo-600 hover:underline"
+          className="btn-press focus-ring group mt-6 inline-flex items-center gap-2 rounded-lg bg-[color:var(--ink-primary)] px-4 py-2 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
         >
-          Go to setup →
-        </a>
+          <span>Go to setup</span>
+          <IconArrowRight
+            width={14}
+            height={14}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
+        </Link>
       </div>
     )
   }
