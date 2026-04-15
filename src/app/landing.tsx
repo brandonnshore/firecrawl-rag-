@@ -256,27 +256,30 @@ function PinnedPromise() {
     const st = ScrollTrigger.create({
       trigger: root,
       start: 'top top',
-      end: '+=2400',
+      end: '+=1500',
       pin: true,
-      scrub: 0.6,
+      scrub: 0.4,
       onUpdate: (self) => {
         const p = self.progress
 
-        const typeP = Math.min(1, p / 0.25)
+        // Phase 1 (0 — 0.18): type URL (quick)
+        const typeP = Math.min(1, p / 0.18)
         const chars = Math.floor(typeP * DEMO_URL.length)
         if (chars !== typedSoFar) {
           typedSoFar = chars
           setTypedUrl(DEMO_URL.slice(0, chars))
         }
 
-        const crawlP = Math.max(0, Math.min(1, (p - 0.25) / 0.5))
+        // Phase 2 (0.18 — 0.78): crawl cards cascade
+        const crawlP = Math.max(0, Math.min(1, (p - 0.18) / 0.6))
         const pageCount = Math.floor(crawlP * CRAWL_PAGES.length + 0.0001)
         if (pageCount !== pagesSoFar) {
           pagesSoFar = pageCount
           setPagesVisible(pageCount)
         }
 
-        setReadyVisible(p > 0.82)
+        // Phase 3 (> 0.78): ready state
+        setReadyVisible(p > 0.78)
       },
     })
 
@@ -356,27 +359,18 @@ function PinnedPromise() {
               </div>
             </div>
 
-            <div className="relative mt-5 h-[320px]">
+            <div className="mt-4 flex flex-col gap-2">
               {CRAWL_PAGES.map((p, i) => {
                 const shown = i < pagesVisible
-                const offsetY = i * 10
-                const offsetX = (i % 2 === 0 ? -1 : 1) * (i * 1.5)
-                const rot = (i % 2 === 0 ? -1 : 1) * 0.6
                 return (
                   <div
                     key={p.path}
-                    className="absolute left-0 right-0 surface-hairline rounded-lg px-4 py-3 shadow-[var(--shadow-sm)] transition-[transform,opacity] duration-500"
+                    className="surface-hairline rounded-lg px-4 py-2.5 shadow-[var(--shadow-sm)]"
                     style={{
-                      top: `${offsetY}px`,
-                      transform: shown
-                        ? `translateX(${offsetX}px) rotate(${rot}deg)`
-                        : `translateX(${offsetX}px) translateY(24px) rotate(${rot}deg)`,
-                      opacity: shown
-                        ? 1 - Math.max(0, i - pagesVisible + 2) * 0.15
-                        : 0,
-                      zIndex: CRAWL_PAGES.length - i,
-                      transitionTimingFunction:
-                        'cubic-bezier(0.32, 0.72, 0, 1)',
+                      transform: shown ? 'translateY(0)' : 'translateY(12px)',
+                      opacity: shown ? 1 : 0,
+                      transition:
+                        'transform 380ms cubic-bezier(0.32,0.72,0,1), opacity 280ms cubic-bezier(0.32,0.72,0,1)',
                     }}
                   >
                     <div className="flex items-center justify-between gap-3">
