@@ -27,10 +27,12 @@
   --border-strong: rgba(10, 10, 10, 0.14);
 
   /* Accents (semantic, earned) */
-  --accent-success: #047857;     /* emerald-700, desaturated */
+  --accent-success: #047857;     /* emerald-700, desaturated — "ready" */
   --accent-success-bg: #ecfdf5;  /* emerald-50 */
-  --accent-danger: #b91c1c;      /* red-700, muted */
+  --accent-danger: #b91c1c;      /* red-700, muted — "failed" */
   --accent-danger-bg: #fef2f2;
+  --accent-ruby: #9f1239;        /* rose-800, deep desaturated ruby — brand */
+  --accent-ruby-bg: #fff1f2;     /* rose-50 */
 
   /* Shadow — tinted to background hue, never harsh */
   --shadow-sm: 0 1px 2px 0 rgba(10, 10, 10, 0.04);
@@ -70,6 +72,8 @@
     --accent-success-bg: rgba(16, 185, 129, 0.1);
     --accent-danger: #fca5a5;
     --accent-danger-bg: rgba(185, 28, 28, 0.15);
+    --accent-ruby: #fb7185;
+    --accent-ruby-bg: rgba(159, 18, 57, 0.15);
   }
 }
 

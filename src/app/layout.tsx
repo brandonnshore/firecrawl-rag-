@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'RubyCrawl — AI chatbot for your website',
+  title: 'RubyCrawl — AI chatbot for your website in 3 minutes',
   description:
     'Paste your URL. We crawl it and give you an AI chatbot that knows your business. 24/7, trained on your content.',
 }

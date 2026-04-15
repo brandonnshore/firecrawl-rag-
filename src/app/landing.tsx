@@ -146,7 +146,11 @@ function Hero() {
           <br />
           <HeroLine line="for your website" muted />
           <br />
-          <HeroLine line="in three minutes." />
+          <span className="inline-flex items-baseline gap-[0.18em] overflow-hidden align-bottom">
+            <HeroWord word="in" />
+            <HeroBigThree />
+            <HeroWord word="minutes." />
+          </span>
         </h1>
 
         <p
@@ -205,6 +209,46 @@ function HeroLine({ line, muted = false }: { line: string; muted?: boolean }) {
           {ch}
         </span>
       ))}
+    </span>
+  )
+}
+
+/** Inline word (character-staggered) — used for "in" and "minutes." */
+function HeroWord({ word }: { word: string }) {
+  return (
+    <span className="inline-flex overflow-hidden">
+      {word.split('').map((ch, i) => (
+        <span
+          key={i}
+          data-hero-char
+          className="inline-block will-change-transform"
+        >
+          {ch}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/**
+ * The "3" — oversized, ruby, the visual hook of the hero.  Rendered in a
+ * tabular-figures slot so baseline alignment with the surrounding text stays
+ * stable while the digit sits ~1.35× the headline size.
+ */
+function HeroBigThree() {
+  return (
+    <span
+      data-hero-char
+      aria-hidden="false"
+      className="inline-flex overflow-hidden font-semibold leading-[0.82] will-change-transform"
+      style={{
+        color: 'var(--accent-ruby)',
+        fontSize: '1.35em',
+        letterSpacing: '-0.06em',
+        fontVariantNumeric: 'lining-nums tabular-nums',
+      }}
+    >
+      3
     </span>
   )
 }
