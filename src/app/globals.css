@@ -185,3 +185,43 @@ body {
     transform: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Lenis — activates only when the landing page's <SmoothScroll /> mounts
+   and toggles the .lenis classes on <html>.  Has zero effect on the
+   dashboard (which never mounts it).
+   -------------------------------------------------------------------------- */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Landing-page-specific helpers */
+.landing-cursor {
+  display: inline-block;
+  width: 2px;
+  background: currentColor;
+  animation: rc-blink 1s steps(2) infinite;
+  margin-left: 2px;
+  vertical-align: -0.1em;
+  height: 0.9em;
+}
+@keyframes rc-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
