@@ -259,20 +259,19 @@ function clamp01(n: number) {
 /* Stage geometry — items absolute-positioned with top:50% and an initial
    translateY offset that reflects their resting distance from center.
    At merge=1 the offsets zero out and every item lands on the center Y. */
-const STAGE_H = 600
-const CARD_PITCH = 48      // card height + gap
+const STAGE_H = 660
+const CARD_PITCH = 56      // card height + gap (44 + 12)
 const CARD_H = 44
 
 /** Resting offset (px) from stage center for each item.  Negative = above,
-    positive = below.  The URL is 250px above center; card 0 is 168px above,
-    card 7 is 168px below; counter sits just below card 7. */
+    positive = below.  URL sits 12px above top card; counter 12px below. */
 const REST_OFFSET = {
-  url: -250,
+  url: -275,
   cards: Array.from(
     { length: CRAWL_PAGES.length },
     (_, i) => (i - (CRAWL_PAGES.length - 1) / 2) * CARD_PITCH
-  ), // [-168, -120, -72, -24, 24, 72, 120, 168]
-  counter: 234,
+  ), // [-196, -140, -84, -28, 28, 84, 140, 196]
+  counter: 255,
 } as const
 
 function PinnedPromise() {
