@@ -53,11 +53,26 @@ export async function processCrawlData(
   const seenPageHashes = new Set<string>()
   const seenChunkHashes = new Set<string>()
 
+  let skippedNoMarkdown = 0
+  let skippedCleanEmpty = 0
+
   for (const page of pages) {
-    if (!page.markdown || !page.metadata?.sourceURL) continue
+    if (!page.markdown || !page.metadata?.sourceURL) {
+      skippedNoMarkdown++
+      console.log(
+        `[process] Skipped page (no markdown): url=${page.metadata?.sourceURL ?? 'unknown'}, markdown length=${page.markdown?.length ?? 0}`
+      )
+      continue
+    }
 
     const cleaned = cleanMarkdown(page.markdown)
-    if (cleaned.length === 0) continue
+    if (cleaned.length === 0) {
+      skippedCleanEmpty++
+      console.log(
+        `[process] Skipped page (clean empty): url=${page.metadata.sourceURL}, raw=${page.markdown.length}, cleaned=0`
+      )
+      continue
+    }
 
     const pageUrl = page.metadata.sourceURL
     const pageTitle = page.metadata.title ?? ''
@@ -92,6 +107,10 @@ export async function processCrawlData(
       })
     }
   }
+
+  console.log(
+    `[process] Result: ${pages.length} total pages, ${skippedNoMarkdown} no markdown, ${skippedCleanEmpty} clean empty, ${allChunks.length} chunks produced`
+  )
 
   if (allChunks.length === 0) {
     throw new Error('No valid content found in crawled pages')
