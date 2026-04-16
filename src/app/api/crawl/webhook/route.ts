@@ -69,6 +69,10 @@ export async function POST(request: Request) {
 
   if (eventType === 'crawl.completed') {
     const pages = payload.data ?? []
+    const totalChars = pages.reduce((n, p) => n + (p.markdown?.length ?? 0), 0)
+    console.log(
+      `[webhook] crawl.completed for site ${siteId}: ${pages.length} pages, ${totalChars} chars total markdown`
+    )
 
     after(async () => {
       try {

@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       maxDiscoveryDepth: 3,
       scrapeOptions: {
         formats: ['markdown'],
-        onlyMainContent: true,
+        waitFor: 2000,
       },
       webhook: {
         url: `${process.env.NEXT_PUBLIC_APP_URL}/api/crawl/webhook`,
