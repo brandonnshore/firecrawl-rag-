@@ -52,6 +52,7 @@ export default function SetupPage() {
   useEffect(() => {
     if (!siteId) return
 
+    // Realtime subscription (preferred — updates immediately)
     const channel = supabase
       .channel(`site-${siteId}`)
       .on(
@@ -77,8 +78,32 @@ export default function SetupPage() {
       )
       .subscribe()
 
+    // Polling fallback — runs every 3s in case realtime isn't
+    // enabled on the table or RLS filters out the UPDATE events.
+    // Stops polling once we hit a terminal status (ready/failed).
+    const poll = setInterval(async () => {
+      const { data: site } = await supabase
+        .from('sites')
+        .select('crawl_status, crawl_page_count, crawl_error_message')
+        .eq('id', siteId)
+        .maybeSingle()
+
+      if (!site) return
+
+      setCrawlStatus(site.crawl_status as CrawlStatus)
+      setPageCount(site.crawl_page_count ?? 0)
+      if (site.crawl_error_message) {
+        setErrorMessage(site.crawl_error_message)
+      }
+
+      if (site.crawl_status === 'ready' || site.crawl_status === 'failed') {
+        clearInterval(poll)
+      }
+    }, 3000)
+
     return () => {
       supabase.removeChannel(channel)
+      clearInterval(poll)
     }
   }, [siteId, supabase])
 
