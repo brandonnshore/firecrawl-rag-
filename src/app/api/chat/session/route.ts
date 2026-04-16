@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     const sessionId = crypto.randomUUID()
 
-    storeSession(sessionId, {
+    await storeSession(sessionId, {
       siteId: site.id,
       siteName,
       siteUrl: site.url,

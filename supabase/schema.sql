@@ -248,3 +248,24 @@ $$;
 
 -- Enable Realtime for sites table (required for live crawl status updates on setup page)
 alter publication supabase_realtime add table sites;
+
+-- ============================================
+-- CHAT SESSIONS (for streaming handoff)
+-- ============================================
+-- The chat widget does POST /api/chat/session → GET /api/chat/stream
+-- On serverless runtimes each request can hit a different instance,
+-- so the session must live in a shared store (not in-memory).
+-- 60-second TTL — sessions are consumed immediately by the stream.
+
+create table chat_sessions (
+  id uuid primary key default gen_random_uuid(),
+  data jsonb not null,
+  expires_at timestamptz not null default (now() + interval '60 seconds'),
+  created_at timestamptz default now()
+);
+
+create index chat_sessions_expires_at_idx on chat_sessions (expires_at);
+
+-- Row-level security: sessions are only touched by service-role code,
+-- never directly from the client, so we just lock it down entirely.
+alter table chat_sessions enable row level security;

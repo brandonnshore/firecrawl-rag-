@@ -20,14 +20,14 @@ export async function GET(request: Request) {
     )
   }
 
-  const session = getSession(sid)
+  const session = await getSession(sid)
   if (!session) {
     return Response.json(
       { error: 'Session not found or expired' },
       { status: 404, headers: corsHeaders }
     )
   }
-  deleteSession(sid)
+  await deleteSession(sid)
 
   const result = streamText({
     model: openai('gpt-4o-mini'),
