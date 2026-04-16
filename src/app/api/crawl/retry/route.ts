@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
+import { validateCrawlUrl } from '@/lib/crawl/validate-url'
 import Firecrawl from '@mendable/firecrawl-js'
 
 export async function POST() {
@@ -37,9 +38,16 @@ export async function POST() {
     )
   }
 
+  // Normalize the stored URL so retries always crawl the root — even
+  // if the site was originally created with a subpage URL before the
+  // start endpoint started normalizing.
+  const normalization = validateCrawlUrl(site.url)
+  const crawlUrl = normalization.normalizedUrl ?? site.url
+
   const { error: resetError } = await supabase
     .from('sites')
     .update({
+      url: crawlUrl,
       crawl_status: 'crawling',
       crawl_error_message: null,
       crawl_page_count: 0,
@@ -55,9 +63,11 @@ export async function POST() {
 
   let crawlJobId: string
   try {
-    const crawlResult = await firecrawl.startCrawl(site.url, {
+    const crawlResult = await firecrawl.startCrawl(crawlUrl, {
       limit: 100,
-      maxDiscoveryDepth: 3,
+      maxDiscoveryDepth: 5,
+      crawlEntireDomain: true,
+      sitemap: 'include',
       scrapeOptions: {
         formats: ['markdown'],
         waitFor: 2000,

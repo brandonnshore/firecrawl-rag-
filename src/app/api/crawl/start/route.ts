@@ -91,7 +91,9 @@ export async function POST(request: Request) {
   try {
     const crawlResult = await firecrawl.startCrawl(url, {
       limit: 100,
-      maxDiscoveryDepth: 3,
+      maxDiscoveryDepth: 5,
+      crawlEntireDomain: true,
+      sitemap: 'include',
       scrapeOptions: {
         formats: ['markdown'],
         waitFor: 2000,
