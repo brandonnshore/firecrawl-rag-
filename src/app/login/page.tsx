@@ -28,7 +28,19 @@ export default function LoginPage() {
     setLoading(false)
 
     if (signInError) {
-      setError('Something went wrong. Please try again.')
+      console.error('[login] signInWithOtp error:', signInError)
+      // Surface the actual error so rate limits and misconfig are visible
+      const msg = signInError.message || 'Something went wrong. Please try again.'
+      if (
+        /rate limit|too many/i.test(msg) ||
+        signInError.status === 429
+      ) {
+        setError(
+          'Too many magic links requested. Please wait a few minutes before trying again.'
+        )
+      } else {
+        setError(msg)
+      }
       return
     }
 
