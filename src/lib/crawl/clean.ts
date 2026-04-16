@@ -73,6 +73,22 @@ export function cleanMarkdown(raw: string): string {
     ''
   )
 
+  // Remove lines that are mostly URL-encoded data, SVG path coordinates,
+  // or embed payloads — Firecrawl often captures these from Google Maps
+  // and Squarespace widgets.  A line qualifies as junk when it's >=60 chars
+  // and 80%+ of its characters are numbers, punctuation, or %-escapes
+  // (i.e. no human-readable English content).
+  text = text
+    .split('\n')
+    .filter((line) => {
+      const stripped = line.trim()
+      if (stripped.length < 60) return true
+      const junkChars = (stripped.match(/[\d.,\-%+:/;!?()&=]/g) ?? []).length
+      const ratio = junkChars / stripped.length
+      return ratio < 0.5
+    })
+    .join('\n')
+
   // Collapse multiple blank lines into a maximum of two
   text = text.replace(/\n{3,}/g, '\n\n')
 

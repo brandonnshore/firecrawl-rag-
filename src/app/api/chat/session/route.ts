@@ -107,13 +107,16 @@ export async function POST(request: NextRequest) {
       value: rewrittenQuery,
     })
 
+    // text-embedding-3-small produces cosine similarities in a narrower
+    // range than older models — relevant matches typically score 0.2–0.4,
+    // not 0.7+.  Threshold 0.2 keeps real matches and filters pure noise.
     const { data: chunks, error: searchError } = await supabase.rpc(
       'match_chunks',
       {
         query_embedding: JSON.stringify(embedding),
         query_text: rewrittenQuery,
         p_site_id: site.id,
-        match_threshold: 0.5,
+        match_threshold: 0.2,
         match_count: 5,
       }
     )

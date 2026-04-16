@@ -68,6 +68,7 @@ export async function POST() {
       maxDiscoveryDepth: 5,
       crawlEntireDomain: true,
       sitemap: 'include',
+      excludePaths: ['/sitemap.xml', '/robots.txt', '/404', '/cart', '/checkout'],
       scrapeOptions: {
         formats: ['markdown'],
         waitFor: 2000,
