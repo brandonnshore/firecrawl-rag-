@@ -78,18 +78,65 @@ export async function POST(request: Request) {
 
     after(async () => {
       try {
+        console.log(`[webhook] after() running for site ${siteId}, job ${crawlJobId}`)
+
+        if (!process.env.FIRECRAWL_API_KEY) {
+          throw new Error('FIRECRAWL_API_KEY env var is missing')
+        }
+
         const firecrawl = new Firecrawl({
-          apiKey: process.env.FIRECRAWL_API_KEY!,
+          apiKey: process.env.FIRECRAWL_API_KEY,
         })
+
+        console.log(`[webhook] Calling getCrawlStatus for job ${crawlJobId}`)
         const result = await firecrawl.getCrawlStatus(crawlJobId)
 
-        const pages: CrawledPage[] = result.data ?? []
+        console.log(
+          `[webhook] getCrawlStatus response: status=${result.status}, total=${result.total}, completed=${result.completed}, dataLength=${result.data?.length ?? 'undefined'}`
+        )
+
+        // Log the shape of the first page to verify field mapping
+        if (result.data && result.data.length > 0) {
+          const first = result.data[0] as Record<string, unknown>
+          console.log(
+            `[webhook] First page keys: ${Object.keys(first).join(', ')}`
+          )
+          console.log(
+            `[webhook] First page markdown length: ${(first.markdown as string)?.length ?? 'undefined'}`
+          )
+          const meta = first.metadata as Record<string, unknown> | undefined
+          if (meta) {
+            console.log(
+              `[webhook] First page metadata keys: ${Object.keys(meta).join(', ')}`
+            )
+            console.log(
+              `[webhook] First page sourceURL: ${meta.sourceURL ?? meta.url ?? 'not found'}`
+            )
+          }
+        }
+
+        const pages: CrawledPage[] = (result.data ?? []).map((doc) => {
+          const d = doc as Record<string, unknown>
+          const meta = d.metadata as Record<string, unknown> | undefined
+          return {
+            markdown: (d.markdown as string) ?? undefined,
+            metadata: {
+              title: (meta?.title as string) ?? undefined,
+              sourceURL:
+                (meta?.sourceURL as string) ??
+                (meta?.url as string) ??
+                undefined,
+              statusCode: (meta?.statusCode as number) ?? undefined,
+            },
+          }
+        })
+
         const totalChars = pages.reduce(
           (n, p) => n + (p.markdown?.length ?? 0),
           0
         )
         console.log(
-          `[webhook] Fetched ${pages.length} pages, ${totalChars} chars for site ${siteId}`
+          `[webhook] Mapped ${pages.length} pages, ${totalChars} chars for site ${siteId}`
         )
 
         await processCrawlData(siteId, pages)
