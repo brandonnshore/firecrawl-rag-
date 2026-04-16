@@ -24,6 +24,35 @@ describe('validateCrawlUrl', () => {
     expect(result.valid).toBe(true)
   })
 
+  // --- Normalization: always strip to root ---
+  it('normalizes a root URL to itself (with trailing slash)', () => {
+    const result = validateCrawlUrl('https://example.com')
+    expect(result.normalizedUrl).toBe('https://example.com/')
+  })
+
+  it('strips a path so the crawl starts at the root', () => {
+    const result = validateCrawlUrl('https://franklinbbq.com/menu')
+    expect(result.valid).toBe(true)
+    expect(result.normalizedUrl).toBe('https://franklinbbq.com/')
+  })
+
+  it('strips query and hash', () => {
+    const result = validateCrawlUrl(
+      'https://example.com/about?foo=bar#section'
+    )
+    expect(result.normalizedUrl).toBe('https://example.com/')
+  })
+
+  it('preserves subdomain during normalization', () => {
+    const result = validateCrawlUrl('https://shop.example.com/products/123')
+    expect(result.normalizedUrl).toBe('https://shop.example.com/')
+  })
+
+  it('preserves non-default port during normalization', () => {
+    const result = validateCrawlUrl('https://example.com:8443/deep/page')
+    expect(result.normalizedUrl).toBe('https://example.com:8443/')
+  })
+
   // --- Reject HTTP ---
   it('rejects HTTP URLs', () => {
     const result = validateCrawlUrl('http://example.com')

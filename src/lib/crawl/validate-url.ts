@@ -1,15 +1,21 @@
 interface ValidationResult {
   valid: boolean
   error?: string
+  /** Normalized URL — always the site root (protocol + hostname + "/"). */
+  normalizedUrl?: string
 }
 
 /**
- * Validates a URL for the crawl start API.
+ * Validates and normalizes a URL for the crawl start API.
  *
  * Requirements:
  * - Must be a non-empty string
  * - Must be a valid URL with https:// protocol
  * - Must not point to localhost, loopback, or private IPs
+ *
+ * Normalization: always strips path, query, and hash so we crawl the
+ * root of the site. Users routinely paste the page they're looking at
+ * (e.g. /menu, /about) but want their whole site indexed.
  */
 export function validateCrawlUrl(url: unknown): ValidationResult {
   if (typeof url !== 'string' || url.trim() === '') {
@@ -18,7 +24,7 @@ export function validateCrawlUrl(url: unknown): ValidationResult {
 
   let parsed: URL
   try {
-    parsed = new URL(url)
+    parsed = new URL(url.trim())
   } catch {
     return { valid: false, error: 'Invalid URL format' }
   }
@@ -45,7 +51,10 @@ export function validateCrawlUrl(url: unknown): ValidationResult {
     return { valid: false, error: 'localhost and private/internal URLs are not allowed' }
   }
 
-  return { valid: true }
+  // Normalize to site root — strip path/query/hash.
+  const normalizedUrl = `${parsed.protocol}//${parsed.hostname}${parsed.port ? ':' + parsed.port : ''}/`
+
+  return { valid: true, normalizedUrl }
 }
 
 /**

@@ -24,11 +24,12 @@ export async function POST(request: Request) {
   }
 
   const validation = validateCrawlUrl(body.url)
-  if (!validation.valid) {
+  if (!validation.valid || !validation.normalizedUrl) {
     return Response.json({ error: validation.error }, { status: 400 })
   }
 
-  const url = (body.url as string).trim()
+  // Always crawl the root — users often paste a subpage by accident.
+  const url = validation.normalizedUrl
 
   // 3. Check subscription
   const subscription = await checkSubscription(user.id)

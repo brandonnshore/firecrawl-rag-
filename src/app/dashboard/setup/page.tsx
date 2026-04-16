@@ -296,7 +296,8 @@ export default function SetupPage() {
             className="focus-ring block w-full rounded-lg border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3.5 py-2.5 text-[15px] text-[color:var(--ink-primary)] placeholder:text-[color:var(--ink-tertiary)]"
           />
           <p className="mt-1.5 text-xs text-[color:var(--ink-tertiary)]">
-            Must be public and reachable. We crawl up to 100 pages.
+            Paste any page — we always start at the site root and crawl up
+            to 100 pages.
           </p>
         </div>
 
