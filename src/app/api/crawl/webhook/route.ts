@@ -2,6 +2,7 @@ import { after } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { processCrawlData, markCrawlFailed } from '@/lib/crawl/process'
 import type { CrawledPage } from '@/lib/crawl/process'
+import Firecrawl from '@mendable/firecrawl-js'
 
 /**
  * Webhook payload shape from Firecrawl
@@ -68,14 +69,29 @@ export async function POST(request: Request) {
   }
 
   if (eventType === 'crawl.completed') {
-    const pages = payload.data ?? []
-    const totalChars = pages.reduce((n, p) => n + (p.markdown?.length ?? 0), 0)
+    // The webhook payload may or may not include page data — Firecrawl
+    // doesn't guarantee it.  Always fetch results via checkCrawlStatus
+    // to get the full dataset reliably.
     console.log(
-      `[webhook] crawl.completed for site ${siteId}: ${pages.length} pages, ${totalChars} chars total markdown`
+      `[webhook] crawl.completed for site ${siteId}, job ${crawlJobId}. Fetching results via API.`
     )
 
     after(async () => {
       try {
+        const firecrawl = new Firecrawl({
+          apiKey: process.env.FIRECRAWL_API_KEY!,
+        })
+        const result = await firecrawl.getCrawlStatus(crawlJobId)
+
+        const pages: CrawledPage[] = result.data ?? []
+        const totalChars = pages.reduce(
+          (n, p) => n + (p.markdown?.length ?? 0),
+          0
+        )
+        console.log(
+          `[webhook] Fetched ${pages.length} pages, ${totalChars} chars for site ${siteId}`
+        )
+
         await processCrawlData(siteId, pages)
       } catch (err) {
         console.error('[webhook] Processing failed:', err)
