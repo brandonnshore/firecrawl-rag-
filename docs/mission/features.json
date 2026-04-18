@@ -727,6 +727,156 @@
         "VAL-ESCAL-014", "VAL-ESCAL-015"
       ],
       "status": "pending"
+    },
+    {
+      "id": "upstash-rate-limiter",
+      "description": "Replace src/lib/chat/rate-limit.ts in-memory Map implementation with @upstash/ratelimit + @upstash/redis. Keep the current per-IP 3-second window on widget /api/chat/session. Add /api/crawl/start rate-limit (5/hour per user). Add /api/files upload rate-limit (60/hour per user). All 429 responses include Retry-After header. Remove the unused ioredis dependency (redis-server is not needed in Vercel production). Keep local Redis in services.yaml for dev-only convenience; production uses Upstash REST API.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["message-quota-enforcement is completed"],
+      "expectedBehavior": [
+        "Rate limit state persists across Vercel cold starts (Upstash-backed)",
+        "429 responses include Retry-After header",
+        "Widget endpoint: 1 req / 3s per IP",
+        "Crawl start: 5 / hour per user",
+        "File upload: 60 / hour per user",
+        "ioredis removed from dependencies"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/rate-limit-upstash.test.ts",
+        "Manual: hammer endpoint, verify 429 with Retry-After"
+      ],
+      "fulfills": ["VAL-HARD-001", "VAL-HARD-002"],
+      "status": "pending"
+    },
+    {
+      "id": "sentry-integration",
+      "description": "Install @sentry/nextjs. Run npx @sentry/wizard@latest -i nextjs (or manually add sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts). Configure DSN via SENTRY_DSN env var. Add tags: environment (production|preview|development), user_id (from Supabase auth), request_id (generate per request via middleware). Enable tracesSampleRate=0.1 in production. Add test case: throw in an API route; assert Sentry test DSN shows the event.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": [],
+      "expectedBehavior": [
+        "@sentry/nextjs configured for client, server, edge runtimes",
+        "Handled exception in an API route produces a Sentry event",
+        "Event has tags: environment, user_id, request_id",
+        "tracesSampleRate=0.1 in production config"
+      ],
+      "verificationSteps": [
+        "Trigger a test error route; check Sentry dashboard for the event",
+        "pnpm vitest run src/__tests__/sentry-tags.test.ts"
+      ],
+      "fulfills": ["VAL-HARD-010"],
+      "status": "pending"
+    },
+    {
+      "id": "legal-pages",
+      "description": "Create /privacy, /terms, /dpa pages as React server components with the app's layout (header/footer only, no dashboard chrome). Content: start from a standard SaaS template (e.g., Termly-generated or hand-written) and customize with RubyCrawl specifics: data stored (site content via Firecrawl, uploaded files, chat transcripts, email leads), processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry), retention policies, GDPR/CCPA language, contact email. /dpa covers processor relationships per GDPR Art. 28. All three linked from footer. Do NOT use AI to generate legal text verbatim — structure from template, Brandon reviews text.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": [],
+      "expectedBehavior": [
+        "/privacy, /terms, /dpa each return 200 with > 1KB of content",
+        "Each page links to the other two via footer",
+        "Content lists our actual processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry)",
+        "Contact email present on each page"
+      ],
+      "verificationSteps": [
+        "curl /privacy /terms /dpa; check response size",
+        "Brandon reviews text before launch"
+      ],
+      "fulfills": ["VAL-HARD-003", "VAL-HARD-004", "VAL-HARD-005"],
+      "status": "pending"
+    },
+    {
+      "id": "transactional-email",
+      "description": "Install resend + react-email. Create emails/ directory with React components: WelcomeEmail, TrialEndingEmail, QuotaWarningEmail, PaymentFailedEmail. Create src/lib/email.ts with sendEmail(to, template, props) using Resend SDK. Wire triggers: (1) signup -> welcome (hook into Supabase auth via DB trigger or webhook); (2) Vercel Cron (daily) -> find trials ending in 3 days, send once per user (idempotency via a sent_emails table with UNIQUE(user_id, template, period)); (3) message-quota-enforcement at 80% threshold -> one-time warning per period; (4) stripe-webhook-api invoice.payment_failed -> payment-failed email. All emails use app branding, plain CTAs, and List-Unsubscribe header. Resend test mode in CI.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["stripe-webhook-api is completed", "message-quota-enforcement is completed"],
+      "expectedBehavior": [
+        "Signup triggers welcome email (visible in Resend logs)",
+        "Cron sends trial-ending email 3 days before trial_ends_at; idempotent on re-run",
+        "User crossing 80% monthly messages triggers one-time warning per period",
+        "invoice.payment_failed triggers payment-failed email",
+        "sent_emails table tracks idempotency"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/email-*.test.ts (each trigger + idempotency)",
+        "Manual: trigger each scenario in dev, verify Resend logs"
+      ],
+      "fulfills": [
+        "VAL-HARD-006", "VAL-HARD-007",
+        "VAL-HARD-008", "VAL-HARD-009"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "ci-workflow",
+      "description": "Finalize .github/workflows/test.yml from the M1 skeleton. Runs on push and pull_request. Jobs: (1) unit-integration: postgres service container, pnpm install frozen, pnpm lint, pnpm typecheck, pnpm vitest run --coverage, codecov upload; (2) e2e: needs unit-integration, pnpm playwright install chromium, pnpm playwright test, upload playwright-report artifact on failure. Secrets: SUPABASE_TEST_* from GitHub secrets. Target run time < 10 min. Gate main branch behind required checks in GitHub settings.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["add-test-infrastructure is completed", "all other milestones substantially complete"],
+      "expectedBehavior": [
+        ".github/workflows/test.yml exists with unit-integration + e2e jobs",
+        "Push triggers the workflow; status appears on the PR",
+        "All P0 tests pass in CI",
+        "Coverage uploaded to Codecov",
+        "Playwright report uploaded as artifact on failure",
+        "Total CI run time < 10 min"
+      ],
+      "verificationSteps": [
+        "Open a PR and observe Actions tab",
+        "Check codecov.io for coverage report"
+      ],
+      "fulfills": ["VAL-HARD-011"],
+      "status": "pending"
+    },
+    {
+      "id": "fresh-start-wipe-script",
+      "description": "Create scripts/reset-my-data.sql: parametrized on a single :user_id. Deletes rows in dependency order from chat_sessions, conversations, leads, embeddings, pages, supplementary_files, usage_counters, custom_responses, escalation_rules, sites WHERE user_id = :user_id (or via site_id chain). Preserves the profiles row (and its Stripe relationship). Also deletes Storage objects under that user's folder. Wrapped in a transaction. Add a safety check: raises exception if :user_id is NULL. Add scripts/reset-my-data.sh wrapper that requires env var CONFIRM_USER_ID to match the SQL param. Brandon runs manually when he's ready to start clean before onboarding real customers.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["all-schema-migrations-complete"],
+      "expectedBehavior": [
+        "Running reset-my-data.sh with CONFIRM_USER_ID=<brandon_id> truncates all his user-scoped data",
+        "profiles row preserved",
+        "Storage folder for user cleared",
+        "Other users' data untouched (asserted via row counts before/after)",
+        "Script raises if user_id is NULL (safety)"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/reset-my-data.test.ts (seeded 2 users, run script for one, assert the other is intact)"
+      ],
+      "fulfills": ["VAL-CROSS-010"],
+      "status": "pending"
+    },
+    {
+      "id": "cross-area-e2e-journeys",
+      "description": "End-to-end Playwright specs covering the user journeys in VAL-CROSS-001..009. One spec file per journey in e2e/: signup-to-chat.spec.ts, subscription-lifecycle.spec.ts, lead-capture.spec.ts, quota-exhaustion.spec.ts, file-retrieval.spec.ts, responses-plus-escalation.spec.ts, settings-navigation.spec.ts, auth-gates-dashboard.spec.ts, auth-gates-api.spec.ts. Each spec stubs external services via page.route (OpenAI, Firecrawl, Stripe via stripe-mock). Seeds test users via the M1 createTestSessionViaAdmin helper. Captures screenshots at key steps to .factory/validation/hardening-launch/evidence/. Assertions map 1:1 to VAL-CROSS-001 through VAL-CROSS-009.",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["all prior milestones at least implementation-complete"],
+      "expectedBehavior": [
+        "e2e/signup-to-chat.spec.ts covers full new-user journey (VAL-CROSS-001)",
+        "e2e/subscription-lifecycle.spec.ts covers trial->expired->paid (VAL-CROSS-002)",
+        "e2e/lead-capture.spec.ts covers widget -> lead -> CSV export (VAL-CROSS-003)",
+        "e2e/quota-exhaustion.spec.ts covers over-quota + upgrade + recovery (VAL-CROSS-004)",
+        "e2e/file-retrieval.spec.ts covers PDF upload -> cite in chat (VAL-CROSS-005)",
+        "e2e/responses-plus-escalation.spec.ts covers combined matcher + escalation flow (VAL-CROSS-006)",
+        "e2e/settings-navigation.spec.ts covers all 5 sub-routes (VAL-CROSS-007)",
+        "e2e/auth-gates-dashboard.spec.ts covers 12 unauth'd dashboard redirects (VAL-CROSS-008)",
+        "e2e/auth-gates-api.spec.ts covers API auth boundaries (VAL-CROSS-009)"
+      ],
+      "verificationSteps": [
+        "pnpm playwright test",
+        "Screenshots archived in .factory/validation/hardening-launch/evidence/"
+      ],
+      "fulfills": [
+        "VAL-CROSS-001", "VAL-CROSS-002", "VAL-CROSS-003",
+        "VAL-CROSS-004", "VAL-CROSS-005", "VAL-CROSS-006",
+        "VAL-CROSS-007", "VAL-CROSS-008", "VAL-CROSS-009"
+      ],
+      "status": "pending"
     }
   ]
 }
