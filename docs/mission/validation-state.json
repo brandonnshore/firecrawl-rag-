@@ -155,6 +155,19 @@
     "VAL-CROSS-007": { "status": "pending" },
     "VAL-CROSS-008": { "status": "pending" },
     "VAL-CROSS-009": { "status": "pending" },
-    "VAL-CROSS-010": { "status": "pending" }
+    "VAL-CROSS-010": { "status": "pending" },
+
+    "VAL-TOS-001": { "status": "pending" },
+    "VAL-TOS-002": { "status": "pending" },
+    "VAL-TOS-003": { "status": "pending" },
+    "VAL-TOS-004": { "status": "pending" },
+
+    "VAL-DEGRADE-001": { "status": "pending" },
+    "VAL-DEGRADE-002": { "status": "pending" },
+    "VAL-DEGRADE-003": { "status": "pending" },
+
+    "VAL-GDPR-001": { "status": "pending" },
+    "VAL-GDPR-002": { "status": "pending" },
+    "VAL-GDPR-003": { "status": "pending" }
   }
 }

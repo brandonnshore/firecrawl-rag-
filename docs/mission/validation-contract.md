@@ -928,6 +928,80 @@ After Brandon runs `scripts/reset-my-data.sql` against his user: `sites`, `embed
 
 ---
 
+---
+
+## Area: TOS (terms-of-service acceptance at signup)
+
+### VAL-TOS-001: Signup requires ToS checkbox
+`/login` (signup) submit is disabled until the ToS checkbox is ticked. Attempting to submit without it shows an inline error and makes no network request.
+
+**Tool:** browser automation
+**Evidence:** screenshot(submit-disabled), screenshot(error-after-submit-attempt), network(no request)
+
+### VAL-TOS-002: ToS link opens /terms
+The ToS label contains a link text "Terms of Service" that opens `/terms` in a new tab.
+
+**Tool:** browser automation
+**Evidence:** DOM check; click opens new tab at `/terms`
+
+### VAL-TOS-003: tos_accepted_at recorded on signup
+After a successful signup, `profiles.tos_accepted_at` is set to the signup timestamp (not null).
+
+**Tool:** vitest integration + curl
+**Evidence:** DB row inspection
+
+### VAL-TOS-004: Existing users without ToS cannot use paid features
+Users created before ToS was required (`tos_accepted_at IS NULL`) are prompted to accept on next login; they cannot access `/dashboard/billing` upgrade actions until accepted.
+
+**Tool:** browser automation
+**Evidence:** screenshot(acceptance-prompt); after accept, full access
+
+---
+
+## Area: DEGRADE (graceful widget degradation)
+
+### VAL-DEGRADE-001: Widget hides bubble when API unreachable
+Widget loader's pre-flight `GET /api/widget/config?site_key=X` failing (5xx, network error, timeout > 3s) causes the bubble to **not render**. No error dialog on the customer's site.
+
+**Tool:** browser automation with route mock
+**Evidence:** screenshot showing no bubble; console logs warning once, not repeatedly
+
+### VAL-DEGRADE-002: Widget recovers when API returns
+After the pre-flight fails, polling once per minute; when the API returns 200 again, the bubble appears without a page reload.
+
+**Tool:** browser automation with toggle route mock
+**Evidence:** screenshot(pre-bubble-hidden), screenshot(post-bubble-visible after toggle)
+
+### VAL-DEGRADE-003: Widget silent on subscription-inactive (402)
+When chat/session returns 402 (subscription inactive), the widget hides the bubble — not "service unavailable", just nothing. Visitor never sees that the site owner lapsed on payment.
+
+**Tool:** browser automation
+**Evidence:** screenshot showing no bubble
+
+---
+
+## Area: GDPR (account deletion — right to be forgotten)
+
+### VAL-GDPR-001: Delete-account button present
+`/dashboard/settings/site` has a "Delete my account" section at the bottom with a red destructive-action button and an explanation of what gets deleted.
+
+**Tool:** browser automation
+**Evidence:** screenshot
+
+### VAL-GDPR-002: Delete confirmation modal
+Clicking the button opens a modal requiring the user to type their email to confirm. Cancel closes without side effects.
+
+**Tool:** browser automation
+**Evidence:** screenshot(modal); cancel returns to settings unchanged
+
+### VAL-GDPR-003: DELETE /api/account cascades everything
+Confirming deletion: (1) cancels Stripe subscription (immediate); (2) deletes all user-scoped rows across sites, pages, embeddings, leads, conversations, chat_sessions, supplementary_files, usage_counters, custom_responses, escalation_rules; (3) deletes Storage objects in the user's folder; (4) deletes profiles row; (5) deletes auth.users row via admin API; (6) clears session cookies; (7) redirects to `/` with confirmation toast.
+
+**Tool:** vitest integration + Playwright
+**Evidence:** pre/post row counts across all tables; Stripe subscription status=canceled; user cannot log back in
+
+---
+
 ## Coverage summary
 
 | Area | Count |
@@ -942,7 +1016,10 @@ After Brandon runs `scripts/reset-my-data.sql` against his user: `sites`, `embed
 | ESCAL | 15 |
 | HARD | 11 |
 | CROSS | 10 |
-| **Total** | **144** |
+| TOS | 4 |
+| DEGRADE | 3 |
+| GDPR | 3 |
+| **Total** | **154** |
 
 Notes from adversarial review passes:
 

@@ -18,6 +18,16 @@ Taking the existing Next.js + Supabase + Firecrawl + OpenAI RAG chatbot product 
 
 Mission is complete only when **every behavioral assertion in `validation-contract.md` has status `"passed"` in `validation-state.json`**, with evidence (screenshots, curl output, DB queries) archived in `.factory/validation/`. Nothing short of that is "done."
 
+## Scope additions (2026-04-18, post-initial-scoping)
+
+Three features added after contract v1.0, folded into existing milestones:
+
+- **Terms-of-service acceptance at signup** — checkbox linked to `/terms`, stored on `profiles.tos_accepted_at`. Blocks account creation without it. Lives in M4 (settings-sidebar milestone since it touches auth UI conventions, though the UX lives on `/login`).
+- **Graceful widget degradation** — when the API is unreachable (5xx, network failure, timeout), the widget bubble hides instead of showing errors on the customer's site. Lives in M8.
+- **GDPR account deletion** — self-serve "Delete my account" in `/dashboard/settings/site` that cancels Stripe subscription, wipes all user-scoped data including `profiles` + auth.user, and invalidates the session. Required before EU customer onboarding. Lives in M8.
+
+Contract grew from 144 → 154 assertions, features.json 40 → 43.
+
 ## Scope — included
 
 - Stripe billing: 3 tiers (Starter $24.99 / Pro $49.99 / Scale $99), checkout, webhook, customer portal, real subscription gates.

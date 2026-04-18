@@ -437,6 +437,27 @@
       "status": "pending"
     },
     {
+      "id": "tos-acceptance-signup",
+      "description": "Add ToS checkbox to /login signup form (login page handles both sign-in and sign-up via magic link, so we gate the magic-link send on acceptance for new emails only). Add profiles.tos_accepted_at timestamptz column (migration). Server-side: /api/auth/magic-link (or equivalent) only sends the link if request body includes tos_accepted=true for new emails, and stamps tos_accepted_at on profile creation via a trigger or auth hook. Existing users (null tos_accepted_at) hit an acceptance banner on next dashboard visit that blocks /dashboard/billing upgrades until accepted via POST /api/account/accept-tos. ToS link opens /terms (M8 feature) in a new tab; for now, links to a placeholder page.",
+      "skillName": "fullstack-worker",
+      "milestone": "settings-sidebar",
+      "preconditions": [],
+      "expectedBehavior": [
+        "Signup submit disabled until ToS checkbox ticked",
+        "Attempt to submit without checkbox shows inline error, no network request",
+        "ToS label contains a link to /terms that opens in new tab",
+        "Successful signup sets profiles.tos_accepted_at",
+        "Existing user with NULL tos_accepted_at sees acceptance banner on next dashboard visit",
+        "Billing upgrade actions blocked until ToS accepted"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/tos-signup.spec.ts covers check/uncheck, submission, DB assertion",
+        "pnpm vitest run src/__tests__/tos-acceptance.test.ts"
+      ],
+      "fulfills": ["VAL-TOS-001", "VAL-TOS-002", "VAL-TOS-003", "VAL-TOS-004"],
+      "status": "pending"
+    },
+    {
       "id": "supplementary-files-schema-storage",
       "description": "Create supabase/migrations/<ts>_supplementary_files.sql: table supplementary_files (id uuid PK default gen_random_uuid(), site_id uuid FK sites(id) ON DELETE CASCADE, filename text NOT NULL, storage_path text NOT NULL, bytes int NOT NULL CHECK (bytes > 0), content_hash text NOT NULL, status text CHECK (status IN ('queued','processing','ready','failed')) default 'queued', error_message text, chunks_count int default 0, created_at timestamptz default now(), UNIQUE(site_id, content_hash)). Index on site_id and status. RLS: authenticated user SELECT/DELETE their own site's files (via site_id -> sites.user_id chain); widget cannot access (server-only). Create Supabase Storage bucket 'knowledge-files' with policy: authenticated user can SELECT/INSERT/DELETE objects under their own user_id folder (storage.foldername(name))[1]::uuid = auth.uid(). Service role bypasses.",
       "skillName": "fullstack-worker",
@@ -876,6 +897,50 @@
         "VAL-CROSS-004", "VAL-CROSS-005", "VAL-CROSS-006",
         "VAL-CROSS-007", "VAL-CROSS-008", "VAL-CROSS-009"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "widget-graceful-degradation",
+      "description": "Update widget loader (widget/src/loader.ts) with a pre-flight check: GET /api/widget/config?site_key=X (new lightweight route returning {site_key_valid, site_ready, api_version}). If it fails (network error, timeout > 3s, 5xx) or returns site_ready=false, bubble does not render. Loader re-tries once per 60s silently. When the check succeeds, bubble appears without a page reload. Also: if POST /api/chat/session returns 402 (subscription inactive), widget hides the bubble permanently for that page-view — visitor never sees 'service unavailable' (protects site-owner reputation). Logger warns once in console (not repeatedly).",
+      "skillName": "widget-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["subscription-gate is completed"],
+      "expectedBehavior": [
+        "Widget bubble hidden when pre-flight fails (5xx / network / timeout)",
+        "Bubble appears automatically after API recovers (60s polling)",
+        "Bubble hidden on 402 subscription inactive — no error shown to visitor",
+        "Console warns once, not repeatedly (no log spam)"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/widget-degradation.spec.ts with page.route toggling 500 / 200",
+        "Manual: stop dev server, load test page, assert no bubble"
+      ],
+      "fulfills": ["VAL-DEGRADE-001", "VAL-DEGRADE-002", "VAL-DEGRADE-003"],
+      "status": "pending"
+    },
+    {
+      "id": "gdpr-account-deletion",
+      "description": "Self-serve account deletion. Add DELETE /api/account route: (1) fetch profile + stripe_customer_id; (2) cancel Stripe subscription immediately (stripe.subscriptions.cancel, NOT cancel_at_period_end — immediate); (3) delete Storage objects under user's folder; (4) delete all user-scoped rows (reuse fresh-start-wipe-script logic but extended to also delete profiles row); (5) call supabase.auth.admin.deleteUser(user_id); (6) clear session cookies; (7) return 200. On /dashboard/settings/site add a 'Delete account' section at the bottom with red destructive-action button. Confirmation modal requires typing user's email. Client redirects to / with a confirmation toast after success. Email confirmation sent (via Resend transactional-email feature) post-deletion with 30-day recovery window note (optional — decide at M8 scope review).",
+      "skillName": "fullstack-worker",
+      "milestone": "hardening-launch",
+      "preconditions": ["stripe-webhook-api is completed", "fresh-start-wipe-script is completed", "settings-sidebar milestone complete"],
+      "expectedBehavior": [
+        "Settings site page has Delete account section with red button",
+        "Modal requires typing user's exact email to enable the Delete button",
+        "Cancel closes modal with zero side effects",
+        "Confirm: Stripe subscription canceled immediately",
+        "All user-scoped rows across all tables deleted",
+        "Storage objects under user folder deleted",
+        "profiles row deleted",
+        "auth.users row deleted (user cannot log back in)",
+        "Session cookies cleared; redirect to / with toast",
+        "Other users' data untouched"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/gdpr-delete-account.test.ts (seeded 2 users, delete one, assert other untouched)",
+        "Playwright: e2e/gdpr-delete.spec.ts walks the full flow"
+      ],
+      "fulfills": ["VAL-GDPR-001", "VAL-GDPR-002", "VAL-GDPR-003"],
       "status": "pending"
     }
   ]
