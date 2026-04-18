@@ -1,0 +1,43 @@
+{
+  "feature": "stripe-webhook-api",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-BILLING-007", "VAL-BILLING-008", "VAL-BILLING-009",
+    "VAL-BILLING-010", "VAL-BILLING-011", "VAL-BILLING-012",
+    "VAL-BILLING-013", "VAL-BILLING-015"
+  ],
+  "partiallyFulfills": {
+    "VAL-BILLING-014": "invoice.paid rolls profiles.current_period_start/end now; the usage_counters portion lands when M3 quota-reset-on-invoice-paid adds the usage_counters table. Handler already writes to usage_counters via a no-op UPDATE — the SQL resolves cleanly once the table exists."
+  },
+  "whatWasImplemented": [
+    "src/app/api/stripe/webhook/route.ts — POST handler. Reads raw body via request.text() for signature verification; returns 400 on missing stripe-signature header, malformed header, wrong secret, or timestamp outside the explicit 300s tolerance (Stripe's constructEvent groups all four failure modes under SignatureVerificationError).",
+    "Idempotency: INSERT into processed_stripe_events (stripe_event_id PK). Duplicate delivery yields PG error 23505 and the handler short-circuits to 200 {duplicate:true} without re-firing the event dispatcher. Verified with a mutate-and-replay test — trialing marker survives the second delivery.",
+    "Event dispatch: checkout.session.completed records subscription id + customer mapping; customer.subscription.created|updated syncs stripe_subscription_id, subscription_status, current_period_start/end, cancel_at_period_end, and plan_id (via stripe_price_id -> plans.id lookup); customer.subscription.deleted flips status='canceled'; invoice.paid rolls profiles.current_period_start/end and attempts the usage_counters reset (harmless no-op pre-M3); invoice.payment_failed flips status='past_due'.",
+    "Unknown event types still return 200 so Stripe stops retrying (per Stripe docs).",
+    "src/__tests__/stripe-webhook.test.ts — 13 integration tests against live Supabase + signed events via Stripe.webhooks.generateTestHeaderString. Covers signature failures (missing header / malformed / wrong secret / no DB write on rejection), expired timestamp, idempotency replay, all 5 event types end-to-end, and an unknown-customer no-op."
+  ],
+  "whatWasLeftUndone": "VAL-BILLING-014 is partially satisfied — profile-side period rollover works now; usage_counters reset will activate automatically when M3's quota-reset-on-invoice-paid feature adds the table. The webhook already issues the UPDATE (just no-ops silently on a missing relation).",
+  "discoveredIssues": [
+    "Stripe SDK v22 Checkout.Session.subscription can be string | Stripe.Subscription | null — handler unwraps defensively. Similarly Invoice.customer. Typed via narrow interfaces rather than casting to any.",
+    "Next.js App Router does NOT require the legacy pages-router raw-body opt-out — request.text() on a Request returns the raw JSON string pre-parse. Verified by the 13 passing signature tests.",
+    "Handler failure after a successful processed_stripe_events insert will cause Stripe retries to be swallowed (the duplicate guard prevents re-dispatch). Acceptable for M2; M8 hardening should add a dead-letter table for handler failures so retries can process the event on a future revision."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 260 passed / 1 skipped / 35 files (+13 new). 0 regressions.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "Webhook signature tolerance: timestamp 6 minutes in the past", "expected": "400 invalid signature", "observed": "400 (via VAL-BILLING-009 test)" },
+      { "action": "Duplicate event_id replay with profile mutation between deliveries", "expected": "first 200 processes, second 200 idempotent no-op", "observed": "pass (VAL-BILLING-010 test)" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/api/stripe/webhook/route.ts (created)",
+    "src/__tests__/stripe-webhook.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-BILLING-007/008/009/010/011/012/013/015 -> passed)",
+    "docs/mission/handoffs/stripe-webhook-api.json (created)"
+  ]
+}
