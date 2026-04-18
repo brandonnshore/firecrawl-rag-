@@ -435,6 +435,141 @@
       ],
       "fulfills": ["VAL-SET-006"],
       "status": "pending"
+    },
+    {
+      "id": "supplementary-files-schema-storage",
+      "description": "Create supabase/migrations/<ts>_supplementary_files.sql: table supplementary_files (id uuid PK default gen_random_uuid(), site_id uuid FK sites(id) ON DELETE CASCADE, filename text NOT NULL, storage_path text NOT NULL, bytes int NOT NULL CHECK (bytes > 0), content_hash text NOT NULL, status text CHECK (status IN ('queued','processing','ready','failed')) default 'queued', error_message text, chunks_count int default 0, created_at timestamptz default now(), UNIQUE(site_id, content_hash)). Index on site_id and status. RLS: authenticated user SELECT/DELETE their own site's files (via site_id -> sites.user_id chain); widget cannot access (server-only). Create Supabase Storage bucket 'knowledge-files' with policy: authenticated user can SELECT/INSERT/DELETE objects under their own user_id folder (storage.foldername(name))[1]::uuid = auth.uid(). Service role bypasses.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "expectedBehavior": [
+        "supplementary_files table with correct schema, constraints, and indexes",
+        "UNIQUE(site_id, content_hash) enforces dedupe at DB level",
+        "RLS: user A cannot SELECT/DELETE user B's files",
+        "Storage bucket knowledge-files exists with per-user folder RLS",
+        "Cascade: deleting a site deletes its supplementary_files rows"
+      ],
+      "verificationSteps": [
+        "supabase db reset; verify table + bucket via psql and supabase Studio",
+        "pnpm vitest run src/__tests__/supplementary-files-schema.test.ts"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "file-upload-api-limits",
+      "description": "POST /api/files route accepting multipart/form-data. Auth required. Pipeline: (1) stream the body with 25MB cap — abort stream if exceeded, return 413; (2) compute magic-byte sniff on first N bytes, compare against allow-list (PDF %PDF-, DOCX/PPTX/XLSX PK zip magic, plain text heuristic, CSV = text with commas); reject MIME spoofing; (3) compute SHA-256 content_hash; (4) sanitize filename (strip path separators, limit to 255 chars, no leading dots); (5) check plan file cap by SELECT count FROM supplementary_files WHERE site_id = ... — if >= plan.supplementary_file_limit, reject with 403; (6) dedupe: INSERT ... ON CONFLICT (site_id, content_hash) DO NOTHING RETURNING id — if conflict, return 200 with {duplicate:true, existing_id}; (7) upload to Storage at `${user_id}/${file_id}.${ext}`; (8) INSERT row with status='queued'; (9) trigger background processor (next feature). Reject 0-byte files. Return 200 with file_id on success.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["supplementary-files-schema-storage is completed"],
+      "expectedBehavior": [
+        "Files >25MB rejected with 413 before full upload",
+        "MIME spoofing detected via magic bytes: .exe labeled as application/pdf -> rejected",
+        "Path traversal in filename sanitized (../../etc/passwd.pdf -> etc_passwd.pdf)",
+        "0-byte file rejected with 400",
+        "Plan file cap enforced (Starter 25, Pro 100, Scale 500) -> 403 over cap",
+        "Duplicate content_hash -> 200 with {duplicate:true}, no new row",
+        "Happy path -> 200 with {file_id}; file in Storage; row in DB with status='queued'"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/file-upload-*.test.ts (including adversarial fixtures)",
+        "curl with 26MB file -> 413; with .exe-as-pdf -> 400; with valid PDF -> 200"
+      ],
+      "fulfills": [
+        "VAL-FILE-010", "VAL-FILE-011", "VAL-FILE-012",
+        "VAL-FILE-018", "VAL-FILE-019", "VAL-FILE-021"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "file-parsers-pipeline",
+      "description": "Background processor (Next.js route POST /api/files/process invoked by a queue or directly via after() from upload) that: (1) sets status='processing'; (2) downloads file from Storage; (3) routes to parser by extension — pdf-parse for PDF (reject if encrypted with owner password), mammoth for DOCX (strips macros), officeparser or pptx2json for PPTX, xlsx for XLSX+CSV (sheet-aware), native text read for TXT/MD; (4) extracts text + detects suspicious size (zip bomb: if decompressed > 100MB -> fail with clear error; PDF-bomb similarly); (5) handles non-UTF8 via TextDecoder('utf-8', {fatal:false}) with fallback; (6) reuses existing src/lib/crawl/chunk.ts chunkMarkdown() to split; (7) embeds via text-embedding-3-small; (8) inserts into embeddings with source_type='file', source_url='file://<filename>', file_id FK. Sets status='ready' (or 'failed' with error_message). Adds embeddings.source_type column if not present. Status transitions observable.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["file-upload-api-limits is completed"],
+      "expectedBehavior": [
+        "PDF, DOCX, PPTX, XLSX, CSV, TXT, MD each extract text correctly and reach status='ready'",
+        "Encrypted PDF (owner password) -> status='failed' with clear error_message",
+        "Zip-bomb (1MB -> 5GB) rejected during extraction, disk usage bounded",
+        "PDF-bomb (decompressed > 100MB) rejected",
+        "DOCX with VBA macro: macro stripped by mammoth, extracted text is clean",
+        "Non-UTF8 CSV: decoded with replacement or rejected cleanly, no crash",
+        "status transitions queued -> processing -> ready (or failed) observable in DB"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/file-parser-*.test.ts (per format + adversarial fixtures in src/__tests__/fixtures/)",
+        "Playwright: upload each type, assert status chip reaches 'Ready'"
+      ],
+      "fulfills": [
+        "VAL-FILE-003", "VAL-FILE-004", "VAL-FILE-005",
+        "VAL-FILE-006", "VAL-FILE-007", "VAL-FILE-008",
+        "VAL-FILE-009", "VAL-FILE-014", "VAL-FILE-016",
+        "VAL-FILE-017", "VAL-FILE-020", "VAL-FILE-022",
+        "VAL-FILE-023"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "file-delete-cascade",
+      "description": "DELETE /api/files/{id} route. Auth required, RLS-checked (user can only delete own site's files). Pipeline: (1) fetch the row; (2) delete the Storage object at file.storage_path; (3) delete embeddings WHERE file_id = ... (cascades if FK configured ON DELETE CASCADE — set this up in supplementary-files-schema-storage); (4) delete the supplementary_files row. Decrement usage_counters.files_stored by 1. Return 200. Test: upload, verify embeddings inserted, delete, verify embeddings gone + row gone + storage object gone.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["file-parsers-pipeline is completed"],
+      "expectedBehavior": [
+        "DELETE /api/files/{id} auth'd as owner returns 200",
+        "embeddings rows with file_id = id are deleted",
+        "Storage object at file.storage_path is deleted",
+        "supplementary_files row is deleted",
+        "usage_counters.files_stored decremented by 1",
+        "RLS: another user's DELETE returns 404 (not authorized to see the row)"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/file-delete.test.ts"
+      ],
+      "fulfills": ["VAL-FILE-013"],
+      "status": "pending"
+    },
+    {
+      "id": "file-rag-integration",
+      "description": "Update match_chunks() RPC (or equivalent retrieval path) to include file-sourced embeddings alongside crawled-page embeddings for the site. Add source_type to returned rows. Update src/lib/chat/system-prompt.ts to cite file sources with their filename (e.g., `[3] (Source: file://product-manual.pdf)`) distinct from URL sources. Widget renders file citations with a document icon vs. link icon for URL sources. Asserts: a chat query answerable only by a PDF returns an answer citing the PDF.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["file-parsers-pipeline is completed"],
+      "expectedBehavior": [
+        "match_chunks returns file-sourced chunks alongside URL-sourced chunks for the site",
+        "System prompt cites file sources with `file://<filename>`",
+        "Widget distinguishes file citations (document icon) from URL citations (link icon)",
+        "Chat query answerable only from a file returns an answer citing that file"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/chat-file-retrieval.test.ts",
+        "Playwright: e2e/file-rag.spec.ts uploads a PDF with unique content, asks a question, asserts the citation"
+      ],
+      "fulfills": ["VAL-FILE-024"],
+      "status": "pending"
+    },
+    {
+      "id": "knowledge-ui",
+      "description": "Build /dashboard/settings/knowledge page per Appendix B.4. react-dropzone DragDropZone accepting 7 extensions + size hint 'Max 25MB per file'. FileRow component with status chip (queued/processing/ready/failed) styled per Appendix A. StorageMeter component showing 'X / N files · Y MB / Z MB'. Retry button on failed files re-queues processing. Delete button confirms and calls DELETE /api/files/{id}. Empty state per standard convention. Error state if /api/files list fetch fails. Rejected file types (e.g., .exe) show inline error. Supabase Realtime subscription on supplementary_files for live status updates.",
+      "skillName": "fullstack-worker",
+      "milestone": "knowledge-uploads",
+      "preconditions": ["settings-layout is completed", "file-upload-api-limits is completed", "file-parsers-pipeline is completed", "file-delete-cascade is completed"],
+      "expectedBehavior": [
+        "Drop zone accepts .pdf .docx .pptx .xlsx .csv .txt .md; rejects others with inline error",
+        "FileRow status chip reflects DB status with correct colors",
+        "Failed files show Retry button that re-queues processing",
+        "Delete button shows confirmation modal, then calls DELETE /api/files/{id}",
+        "Realtime updates chip state when backend pipeline advances",
+        "Empty state renders for new user (no files)"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/knowledge-ui.spec.ts drops each file type, asserts row + chip + Realtime transition",
+        "Visual check: states (empty, uploading, ready, failed) match Appendix A tokens"
+      ],
+      "fulfills": [
+        "VAL-FILE-001", "VAL-FILE-002", "VAL-FILE-015", "VAL-FILE-025"
+      ],
+      "status": "pending"
     }
   ]
 }
