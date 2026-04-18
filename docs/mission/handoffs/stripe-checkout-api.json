@@ -1,0 +1,36 @@
+{
+  "feature": "stripe-checkout-api",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-BILLING-004", "VAL-BILLING-005", "VAL-BILLING-006"],
+  "whatWasImplemented": [
+    "src/lib/stripe/client.ts — memoized Stripe SDK client. Reads STRIPE_SECRET_KEY plus optional STRIPE_API_HOST / STRIPE_API_PORT / STRIPE_API_PROTOCOL for stripe-mock routing in tests (in production those three are unset, so the SDK goes to api.stripe.com). Exports resetStripeClient() for test isolation.",
+    "src/app/api/stripe/checkout/route.ts — POST handler. Auth-required (401 without session). Parses plan_id from JSON body (400 on missing, malformed JSON, or unknown plan). Looks up plans row by id; rejects 400 if stripe_price_id is NULL (plan not yet configured by create-stripe-prices script). Lazy-creates the Stripe customer and stores the id on profiles.stripe_customer_id; subsequent calls reuse it. Session includes client_reference_id=user.id so the webhook can correlate back even before subscription_id lands on the profile.",
+    "success_url and cancel_url pinned to NEXT_PUBLIC_APP_URL + /dashboard/billing with ?checkout=success|canceled query param so the billing page can render a toast after redirect.",
+    "src/__tests__/stripe-checkout.test.ts — 11 unit tests with mocked Stripe + Supabase: auth gate (401), plan validation (400 on missing/unknown/not-configured/malformed-JSON), happy path (200 + URL, correct line items, correct URLs, client_reference_id), lazy customer create vs reuse.",
+    "src/__tests__/stripe-checkout-integration.test.ts — 2 integration tests against live stripe-mock. Gated by STRIPE_API_HOST so they skip silently in CI until stripe-mock is wired up. Proves the stripeClient() wiring actually reaches stripe-mock end-to-end."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [
+    "Stripe SDK v22 TypeScript types for Checkout.SessionCreateParams require a union-narrow on line_items price — trivially handled by TS inference since we pass a string literal. No hack needed."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 247 passed / 1 skipped / 34 files (+13 new — 11 unit + 2 stripe-mock integration).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "stripe-mock docker run -p 12111:12111 + curl /v1/customers", "expected": "200 with fixture payload", "observed": "passes" },
+      { "action": "stripeClient() customers.create against stripe-mock", "expected": "cus_* id returned", "observed": "passes via stripe-checkout-integration test" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/stripe/client.ts (created)",
+    "src/app/api/stripe/checkout/route.ts (created)",
+    "src/__tests__/stripe-checkout.test.ts (created)",
+    "src/__tests__/stripe-checkout-integration.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-BILLING-004/005/006 -> passed)",
+    "docs/mission/handoffs/stripe-checkout-api.json (created)"
+  ]
+}

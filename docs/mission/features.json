@@ -155,7 +155,7 @@
         "Start stripe-mock, start dev server, curl with session cookie, verify 200 and URL"
       ],
       "fulfills": ["VAL-BILLING-004", "VAL-BILLING-005", "VAL-BILLING-006"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "stripe-webhook-api",
