@@ -1,0 +1,121 @@
+{
+  "_comment": "Feature decomposition for prod-saas mission. Each feature's fulfills[] claims specific assertion IDs from validation-contract.md. Coverage invariant: every assertion claimed by exactly one feature.",
+  "missionId": "prod-saas",
+  "contractVersion": "1.0 (2026-04-18)",
+  "features": [
+    {
+      "id": "add-test-infrastructure",
+      "description": "Foundation for the entire mission's testing. Install @vitest/coverage-v8 with 80% line threshold on src/lib/**. Install @playwright/test with chromium, config at playwright.config.ts pointing webServer at `pnpm dev` on port 3000. Add Supabase CLI test harness: src/__tests__/helpers/supabase.ts with createTestUser(email) returning {userId, jwt}, clientAs(jwt), and truncateUserData() using service role. Wire setupFiles in vitest.config.ts with beforeEach truncation. Add `pnpm test:e2e` and `pnpm test:coverage` scripts to package.json. Add CI skeleton at .github/workflows/test.yml with postgres service container, lint + typecheck + vitest + playwright jobs, codecov upload. Install stripe-mock docker image reference in services.yaml (used in M2). Install fast-check and pdf-lib for adversarial tests (used in M3 and M5).",
+      "skillName": "fullstack-worker",
+      "milestone": "foundation-rls",
+      "preconditions": ["supabase CLI installed locally", "docker running"],
+      "expectedBehavior": [
+        "pnpm test:coverage produces coverage/ report with line % per file",
+        "pnpm test:e2e runs playwright against localhost:3000",
+        "src/__tests__/helpers/supabase.ts exports createTestUser/clientAs/truncateUserData",
+        "vitest.config.ts has setupFiles and 80% threshold on src/lib/**",
+        ".github/workflows/test.yml runs on push and PR",
+        "stripe-mock, fast-check, pdf-lib, @playwright/test, @vitest/coverage-v8 in devDependencies"
+      ],
+      "verificationSteps": [
+        "pnpm test:coverage and verify coverage/ output",
+        "pnpm test:e2e and verify a trivial spec runs (write e2e/smoke.spec.ts)",
+        "grep setupFiles vitest.config.ts",
+        "GitHub Actions workflow shown in Actions tab after push"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "rls-cross-user-tests",
+      "description": "Integration test suite proving cross-user data isolation on every user-scoped table. Uses createTestUser helper from add-test-infrastructure to spin up two users A and B per test, writes data as A with service role, then asserts B cannot SELECT/UPDATE/DELETE A's rows via their anon JWT. Covers: sites, pages, embeddings, leads, conversations. Also tests service-role intentional bypass (for webhooks) and anonymous (no-JWT, no-site_key) returning zero rows. Adversarial: widget with wrong site_key returns zero rows and does not leak schema errors. Stress: 50 parallel cross-user reads never cross-pollute.",
+      "skillName": "fullstack-worker",
+      "milestone": "foundation-rls",
+      "preconditions": ["add-test-infrastructure is completed"],
+      "expectedBehavior": [
+        "src/__tests__/rls-sites.test.ts, rls-embeddings.test.ts, rls-pages.test.ts, rls-leads.test.ts, rls-conversations.test.ts each assert user A/B isolation for SELECT",
+        "src/__tests__/rls-mutations.test.ts asserts UPDATE and DELETE blocked cross-user",
+        "src/__tests__/rls-widget.test.ts asserts widget site_key scoping and spoofing rejection",
+        "src/__tests__/rls-bypass.test.ts asserts service-role reads all rows (intentional)",
+        "src/__tests__/rls-anonymous.test.ts asserts no-JWT reads return zero",
+        "src/__tests__/rls-concurrent.test.ts runs 50 parallel alternating reads with no cross-pollution"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/rls-*.test.ts and observe all pass",
+        "Inspect test output: row counts match expectations per assertion"
+      ],
+      "fulfills": [
+        "VAL-RLS-001", "VAL-RLS-002", "VAL-RLS-003", "VAL-RLS-004",
+        "VAL-RLS-005", "VAL-RLS-006", "VAL-RLS-007", "VAL-RLS-008",
+        "VAL-RLS-009", "VAL-RLS-010", "VAL-RLS-011", "VAL-RLS-012",
+        "VAL-RLS-014"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "site-key-rotation-api",
+      "description": "Add POST /api/sites/rotate-key endpoint. Authenticated (requires user session). Generates new site_key via `encode(gen_random_bytes(16), 'hex')` (matches existing default), updates sites.site_key for the caller's site, returns the new key. Old key immediately invalid — next widget call with old key returns 401 from chat/session because site lookup fails. Add tests: happy path (new key returned, old key fails), auth required (401 without session), rate-limit (5/hour per user).",
+      "skillName": "fullstack-worker",
+      "milestone": "foundation-rls",
+      "preconditions": ["add-test-infrastructure is completed"],
+      "expectedBehavior": [
+        "POST /api/sites/rotate-key returns 200 with {site_key} when authenticated",
+        "POST without auth returns 401",
+        "Old site_key invalid immediately after rotation (widget chat/session returns 401)",
+        "Rate limited to 5 rotations per user per hour"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/site-key-rotation.test.ts",
+        "curl rotation twice; verify second returns 429 or succeeds depending on rate window"
+      ],
+      "fulfills": ["VAL-AUTH-013"],
+      "status": "pending"
+    },
+    {
+      "id": "auth-revalidation-fixes",
+      "description": "Re-validate the 7 blocked + 1 failed auth assertions deferred from foundation round 1. Root fix: the /auth/callback route currently lands some magic-link flows on /login?error=auth_callback_error (VAL-AUTH-003 failure). Investigate: likely handling code-query params but not fragment tokens from Supabase Admin-generated links. Fix so both code-query and fragment-token flows reach /dashboard with valid sb-* cookies. Add src/__tests__/helpers/auth.ts with createTestSessionViaAdmin() that uses supabase.auth.admin.generateLink + direct token exchange, bypassing the OTP rate limit that blocked the original validation run. Update /auth/callback to preserve the originally-requested protected path (deep-link redirect). Assert callback rejects external-origin `next` params (open redirect). Assert sign-out clears sb-* cookies and magic links are single-use.",
+      "skillName": "fullstack-worker",
+      "milestone": "foundation-rls",
+      "preconditions": ["add-test-infrastructure is completed"],
+      "expectedBehavior": [
+        "Visiting a valid magic link (code-query OR fragment-token form) lands on /dashboard with sb-* cookies present",
+        "Login form shows identical 'Check your email' for known and unknown emails (no enumeration)",
+        "/auth/callback strips external-origin next params, redirects to /dashboard fallback",
+        "Authenticated session persists across page refresh (cookies unchanged)",
+        "Sign-out POST /api/auth/signout clears sb-* cookies and redirects",
+        "After sign-out, all protected routes redirect to /login",
+        "Magic link is single-use: second exchange returns error",
+        "src/__tests__/helpers/auth.ts exports createTestSessionViaAdmin()"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/auth-*.test.ts",
+        "Playwright: e2e/auth-flow.spec.ts walks through login, refresh, signout, post-signout navigation"
+      ],
+      "fulfills": [
+        "VAL-AUTH-002", "VAL-AUTH-003", "VAL-AUTH-005",
+        "VAL-AUTH-007", "VAL-AUTH-008", "VAL-AUTH-009",
+        "VAL-AUTH-010", "VAL-AUTH-012"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "env-gitignore-audit",
+      "description": "Defense-in-depth audit of secret handling. Confirm .env.local is in .gitignore (already done) and has never been committed (verified via git log -- .env.local). Ensure .env.example exists at repo root with every required var listed and commented (no real values). Update .env.example with vars we'll add in M2 (Stripe) and M8 (Upstash, Resend, Sentry) marked as 'Required from M2' / 'Required from M8'. Add a pre-commit hook (husky or simple shell) that scans staged files for patterns matching sk_live_*, sk_test_[A-Za-z0-9]{20,}, whsec_*, and aborts commit if found. Document in README the rule: production secrets only in Vercel dashboard.",
+      "skillName": "fullstack-worker",
+      "milestone": "foundation-rls",
+      "preconditions": [],
+      "expectedBehavior": [
+        ".env.example covers all current + M2 + M8 env vars with comments",
+        "Pre-commit hook aborts commit when staged diff contains secret-like patterns",
+        "README has a Secrets section naming Vercel as the production secret store",
+        "git log -- .env.local returns empty (confirms never committed)"
+      ],
+      "verificationSteps": [
+        "Attempt commit with a fake sk_test_abc123... string; verify hook aborts",
+        "Diff .env.example vs services.yaml env_requirements — all vars present"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    }
+  ]
+}
