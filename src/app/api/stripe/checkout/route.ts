@@ -53,12 +53,20 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileErr } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, email')
+    .select('stripe_customer_id, email, tos_accepted_at')
     .eq('id', user.id)
     .single()
 
   if (profileErr || !profile) {
     return Response.json({ error: 'Profile not found' }, { status: 500 })
+  }
+
+  // Block paid-plan activation until Terms of Service accepted (VAL-TOS-004).
+  if (!profile.tos_accepted_at) {
+    return Response.json(
+      { error: 'tos_required', accept_url: '/dashboard?tos=1' },
+      { status: 403 }
+    )
   }
 
   const stripe = stripeClient()

@@ -7,12 +7,18 @@ import { IconArrowRight, IconMail, IconSpinner } from '@/components/icons'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [tosAccepted, setTosAccepted] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Hard guard on ToS — VAL-TOS-001: no network request without acceptance.
+    if (!tosAccepted) {
+      setError('Please accept the Terms of Service to continue.')
+      return
+    }
     setLoading(true)
     setError(null)
 
@@ -22,6 +28,9 @@ export default function LoginPage() {
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Stored as raw_user_meta_data; handle_new_user trigger copies
+        // it onto profiles.tos_accepted_at for first-time signups.
+        data: { tos_accepted_at: new Date().toISOString() },
       },
     })
 
@@ -158,8 +167,31 @@ export default function LoginPage() {
                   />
                 </div>
 
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-[color:var(--ink-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={tosAccepted}
+                    onChange={(e) => setTosAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[color:var(--ink-primary)]"
+                    aria-describedby="tos-error"
+                  />
+                  <span>
+                    I agree to RubyCrawl&apos;s{' '}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:text-[color:var(--ink-primary)]"
+                    >
+                      Terms of Service
+                    </Link>
+                    .
+                  </span>
+                </label>
+
                 {error && (
                   <p
+                    id="tos-error"
                     role="alert"
                     className="text-sm text-[color:var(--accent-danger)]"
                   >
@@ -169,7 +201,8 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !tosAccepted}
+                  aria-disabled={loading || !tosAccepted}
                   className="btn-press focus-ring group flex w-full items-center justify-between rounded-lg bg-[color:var(--ink-primary)] px-4 py-2.5 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span>{loading ? 'Sending link…' : 'Send magic link'}</span>
@@ -186,8 +219,7 @@ export default function LoginPage() {
               </form>
 
               <p className="mt-8 text-xs text-[color:var(--ink-tertiary)]">
-                By signing in you agree to RubyCrawl&apos;s terms. One site per
-                account.
+                One site per account.
               </p>
             </>
           )}

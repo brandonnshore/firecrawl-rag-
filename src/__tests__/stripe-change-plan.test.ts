@@ -56,6 +56,7 @@ function mockProfileAndPlan(opts: {
               data: {
                 stripe_customer_id: opts.customerId,
                 stripe_subscription_id: opts.subscriptionId,
+                tos_accepted_at: '2026-01-01T00:00:00.000Z',
               },
               error: null,
             }),

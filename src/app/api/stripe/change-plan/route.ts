@@ -32,12 +32,19 @@ export async function POST(request: Request): Promise<Response> {
 
   const { data: profile, error: profileErr } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, stripe_subscription_id')
+    .select('stripe_customer_id, stripe_subscription_id, tos_accepted_at')
     .eq('id', user.id)
     .single()
 
   if (profileErr || !profile) {
     return Response.json({ error: 'Profile not found' }, { status: 500 })
+  }
+
+  if (!profile.tos_accepted_at) {
+    return Response.json(
+      { error: 'tos_required', accept_url: '/dashboard?tos=1' },
+      { status: 403 }
+    )
   }
 
   if (!profile.stripe_subscription_id) {

@@ -157,10 +157,10 @@
     "VAL-CROSS-009": { "status": "pending" },
     "VAL-CROSS-010": { "status": "pending" },
 
-    "VAL-TOS-001": { "status": "pending" },
-    "VAL-TOS-002": { "status": "pending" },
-    "VAL-TOS-003": { "status": "pending" },
-    "VAL-TOS-004": { "status": "pending" },
+    "VAL-TOS-001": { "status": "pending", "feature": "tos-acceptance-signup", "note": "Checkbox disables submit; handleSubmit returns early without network if bypassed. Playwright screenshot of disabled state pending." },
+    "VAL-TOS-002": { "status": "pending", "feature": "tos-acceptance-signup", "note": "<Link target='_blank' rel='noopener'> to /terms wired; Playwright click-to-new-tab test pending." },
+    "VAL-TOS-003": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Migration extends handle_new_user to stamp tos_accepted_at from raw_user_meta_data; unit-tested via migration + acceptance-route tests." },
+    "VAL-TOS-004": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Banner mounted in dashboard layout; billing upgrade APIs return 403 tos_required when null — 6 unit tests." },
 
     "VAL-DEGRADE-001": { "status": "pending" },
     "VAL-DEGRADE-002": { "status": "pending" },

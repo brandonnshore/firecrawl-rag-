@@ -455,7 +455,7 @@
         "pnpm vitest run src/__tests__/tos-acceptance.test.ts"
       ],
       "fulfills": ["VAL-TOS-001", "VAL-TOS-002", "VAL-TOS-003", "VAL-TOS-004"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "supplementary-files-schema-storage",

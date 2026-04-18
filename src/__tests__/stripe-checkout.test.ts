@@ -53,8 +53,15 @@ function mockPlansLookup(plan: {
 function mockProfileLookup(profile: {
   stripe_customer_id: string | null
   email: string
+  tos_accepted_at?: string | null
 }) {
-  return vi.fn().mockResolvedValue({ data: profile, error: null })
+  return vi.fn().mockResolvedValue({
+    data: {
+      tos_accepted_at: '2026-01-01T00:00:00.000Z',
+      ...profile,
+    },
+    error: null,
+  })
 }
 
 function mockProfileUpdate() {
