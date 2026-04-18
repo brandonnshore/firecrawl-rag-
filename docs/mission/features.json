@@ -116,6 +116,142 @@
       ],
       "fulfills": [],
       "status": "pending"
+    },
+    {
+      "id": "plans-schema-migration",
+      "description": "Create supabase/migrations/<ts>_plans.sql adding: (1) plans table (id text PK, stripe_price_id, monthly_message_limit, monthly_crawl_page_limit, supplementary_file_limit, display_name, price_cents); (2) extend profiles with plan_id text FK -> plans(id), current_period_start, current_period_end; (3) seed three plan rows (starter 2499/2000/500/25, pro 4999/7500/1500/100, scale 9900/25000/5000/500). stripe_price_id populated via one-shot script scripts/create-stripe-prices.mjs that calls Stripe API (test mode) and writes price IDs back via UPSERT. RLS: plans readable by anyone (public plan list), only service-role writes. Add tests asserting seed rows exist and plan caps match the mission.md pricing table.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["add-test-infrastructure is completed"],
+      "expectedBehavior": [
+        "supabase migration up succeeds and creates plans table + profiles additions",
+        "SELECT * FROM plans returns 3 rows with caps matching mission.md",
+        "scripts/create-stripe-prices.mjs populates stripe_price_id for each plan",
+        "RLS: anon can SELECT plans, cannot INSERT/UPDATE/DELETE",
+        "src/__tests__/plans-schema.test.ts asserts seed data integrity"
+      ],
+      "verificationSteps": [
+        "supabase db reset && verify tables exist via psql",
+        "node scripts/create-stripe-prices.mjs (test mode); verify DB rows have price IDs"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "stripe-checkout-api",
+      "description": "POST /api/stripe/checkout route. Body: {plan_id}. Auth required (401 without session). Validates plan_id against plans table (400 if unknown). Lazy-creates stripe customer (profiles.stripe_customer_id) if missing. Creates Stripe Checkout Session with mode='subscription', line_items from plan.stripe_price_id, success_url and cancel_url pointing to /dashboard/billing. Returns {url: session.url}. Adds src/lib/stripe/client.ts with memoized Stripe SDK instance (uses host=localhost:12111 when STRIPE_SECRET_KEY starts with 'sk_test_mock' for stripe-mock in tests). Tests cover: 200 happy path, 400 invalid plan_id, 401 no auth, lazy customer creation side-effect, correct success/cancel URLs.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["plans-schema-migration is completed"],
+      "expectedBehavior": [
+        "POST /api/stripe/checkout with {plan_id:'starter'} + auth returns 200 with {url}",
+        "POST with invalid plan_id returns 400",
+        "POST without auth returns 401",
+        "First call for a user creates stripe_customer and stores stripe_customer_id on profiles",
+        "Subsequent calls reuse the same stripe_customer_id"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/stripe-checkout.test.ts",
+        "Start stripe-mock, start dev server, curl with session cookie, verify 200 and URL"
+      ],
+      "fulfills": ["VAL-BILLING-004", "VAL-BILLING-005", "VAL-BILLING-006"],
+      "status": "pending"
+    },
+    {
+      "id": "stripe-webhook-api",
+      "description": "POST /api/stripe/webhook route. Reads raw body (required for signature verification — disable Next.js body parser for this route). Calls stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET). Returns 400 on invalid signature, 400 if event created > 5 min ago. Uses processed_stripe_events table for idempotency: INSERT event_id UNIQUE first, if conflict return 200 without reprocessing. Handles event types: checkout.session.completed (set stripe_subscription_id + plan_id + status + period dates), customer.subscription.updated (sync), customer.subscription.deleted (status='canceled'), invoice.paid (reset usage_counters for period), invoice.payment_failed (status='past_due'). All events 200 after processing. Uses service-role client (no user JWT). Structured logging per event.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["plans-schema-migration is completed", "stripe-checkout-api is completed"],
+      "expectedBehavior": [
+        "Valid signature + fresh timestamp + new event_id -> 200 and DB updated",
+        "Invalid signature -> 400, no DB change",
+        "Expired timestamp (> 5 min) -> 400",
+        "Duplicate event_id -> 200 but no double-processing",
+        "checkout.session.completed writes stripe_subscription_id, plan_id, current_period_end",
+        "customer.subscription.updated syncs fields including status transitions",
+        "customer.subscription.deleted sets status='canceled'",
+        "invoice.paid resets messages_used and crawl_pages_used",
+        "invoice.payment_failed sets status='past_due'"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/stripe-webhook*.test.ts (signature, idempotency, each event type)",
+        "stripe trigger checkout.session.completed via CLI against local webhook"
+      ],
+      "fulfills": [
+        "VAL-BILLING-007", "VAL-BILLING-008", "VAL-BILLING-009",
+        "VAL-BILLING-010", "VAL-BILLING-011", "VAL-BILLING-012",
+        "VAL-BILLING-013", "VAL-BILLING-014", "VAL-BILLING-015"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "stripe-portal-api",
+      "description": "POST /api/stripe/portal route. Auth required. Looks up profiles.stripe_customer_id for caller; if null returns 400 (no subscription yet). Calls stripe.billingPortal.sessions.create({customer, return_url: `${APP_URL}/dashboard/billing`}). Returns {url}. Client redirects. Tests: happy path 200 with URL, 401 without auth, 400 without subscription.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["stripe-checkout-api is completed"],
+      "expectedBehavior": [
+        "Authenticated POST with existing stripe_customer_id returns 200 with billing portal URL",
+        "Authenticated POST without stripe_customer_id returns 400",
+        "POST without auth returns 401"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/stripe-portal.test.ts"
+      ],
+      "fulfills": ["VAL-BILLING-021"],
+      "status": "pending"
+    },
+    {
+      "id": "subscription-gate",
+      "description": "Replace src/lib/subscription.ts stub. New checkSubscription(userId) reads profiles.{subscription_status, trial_ends_at, current_period_end}: returns {active: true} when status in ('trialing','active') AND relevant date in the future; returns {active: false, reason, upgrade_url: '/dashboard/billing'} otherwise. Wire into /api/chat/session and /api/crawl/start: on !active, return 402 with {error: 'subscription_inactive', upgrade_url}. Tests cover each status + time combination: trialing + trial_ends_at future = active; trialing + expired = inactive; active + period future = active; past_due = inactive; canceled = inactive; canceled + period future (still paid through period) = active. Widget path handling for 402: widget renders a generic 'Service temporarily unavailable' with no sensitive details.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["stripe-webhook-api is completed"],
+      "expectedBehavior": [
+        "trialing + trial_ends_at in future = active; can chat and crawl",
+        "trialing + trial_ends_at expired = inactive; 402 on chat and crawl",
+        "active + current_period_end in future = active",
+        "past_due = inactive; 402 response includes upgrade_url",
+        "canceled + current_period_end in future = active (paid-through grace)",
+        "canceled + current_period_end past = inactive"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/subscription-gate.test.ts",
+        "Manual curl: create test profile per each status, hit /api/chat/session, verify 200 vs 402"
+      ],
+      "fulfills": [
+        "VAL-BILLING-016", "VAL-BILLING-017", "VAL-BILLING-018",
+        "VAL-BILLING-019", "VAL-BILLING-020"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "billing-page-refactor",
+      "description": "Rewrite /dashboard/billing per Appendix B.1 of tasks/todo.md. Server component fetches profile + plan + last-12 invoices (via stripe.invoices.list). Renders: heading, PlanCard (plan name, status pill, price, usage meters), TrialCountdown (if trialing), invoice list with Stripe-hosted PDF links, next-invoice date, and three action buttons: [Manage billing] -> POST /api/stripe/portal, [Upgrade] / [Downgrade] -> POST /api/stripe/checkout with target plan. Guest redirected to /login (via existing dashboard layout). Renders proration preview when clicking Upgrade (stripe.invoices.retrieveUpcoming). States: skeleton while loading; error banner on fetch failure; trial banner when trialing. Microcopy and visual style per Appendix A.",
+      "skillName": "fullstack-worker",
+      "milestone": "billing-stripe",
+      "preconditions": ["stripe-checkout-api, stripe-portal-api, subscription-gate all completed"],
+      "expectedBehavior": [
+        "Guest GET /dashboard/billing -> 302 /login",
+        "Pre-subscription user sees plan options and Upgrade CTAs",
+        "Trialing user sees countdown banner 'Trial ends in N days'",
+        "Active user sees current plan, price, status pill, usage meters",
+        "Upgrade button creates proration-preview; confirming redirects to Stripe Checkout or portal",
+        "Downgrade similarly creates credit preview",
+        "Invoice list renders last 12 with PDF links",
+        "Next-invoice date displayed when on active subscription"
+      ],
+      "verificationSteps": [
+        "Playwright e2e/billing-page.spec.ts: walk through guest, trialing, active, upgrade, downgrade",
+        "Manual: visit /dashboard/billing in each state via seeded profiles"
+      ],
+      "fulfills": [
+        "VAL-BILLING-001", "VAL-BILLING-002", "VAL-BILLING-003",
+        "VAL-BILLING-022", "VAL-BILLING-023", "VAL-BILLING-024",
+        "VAL-BILLING-025"
+      ],
+      "status": "pending"
     }
   ]
 }
