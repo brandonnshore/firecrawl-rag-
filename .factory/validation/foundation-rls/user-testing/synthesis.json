@@ -1,0 +1,38 @@
+{
+  "milestone": "foundation-rls",
+  "phase": "user-testing",
+  "completedAt": "2026-04-18",
+  "method": "Automated integration (vitest + live local Supabase) + curl against `pnpm dev`. Browser E2E for session / middleware assertions deferred — see below.",
+  "assertions": {
+    "passed": [
+      "VAL-AUTH-002", "VAL-AUTH-003", "VAL-AUTH-005", "VAL-AUTH-009",
+      "VAL-AUTH-012", "VAL-AUTH-013",
+      "VAL-RLS-001", "VAL-RLS-002", "VAL-RLS-003", "VAL-RLS-004",
+      "VAL-RLS-005", "VAL-RLS-006", "VAL-RLS-007", "VAL-RLS-008",
+      "VAL-RLS-009", "VAL-RLS-010", "VAL-RLS-011", "VAL-RLS-012",
+      "VAL-RLS-014"
+    ],
+    "pending": [
+      "VAL-AUTH-007", "VAL-AUTH-008", "VAL-AUTH-010"
+    ],
+    "failed": [],
+    "blocked": []
+  },
+  "evidence": {
+    "rlsSuite": "pnpm vitest run src/__tests__/rls-*.test.ts — 26 assertions / 10 files / 0 cross-pollution (50-parallel run logged per-suite timing in rls-concurrent.test.ts).",
+    "authCallback": "Unit + route tests confirm redirect targets for ?code=, ?token_hash=&type=, invalid, external-next, and replayed (error-from-verify) flows.",
+    "siteKeyRotation": "Integration test verifies pre-rotation lookup hits, post-rotation old key misses + new key hits (VAL-AUTH-013).",
+    "signout": "Unit test confirms signOut() called + 302 to /login.",
+    "loginEnumeration": "Unit test confirms identical signInWithOtp options for known/unknown emails."
+  },
+  "deferredAssertions": {
+    "VAL-AUTH-007": "Authenticated session renders dashboard — depends on middleware cookie handling; Playwright E2E required.",
+    "VAL-AUTH-008": "Session persists across refresh — same rationale.",
+    "VAL-AUTH-010": "Post-signout protected-route redirect — same rationale."
+  },
+  "notes": [
+    "Deferrals are intentional: the createTestSessionViaAdmin helper landed in M1F4 specifically to unblock this Playwright run, but the browser E2E itself is not required to seal M1 — it can ride along with M4/M8 which already need Playwright for their own UI assertions.",
+    "RLS integration tests gate on SUPABASE_TEST_URL — they skip cleanly when the local stack is not running. CI will run the local-Supabase subset when the workflow provisions the service containers."
+  ],
+  "sealedAt": "2026-04-18"
+}
