@@ -1,0 +1,43 @@
+{
+  "feature": "auth-revalidation-fixes",
+  "milestone": "foundation-rls",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-AUTH-002", "VAL-AUTH-003", "VAL-AUTH-005",
+    "VAL-AUTH-007", "VAL-AUTH-008", "VAL-AUTH-009",
+    "VAL-AUTH-010", "VAL-AUTH-012"
+  ],
+  "whatWasImplemented": [
+    "Extended /auth/callback to accept both magic-link shapes: `?code=CODE` (PKCE / exchangeCodeForSession) and `?token_hash=HASH&type=magiclink|email|recovery|invite|signup` (email OTP / verifyOtp). The second shape is what Supabase admin-generated magic links (and most signInWithOtp emails) actually use — which is why VAL-AUTH-003 failed in foundation round 1.",
+    "Unknown OTP types and missing params all redirect to /login?error=auth_callback_error — covers VAL-AUTH-012 (replayed / already-consumed links).",
+    "External-origin `next` values continue to be stripped by sanitizeRedirectPath (VAL-AUTH-005).",
+    "Added src/__tests__/helpers/auth.ts with createTestSessionViaAdmin() — mints a valid access + refresh token pair for E2E without going through OTP (sidesteps the rate limit that blocked foundation). Backed by pg-direct auth.users insert + HS256 JWT signing.",
+    "Added auth-callback-route.test.ts (9 tests), auth-signout.test.ts (2 tests), auth-login-enumeration.test.ts (1 test), auth-helper-integration.test.ts (1 test). Total 13 new auth tests.",
+    "Also tightened rotate-key route signature (drop unused request param) and test call sites for strict typecheck."
+  ],
+  "whatWasLeftUndone": "VAL-AUTH-007 (dashboard rendered post-login), VAL-AUTH-008 (session persists across refresh), VAL-AUTH-010 (post-signout protected-route redirect) need full Playwright e2e with cookie handling — left as 'pending' in validation-state.json. The createTestSessionViaAdmin helper unblocks that work when the M1 user-testing pass runs. Passed at unit/route level: 002, 003, 005, 009, 012. Passed via integration: 013 (committed in M1F3).",
+  "discoveredIssues": [
+    "Fragment-token callbacks (#access_token=...&refresh_token=...) are not handled server-side — Next.js server routes never see the URL fragment. Modern Supabase magic-link emails default to ?token_hash=&type= (which we now handle). If Brandon ever sees fragment-form links in the wild, add a tiny client component at /auth/callback/page.tsx that reads window.location.hash and calls supabase.auth.setSession."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 198 passed / 1 skipped / 30 files.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "curl /auth/callback?code=X (mocked error)", "expected": "/login?error=auth_callback_error", "observed": "matches" },
+      { "action": "curl /auth/callback?token_hash=X&type=magiclink (mocked ok)", "expected": "/dashboard", "observed": "matches" },
+      { "action": "curl /auth/callback?code=X&next=https://evil", "expected": "/dashboard (stripped)", "observed": "matches" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/auth/callback/route.ts (modified — dual code/token_hash handling)",
+    "src/__tests__/helpers/auth.ts (created)",
+    "src/__tests__/auth-callback-route.test.ts (created)",
+    "src/__tests__/auth-signout.test.ts (created)",
+    "src/__tests__/auth-login-enumeration.test.ts (created)",
+    "src/__tests__/auth-helper-integration.test.ts (created)",
+    "src/app/api/sites/rotate-key/route.ts (modified — drop unused param for typecheck)",
+    "src/__tests__/site-key-rotation.test.ts (modified — match signature)"
+  ]
+}

@@ -96,7 +96,7 @@
         "VAL-AUTH-007", "VAL-AUTH-008", "VAL-AUTH-009",
         "VAL-AUTH-010", "VAL-AUTH-012"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "env-gitignore-audit",

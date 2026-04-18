@@ -17,13 +17,6 @@ import {
 } from '@/lib/sites/rotation-rate-limit'
 import { POST } from '@/app/api/sites/rotate-key/route'
 
-function makeRequest(): Request {
-  return new Request('http://localhost:3000/api/sites/rotate-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 function authedSupabase() {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
   const updateSingleMock = vi.fn().mockResolvedValue({
@@ -50,7 +43,7 @@ describe('POST /api/sites/rotate-key', () => {
 
   it('returns 401 when unauthenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
-    const response = await POST(makeRequest())
+    const response = await POST()
     expect(response.status).toBe(401)
     const body = await response.json()
     expect(body.error).toBeDefined()
@@ -58,7 +51,7 @@ describe('POST /api/sites/rotate-key', () => {
 
   it('returns 200 with a newly rotated site_key for an authenticated user', async () => {
     authedSupabase()
-    const response = await POST(makeRequest())
+    const response = await POST()
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body.site_key).toBe('new-key-hex')
@@ -66,7 +59,7 @@ describe('POST /api/sites/rotate-key', () => {
 
   it('calls sites.update with a fresh 32-char hex site_key scoped to the caller', async () => {
     const { updateMock, updateEqMock } = authedSupabase()
-    await POST(makeRequest())
+    await POST()
 
     expect(updateMock).toHaveBeenCalledTimes(1)
     const payload = updateMock.mock.calls[0][0] as { site_key: string }
@@ -88,17 +81,17 @@ describe('POST /api/sites/rotate-key', () => {
       }),
     })
 
-    const response = await POST(makeRequest())
+    const response = await POST()
     expect(response.status).toBe(404)
   })
 
   it('rate-limits to 5 rotations per user per hour (6th returns 429)', async () => {
     authedSupabase()
     for (let i = 0; i < 5; i++) {
-      const r = await POST(makeRequest())
+      const r = await POST()
       expect(r.status).toBe(200)
     }
-    const sixth = await POST(makeRequest())
+    const sixth = await POST()
     expect(sixth.status).toBe(429)
     expect(sixth.headers.get('Retry-After')).toBeDefined()
   })
@@ -106,11 +99,11 @@ describe('POST /api/sites/rotate-key', () => {
   it('rate limit is scoped per-user (user-2 not blocked by user-1 exhaustion)', async () => {
     authedSupabase()
     for (let i = 0; i < 5; i++) {
-      await POST(makeRequest())
+      await POST()
     }
     // Switch user
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-2' } }, error: null })
-    const response = await POST(makeRequest())
+    const response = await POST()
     expect(response.status).toBe(200)
   })
 })
