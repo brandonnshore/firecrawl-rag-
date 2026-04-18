@@ -1,0 +1,40 @@
+{
+  "feature": "plans-schema-migration",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [],
+  "whatWasImplemented": [
+    "supabase/migrations/20260418220000_plans.sql — creates plans table with caps/price columns, seeds Starter/Pro/Scale with caps matching mission.md ($24.99/2000/500/25, $49.99/7500/1500/100, $99.00/25000/5000/500).",
+    "Extended profiles with plan_id text FK -> plans(id) ON DELETE SET NULL (nullable — set on first checkout), plus current_period_start timestamptz (current_period_end already existed).",
+    "Relaxed profiles_subscription_status_check to Stripe's lifecycle vocabulary: 'trialing','active','past_due','canceled','incomplete','incomplete_expired','unpaid','paused'. Previous constraint used 'cancelled' (double-l) which would never match webhook payloads — defensive UPDATE included.",
+    "RLS on plans: public SELECT via 'Anyone can read plans' policy; no INSERT/UPDATE/DELETE policies, so anon/authenticated roles are silently blocked and only service-role can write.",
+    "scripts/create-stripe-prices.mjs — idempotent one-shot that creates 3 Stripe test-mode products + recurring prices and UPSERTs the stripe_price_id into each plan row. Refuses to run with an sk_live_ key. Skips plans whose stripe_price_id is already set (rotate by nulling first).",
+    "Added stripe@22.0.2 dependency (also consumed by M2F2 checkout, M2F3 webhook, M2F4 portal).",
+    "src/__tests__/plans-schema.test.ts — 11 assertions covering seed integrity, per-plan cap values, RLS public-read, RLS anon-write-blocked (INSERT/UPDATE/DELETE), service-role write permission, profile plan_id FK + subscription_status 'canceled'."
+  ],
+  "whatWasLeftUndone": "scripts/create-stripe-prices.mjs not yet run — requires a real sk_test_... key from Brandon's Stripe dashboard. Plans table will have stripe_price_id=NULL until then; M2F2 tests use placeholder IDs via stripe-mock.",
+  "discoveredIssues": [
+    "The inherited profiles_subscription_status_check used 'cancelled' (British/double-l) but Stripe's webhook payloads always use 'canceled' (single-l). Silent bug — any subscription.deleted event would have violated the constraint and failed the webhook. Fixed inline as part of this migration rather than deferring to a separate fix feature; behavior change is strictly additive (broader set of allowed values) and caught here by the RED test `subscription_status accepts canceled`.",
+    "Cloud Supabase project (luznxhpadjblwnkfzjhn) still has the old constraint. M8 hardening-launch will push migrations to production; until then, the cloud project is not in use for M2 development."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 234 passed / 1 skipped / 32 files (11 new assertions, 0 regressions from baseline 223).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "supabase migration up --local", "expected": "migration applies cleanly", "observed": "applied without errors" },
+      { "action": "node --check scripts/create-stripe-prices.mjs", "expected": "no syntax errors", "observed": "pass" },
+      { "action": "SELECT count(*) FROM plans via service-role client", "expected": "3", "observed": "3 (starter, pro, scale)" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260418220000_plans.sql (created)",
+    "scripts/create-stripe-prices.mjs (created)",
+    "src/__tests__/plans-schema.test.ts (created)",
+    "package.json (modified — +stripe@22.0.2)",
+    "pnpm-lock.yaml (modified)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/handoffs/plans-schema-migration.json (created)"
+  ]
+}

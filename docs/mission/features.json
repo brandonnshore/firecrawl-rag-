@@ -135,7 +135,7 @@
         "node scripts/create-stripe-prices.mjs (test mode); verify DB rows have price IDs"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "stripe-checkout-api",
