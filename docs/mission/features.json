@@ -356,6 +356,85 @@
         "VAL-QUOTA-013", "VAL-QUOTA-014", "VAL-QUOTA-015"
       ],
       "status": "pending"
+    },
+    {
+      "id": "settings-layout",
+      "description": "Create src/app/dashboard/settings/layout.tsx with left sub-nav (Site, Knowledge, Responses, Escalation, Billing) per Appendix B.2. Uses usePathname to highlight active item using the app's existing active-state pattern from src/app/dashboard/sidebar.tsx. Main content area renders children. Parent /dashboard/settings page component redirects to /dashboard/settings/site. All settings sub-routes protected by parent dashboard layout auth check. Mobile viewport (< 640px): sidebar collapses into a horizontal tab strip above content, not stacked.",
+      "skillName": "fullstack-worker",
+      "milestone": "settings-sidebar",
+      "preconditions": ["add-test-infrastructure is completed"],
+      "expectedBehavior": [
+        "/dashboard/settings redirects to /dashboard/settings/site",
+        "Sidebar shows 5 items: Site, Knowledge, Responses, Escalation, Billing",
+        "Active item matches current pathname via distinct styling",
+        "Unauth'd access to any /dashboard/settings/* redirects to /login",
+        "Mobile viewport collapses sidebar cleanly (no awkward stacking)"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/settings-nav.spec.ts walks all 5 sub-routes",
+        "Playwright with mobile viewport: screenshot at 375px"
+      ],
+      "fulfills": [
+        "VAL-SET-001", "VAL-SET-002", "VAL-SET-003",
+        "VAL-SET-007", "VAL-SET-008"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "settings-site-move",
+      "description": "Move existing src/app/dashboard/settings/settings-client.tsx logic into src/app/dashboard/settings/site/page.tsx (+ site-client.tsx). Preserves all current fields: site name, greeting message, Calendly URL, Google Maps URL. Save action unchanged. No functional regression. Old /dashboard/settings route now hits the new layout and redirects (via settings-layout feature).",
+      "skillName": "fullstack-worker",
+      "milestone": "settings-sidebar",
+      "preconditions": ["settings-layout is completed"],
+      "expectedBehavior": [
+        "/dashboard/settings/site renders existing settings form",
+        "Saving persists fields identically to pre-refactor behavior",
+        "No regressions in existing src/__tests__/dashboard-*.test.ts suites"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run (all existing tests pass)",
+        "Playwright: e2e/settings-site.spec.ts submits form and reloads, verifies values"
+      ],
+      "fulfills": ["VAL-SET-004"],
+      "status": "pending"
+    },
+    {
+      "id": "site-key-rotation-ui",
+      "description": "Add a 'Rotate site key' button in /dashboard/settings/site (below the existing fields). Click -> confirmation modal ('This will immediately invalidate the current site key. Your widget will need to be re-embedded.') -> POST /api/sites/rotate-key (endpoint from M1 feature site-key-rotation-api) -> toast 'Site key rotated' on success -> refresh the displayed key and update the embed snippet shown on /dashboard/embed. No page reload needed — uses server action or client-side refetch.",
+      "skillName": "fullstack-worker",
+      "milestone": "settings-sidebar",
+      "preconditions": ["site-key-rotation-api is completed", "settings-site-move is completed", "toast-system is completed"],
+      "expectedBehavior": [
+        "Rotate button opens confirmation modal with warning text",
+        "Confirming POSTs to /api/sites/rotate-key and displays the new key",
+        "Toast appears on success",
+        "Embed page (/dashboard/embed) reflects the new key without a full refresh",
+        "Old key immediately fails on widget calls (validated via M1 site-key-rotation-api's test)"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/site-key-rotate.spec.ts clicks rotate, asserts modal, toast, new key displayed"
+      ],
+      "fulfills": ["VAL-SET-005"],
+      "status": "pending"
+    },
+    {
+      "id": "toast-system",
+      "description": "Install sonner. Add <Toaster /> once in src/app/layout.tsx or dashboard layout. Theme to match app (use --ink-primary / --bg-surface tokens from globals.css). Create src/lib/toast.ts thin wrapper exporting toast.success/error/loading with sensible defaults (4s duration, top-right position). Used by settings save, file upload, responses save, escalation save, billing actions.",
+      "skillName": "fullstack-worker",
+      "milestone": "settings-sidebar",
+      "preconditions": [],
+      "expectedBehavior": [
+        "sonner in dependencies; <Toaster /> mounted once in layout",
+        "toast.success('Saved') on settings save displays a toast",
+        "Toast auto-dismisses after 4s",
+        "Theme uses app color tokens (no jarring mismatch)"
+      ],
+      "verificationSteps": [
+        "Playwright: trigger a save action, screenshot with toast visible",
+        "Visual review: toast color scheme matches app"
+      ],
+      "fulfills": ["VAL-SET-006"],
+      "status": "pending"
     }
   ]
 }
