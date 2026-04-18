@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Runs before every `git commit`. Adds checks here as the repo grows.
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+"$REPO_ROOT/scripts/secret-scan.sh"

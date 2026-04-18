@@ -1,0 +1,39 @@
+{
+  "feature": "env-gitignore-audit",
+  "milestone": "foundation-rls",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [],
+  "whatWasImplemented": [
+    "Wrote .env.example documenting every env var in services.yaml's env_requirements — day-1 (Supabase, OpenAI, Firecrawl, app URL), M2 (Stripe trio), M8 (Upstash, Resend, Sentry), plus test-only (SUPABASE_TEST_*). Each section commented with which milestone brings it online.",
+    "Added scripts/secret-scan.sh — scans staged git diff for sk_live_*, rk_live_*, sk_test_{20+}, whsec_*, sk-openai keys, AWS AKIA keys, Google AIza keys, and PEM private-key blocks. Exits 1 with a clear message when any match is found. macOS-BSD-grep compatible (uses `-oE --`, no empty alternations).",
+    "Added .githooks/pre-commit that runs the scanner. Repo is configured via the `prepare` npm script to set `git config core.hooksPath .githooks` on `pnpm install`, so the hook activates on every developer machine without husky.",
+    "Added README.md 'Secrets' section naming Vercel as the production secret store and documenting the pre-commit scanner.",
+    "Added src/__tests__/env-audit.test.ts with 25 assertions: .env.example exists and documents all 13 expected vars, .env.local has never been committed + is gitignored, pre-commit hook + scanner are present and executable, the scanner detects sk_test_ keys and passes clean diffs, package.json prepare wires hooksPath, and every env_requirements entry in services.yaml round-trips to .env.example."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [
+    "No pre-existing husky/lint-staged setup — chose raw .githooks + core.hooksPath so the install footprint stays minimal (no new runtime deps).",
+    "Scanner treats .env.example, package-lock.json, and pnpm-lock.yaml as excluded — changes to those files are not scanned (real secrets would not live there)."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 223 passed / 1 skipped / 31 files.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "git config core.hooksPath after pnpm install's prepare script", "expected": "core.hooksPath = .githooks", "observed": "matches" },
+      { "action": "scanner vs staged diff containing a Stripe-live-style placeholder", "expected": "exit 1 + message", "observed": "exit=1, printed pattern + match" },
+      { "action": "scanner vs staged diff containing a PEM private-key header", "expected": "exit 1", "observed": "exit=1" },
+      { "action": "scanner vs clean diff", "expected": "exit 0", "observed": "exit=0" },
+      { "action": "git log -- .env.local", "expected": "empty (never committed)", "observed": "empty" }
+    ]
+  },
+  "filesChanged": [
+    ".env.example (created)",
+    "scripts/secret-scan.sh (created, +x)",
+    ".githooks/pre-commit (created, +x)",
+    "package.json (modified — added prepare script)",
+    "README.md (modified — added Secrets section)",
+    "src/__tests__/env-audit.test.ts (created)"
+  ]
+}

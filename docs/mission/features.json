@@ -115,7 +115,7 @@
         "Diff .env.example vs services.yaml env_requirements — all vars present"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "plans-schema-migration",
