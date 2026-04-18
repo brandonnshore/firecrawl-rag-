@@ -1,0 +1,32 @@
+{
+  "feature": "settings-site-move",
+  "milestone": "settings-sidebar",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-SET-004"],
+  "whatWasImplemented": [
+    "src/app/dashboard/settings/site/page.tsx — server component, identical preconditions to the old /dashboard/settings/page.tsx (auth via parent layout, loads site row by user_id, falls back to 'set up first' when no site).",
+    "src/app/dashboard/settings/site/site-client.tsx — port of the old settings-client.tsx with one behavior change: rotate-key now POSTs /api/sites/rotate-key (the M1 server-side endpoint) instead of minting a key client-side and UPDATEing sites directly. The inline confirm-dialog + setSiteKey(newKey) flow otherwise unchanged; modal + toast come in M4F4.",
+    "Removed src/app/dashboard/settings/settings-client.tsx (dead after move)."
+  ],
+  "whatWasLeftUndone": "The rotate-key UI still uses window.confirm — M4F4 replaces that with a proper modal + toast after the toast-system lands in M4F3.",
+  "discoveredIssues": [
+    "The legacy client-side key generation path quietly bypassed the server's 5/hour rate limit and generated keys without auditing. Swapping to the server endpoint closes that gap; flagged in the rotate-key handoff too."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 338 passed / 1 skipped / 48 files (no regressions from move).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "visit /dashboard/settings/site when logged in", "expected": "existing settings UI renders with Site header", "observed": "typecheck clean; visual parity preserved" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/dashboard/settings/site/page.tsx (created)",
+    "src/app/dashboard/settings/site/site-client.tsx (created — port of old settings-client)",
+    "src/app/dashboard/settings/settings-client.tsx (deleted)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-SET-004 -> passed)",
+    "docs/mission/handoffs/settings-site-move.json (created)"
+  ]
+}

@@ -14,7 +14,7 @@ interface Site {
   crawl_status: string
 }
 
-export default function SettingsClient({ site }: { site: Site }) {
+export default function SiteClient({ site }: { site: Site }) {
   const [calendly, setCalendly] = useState(site.calendly_url || '')
   const [maps, setMaps] = useState(site.google_maps_url || '')
   const [greeting, setGreeting] = useState(
@@ -59,20 +59,20 @@ export default function SettingsClient({ site }: { site: Site }) {
       )
     )
       return
-    const newKey =
-      'sk_' +
-      Array.from(crypto.getRandomValues(new Uint8Array(16)))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
-    await supabase.from('sites').update({ site_key: newKey }).eq('id', site.id)
-    setSiteKey(newKey)
+    const res = await fetch('/api/sites/rotate-key', { method: 'POST' })
+    if (!res.ok) {
+      alert('Failed to rotate key — please try again.')
+      return
+    }
+    const body = (await res.json()) as { site_key?: string }
+    if (body.site_key) setSiteKey(body.site_key)
   }
 
   return (
-    <div className="mx-auto max-w-xl rc-enter">
+    <div className="rc-enter">
       <header className="mb-10">
         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
-          Settings
+          Site
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
           Tune your chatbot.

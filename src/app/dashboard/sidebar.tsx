@@ -2,11 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { NAV_ITEMS } from './nav-items'
+import { NAV_ITEMS, resolveActiveHref } from './nav-items'
 import { SignOutButton } from './sign-out-button'
 
 export function Sidebar() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
+  const activeHref = resolveActiveHref(
+    pathname,
+    NAV_ITEMS.map((n) => n.href)
+  )
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
@@ -25,7 +29,7 @@ export function Sidebar() {
             const isActive =
               href === '/dashboard'
                 ? pathname === '/dashboard'
-                : pathname.startsWith(href)
+                : activeHref === href
 
             return (
               <li key={href}>

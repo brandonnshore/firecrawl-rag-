@@ -1,0 +1,48 @@
+{
+  "feature": "settings-layout",
+  "milestone": "settings-sidebar",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-SET-001", "VAL-SET-002", "VAL-SET-003", "VAL-SET-007", "VAL-SET-008"],
+  "whatWasImplemented": [
+    "src/app/dashboard/settings/layout.tsx — wraps all /dashboard/settings/* sub-routes with a two-column layout (desktop) or stacked-plus-tabs layout (mobile). No auth check needed — the parent /dashboard/layout.tsx already redirects guests to /login, which transitively protects every sub-route (VAL-SET-007).",
+    "src/app/dashboard/settings/settings-sidebar.tsx — client component rendering the 5-item sub-nav. Desktop: vertical column (w-48). Mobile (<640px): horizontal scrollable tab strip above content. Active highlighting uses isActiveSubRoute() from nav-items.ts (prefix match with segment boundary so 'sitemap' doesn't match 'site').",
+    "src/app/dashboard/settings/nav-items.ts — canonical SETTINGS_NAV_ITEMS array (Site / Knowledge / Responses / Escalation / Billing) + isActiveSubRoute helper. Single source of truth for the sub-nav order (VAL-SET-002).",
+    "src/app/dashboard/settings/page.tsx — replaced the old settings content with a `redirect('/dashboard/settings/site')` (VAL-SET-001).",
+    "Placeholder pages at /dashboard/settings/{knowledge,responses,escalation} — 'Shipping soon' stubs replaced by M5/M6/M7. Keeps the sub-nav links live today and prevents 404s on clicks.",
+    "src/__tests__/settings-nav.test.ts — 7 unit tests pinning down nav-item ordering (VAL-SET-002), link scoping, and isActiveSubRoute edge cases including the prefix-collision case (sitemap vs site).",
+    "src/__tests__/main-nav-active.test.ts — 6 unit tests for the new longest-prefix resolver (see related main-nav change below)."
+  ],
+  "whatWasLeftUndone": "Playwright-driven VAL-SET-003 active-state screenshots and VAL-SET-008 mobile viewport collapse — logic unit-tested; browser confirmation batches with end-of-mission pass.",
+  "discoveredIssues": [
+    "Added a sibling cross-milestone change for M4F1 to make sense: Billing was moved from /dashboard/billing to /dashboard/settings/billing (so the sub-nav's Billing tab actually lives inside the settings layout). Added a `/dashboard/billing` redirect page for backward compatibility with Stripe's saved return URLs. Main sidebar nav-items.ts updated accordingly; resolveActiveHref exported for longest-prefix active-state so /dashboard/settings/billing highlights Billing (not Settings). Documented in the main-nav-active test."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 338 passed / 1 skipped / 48 files (+13 new across settings-nav + main-nav-active).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "isActiveSubRoute('/dashboard/settings/sitemap', '/dashboard/settings/site')", "expected": "false (no false-positive prefix match)", "observed": "pass" },
+      { "action": "resolveActiveHref('/dashboard/settings/billing', main sidebar hrefs)", "expected": "/dashboard/settings/billing (more specific wins over /dashboard/settings)", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/dashboard/settings/layout.tsx (created)",
+    "src/app/dashboard/settings/settings-sidebar.tsx (created)",
+    "src/app/dashboard/settings/nav-items.ts (created)",
+    "src/app/dashboard/settings/page.tsx (replaced with redirect)",
+    "src/app/dashboard/settings/knowledge/page.tsx (created — placeholder)",
+    "src/app/dashboard/settings/responses/page.tsx (created — placeholder)",
+    "src/app/dashboard/settings/escalation/page.tsx (created — placeholder)",
+    "src/app/dashboard/nav-items.ts (modified — Billing href + resolveActiveHref export)",
+    "src/app/dashboard/sidebar.tsx (modified — use longest-prefix resolver)",
+    "src/app/dashboard/billing/page.tsx (modified — redirect to settings/billing)",
+    "src/app/dashboard/settings/billing/page.tsx (moved from /dashboard/billing)",
+    "src/app/dashboard/settings/billing/client-actions.tsx (moved from /dashboard/billing)",
+    "src/__tests__/settings-nav.test.ts (created)",
+    "src/__tests__/main-nav-active.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-SET-001/002 -> passed; 003/007/008 deferred to Playwright)",
+    "docs/mission/handoffs/settings-layout.json (created)"
+  ]
+}

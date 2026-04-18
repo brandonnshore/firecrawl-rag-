@@ -378,7 +378,7 @@
         "VAL-SET-001", "VAL-SET-002", "VAL-SET-003",
         "VAL-SET-007", "VAL-SET-008"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "settings-site-move",
@@ -396,7 +396,7 @@
         "Playwright: e2e/settings-site.spec.ts submits form and reloads, verifies values"
       ],
       "fulfills": ["VAL-SET-004"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "site-key-rotation-ui",
