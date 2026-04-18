@@ -355,7 +355,7 @@
         "VAL-QUOTA-007", "VAL-QUOTA-008", "VAL-QUOTA-009",
         "VAL-QUOTA-013", "VAL-QUOTA-014", "VAL-QUOTA-015"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "settings-layout",

@@ -1,0 +1,47 @@
+{
+  "feature": "usage-meter-ui",
+  "milestone": "quota-meter",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-QUOTA-007", "VAL-QUOTA-008", "VAL-QUOTA-009",
+    "VAL-QUOTA-013", "VAL-QUOTA-014", "VAL-QUOTA-015"
+  ],
+  "whatWasImplemented": [
+    "src/lib/billing/usage-meter-model.ts — buildMeterSet() pure helper. Returns three rows (Messages / Crawl pages / Files) with {used, max, percent}. Percent is integer rounded + clamped to [0,100] so overshoot can never overflow the CSS bar width. Null counter -> zeros. Null caps -> Starter fallback (2000/500/25). Zero/negative cap defends with /1 so the clamp still fires.",
+    "src/components/usage-meter-set.tsx — client component. Props: userId, initialCounter (server-rendered), caps, optional title. Subscribes to a Supabase Realtime channel filtered by user_id=eq.X on UPDATE events. Updates local state on payload.new. Rendered bars use aria-valuenow/min/max for screen-reader parity with the visual progress.",
+    "supabase/migrations/20260419010000_usage_counters_realtime.sql — `alter publication supabase_realtime add table usage_counters;` so Realtime publishes UPDATE events to subscribed clients.",
+    "Mounted on /dashboard (overview) in the subscription strip — replaces the static 'RubyCrawl Standard $24.99/month Active' card.",
+    "Mounted on /dashboard/billing inside the plan card, under a hairline divider, above the next-invoice date + CTAs.",
+    "src/__tests__/usage-meter-model.test.ts — 6 unit tests covering fixed row order, empty state, overshoot cap (VAL-QUOTA-015), rounding, Starter-fallback caps, and zero-cap defensive."
+  ],
+  "whatWasLeftUndone": [
+    "Playwright-driven verification of VAL-QUOTA-007/008/009/013/014: 3-bar render, live Realtime push, plan-change propagation, billing-page placement, empty-state. Pure-logic coverage via unit tests complete; browser confirmation batches with the end-of-mission Playwright pass.",
+    "Plan-change live propagation (VAL-QUOTA-009) — current implementation refreshes caps on Realtime UPDATE of usage_counters but not on profiles.plan_id. Works today because BillingAction triggers a window.location.reload(). Tighter live propagation without reload is deferred to M8."
+  ],
+  "discoveredIssues": [
+    "Parallel test-file isolation: stripe-webhook.test.ts and quota-reset.test.ts both hit processed_stripe_events and previously used `LIKE 'evt_%'` in their afterEach cleanup. Under parallel vitest workers, that deleted each other's rows mid-test and broke idempotency assertions. Fixed by namespacing all fixed/random event_ids + invoice_ids + customer_ids + sub_ids with feature prefixes (`evt_M2F3_*`, `evt_M3F4_*`) and narrowing the afterEach LIKE to the file's own prefix. Lesson: any shared-state table deserves namespaced test fixtures."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 325 passed / 1 skipped / 46 files (+6 new). 0 regressions after the test-isolation fix.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "buildMeterSet({counter: {messages_used: 2500, ...}, caps: {monthly_message_limit: 2000, ...}})", "expected": "percent=100 (VAL-QUOTA-015 cap invariant)", "observed": "pass" },
+      { "action": "Realtime subscription setup", "expected": "no thrown errors on mount, cleanup on unmount via supabase.removeChannel", "observed": "typecheck + lint clean" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/billing/usage-meter-model.ts (created)",
+    "src/components/usage-meter-set.tsx (created)",
+    "supabase/migrations/20260419010000_usage_counters_realtime.sql (created)",
+    "src/app/dashboard/page.tsx (modified — replace subscription card with UsageMeterSet)",
+    "src/app/dashboard/billing/page.tsx (modified — mount UsageMeterSet in plan card)",
+    "src/__tests__/usage-meter-model.test.ts (created)",
+    "src/__tests__/quota-reset.test.ts (modified — namespace event ids)",
+    "src/__tests__/stripe-webhook.test.ts (modified — namespace event / customer / sub / invoice ids)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-QUOTA-007/013/015 -> passed; 008/009/014 pending Playwright)",
+    "docs/mission/handoffs/usage-meter-ui.json (created)"
+  ]
+}

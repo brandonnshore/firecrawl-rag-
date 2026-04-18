@@ -7,6 +7,7 @@ import {
   type ProfileInput,
 } from '@/lib/billing/page-model'
 import { BillingAction } from './client-actions'
+import { UsageMeterSet } from '@/components/usage-meter-set'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,24 @@ export default async function BillingPage() {
 
   const vm = buildBillingViewModel({ profile, plans, invoices })
 
+  const { data: counterRow } = await supabase
+    .from('usage_counters')
+    .select('messages_used, crawl_pages_used, files_stored')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const initialCounter = counterRow as {
+    messages_used: number
+    crawl_pages_used: number
+    files_stored: number
+  } | null
+  const meterCaps = vm.currentPlan
+    ? {
+        monthly_message_limit: vm.currentPlan.monthly_message_limit,
+        monthly_crawl_page_limit: vm.currentPlan.monthly_crawl_page_limit,
+        supplementary_file_limit: vm.currentPlan.supplementary_file_limit,
+      }
+    : null
+
   return (
     <div className="mx-auto max-w-3xl rc-enter">
       <header className="mb-8">
@@ -89,6 +108,15 @@ export default async function BillingPage() {
             ) : null}
           </div>
           <StatusPill label={vm.statusPill.label} tone={vm.statusPill.tone} />
+        </div>
+
+        <div className="mt-6 border-t border-[color:var(--border-hairline)] pt-5">
+          <UsageMeterSet
+            userId={user.id}
+            initialCounter={initialCounter}
+            caps={meterCaps}
+            title="Usage this period"
+          />
         </div>
 
         {vm.nextInvoiceIso ? (

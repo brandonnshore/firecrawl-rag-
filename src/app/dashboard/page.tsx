@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconSparkle,
 } from '@/components/icons'
+import { UsageMeterSet } from '@/components/usage-meter-set'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -88,6 +89,37 @@ export default async function DashboardPage() {
   const uniqueVisitors = new Set(conversations?.map((c) => c.visitor_id) || [])
     .size
 
+  const [counterRes, profileRes] = await Promise.all([
+    supabase
+      .from('usage_counters')
+      .select('messages_used, crawl_pages_used, files_stored')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('profiles')
+      .select('plan_id')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
+  const ownerPlanId = (profileRes.data as { plan_id: string | null } | null)?.plan_id
+  const { data: planRow } = ownerPlanId
+    ? await supabase
+        .from('plans')
+        .select('monthly_message_limit, monthly_crawl_page_limit, supplementary_file_limit')
+        .eq('id', ownerPlanId)
+        .maybeSingle()
+    : { data: null }
+  const initialCounter = counterRes.data as {
+    messages_used: number
+    crawl_pages_used: number
+    files_stored: number
+  } | null
+  const caps = planRow as {
+    monthly_message_limit: number
+    monthly_crawl_page_limit: number
+    supplementary_file_limit: number
+  } | null
+
   return (
     <div className="rc-enter space-y-12">
       {/* Header row */}
@@ -141,24 +173,12 @@ export default async function DashboardPage() {
         <MetricCard label="Messages answered" value={totalMessages} />
         <MetricCard label="Leads captured" value={totalLeads ?? 0} />
         <div className="col-span-full bg-[color:var(--bg-surface)] p-6 sm:col-span-2">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
-                Subscription
-              </p>
-              <p className="mt-1 text-base font-medium text-[color:var(--ink-primary)]">
-                RubyCrawl Standard
-              </p>
-              <p className="mt-0.5 text-sm text-[color:var(--ink-secondary)]">
-                <span className="font-mono">$24.99</span>
-                <span className="text-[color:var(--ink-tertiary)]">/month</span>
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-success-bg)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--accent-success)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-success)] rc-pulse" />
-              Active
-            </span>
-          </div>
+          <UsageMeterSet
+            userId={user.id}
+            initialCounter={initialCounter}
+            caps={caps}
+            title="Usage this period"
+          />
         </div>
       </section>
 

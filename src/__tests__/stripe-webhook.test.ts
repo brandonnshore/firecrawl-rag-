@@ -64,7 +64,7 @@ function subscriptionEvent(
   }
 ) {
   return {
-    id: opts.eventId ?? `evt_${crypto.randomUUID()}`,
+    id: opts.eventId ?? `evt_M2F3_${crypto.randomUUID()}`,
     object: 'event',
     api_version: '2025-09-30.clover',
     created: Math.floor(Date.now() / 1000),
@@ -106,7 +106,7 @@ function invoiceEvent(
   }
 ) {
   return {
-    id: opts.eventId ?? `evt_${crypto.randomUUID()}`,
+    id: opts.eventId ?? `evt_M2F3_${crypto.randomUUID()}`,
     object: 'event',
     api_version: '2025-09-30.clover',
     created: Math.floor(Date.now() / 1000),
@@ -116,7 +116,7 @@ function invoiceEvent(
     type,
     data: {
       object: {
-        id: `in_test_${crypto.randomUUID()}`,
+        id: `in_M2F3_${crypto.randomUUID()}`,
         object: 'invoice',
         customer: opts.customer,
         subscription: opts.subscriptionId,
@@ -142,8 +142,8 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
 
   beforeEach(async () => {
     user = await createTestUser()
-    customerId = `cus_test_${crypto.randomUUID()}`
-    subscriptionId = `sub_test_${crypto.randomUUID()}`
+    customerId = `cus_M2F3_${crypto.randomUUID()}`
+    subscriptionId = `sub_M2F3_${crypto.randomUUID()}`
 
     const admin = serviceRoleClient()
     await admin
@@ -159,7 +159,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
     await admin
       .from('processed_stripe_events')
       .delete()
-      .like('stripe_event_id', 'evt_%')
+      .like('stripe_event_id', 'evt_M2F3_%')
 
     await truncateUserData(user.userId)
   })
@@ -210,7 +210,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
 
     it('does NOT record a 400-rejected event in processed_stripe_events', async () => {
       const event = subscriptionEvent('customer.subscription.updated', {
-        eventId: 'evt_bad_sig_1',
+        eventId: 'evt_M2F3_bad_sig_1',
         customer: customerId,
         subscriptionId,
         priceId: 'price_test_starter',
@@ -224,7 +224,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
       const { data } = await admin
         .from('processed_stripe_events')
         .select('stripe_event_id')
-        .eq('stripe_event_id', 'evt_bad_sig_1')
+        .eq('stripe_event_id', 'evt_M2F3_bad_sig_1')
       expect(data).toEqual([])
     })
   })
@@ -248,7 +248,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
   describe('VAL-BILLING-010: idempotency on duplicate event_id', () => {
     it('second delivery returns 200 but does not re-process', async () => {
       const event = subscriptionEvent('customer.subscription.updated', {
-        eventId: 'evt_dup_test_M2F3',
+        eventId: 'evt_M2F3_dup_test',
         customer: customerId,
         subscriptionId,
         priceId: 'price_test_starter',
@@ -264,7 +264,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
       const { data: rowsAfterFirst } = await admin
         .from('processed_stripe_events')
         .select('stripe_event_id')
-        .eq('stripe_event_id', 'evt_dup_test_M2F3')
+        .eq('stripe_event_id', 'evt_M2F3_dup_test')
       expect(rowsAfterFirst).toHaveLength(1)
 
       // Mutate the profile to detect re-processing.
@@ -289,7 +289,7 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
       const { data: rowsAfterSecond } = await admin
         .from('processed_stripe_events')
         .select('stripe_event_id')
-        .eq('stripe_event_id', 'evt_dup_test_M2F3')
+        .eq('stripe_event_id', 'evt_M2F3_dup_test')
       expect(rowsAfterSecond).toHaveLength(1)
     })
   })

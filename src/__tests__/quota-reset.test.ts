@@ -100,7 +100,7 @@ describe.skipIf(!hasSupabaseTestEnv())('M3F4 quota reset on invoice.paid', () =>
     await admin
       .from('processed_stripe_events')
       .delete()
-      .like('stripe_event_id', 'evt_%')
+      .like('stripe_event_id', 'evt_M3F4_%')
     await truncateUserData(user.userId)
   })
 
@@ -172,7 +172,7 @@ describe.skipIf(!hasSupabaseTestEnv())('M3F4 quota reset on invoice.paid', () =>
 
   it('duplicate invoice.paid event does NOT double-reset (VAL-QUOTA-010)', async () => {
     const admin = serviceRoleClient()
-    const eventId = 'evt_dup_quota_reset'
+    const eventId = 'evt_M3F4_dup_quota_reset'
 
     const firstRes = await POST(
       signedRequest(
@@ -182,7 +182,7 @@ describe.skipIf(!hasSupabaseTestEnv())('M3F4 quota reset on invoice.paid', () =>
           subscriptionId: 'sub_fake',
           periodStart: 100,
           periodEnd: 200,
-        })
+        }),
       )
     )
     expect(firstRes.status).toBe(200)
@@ -201,7 +201,7 @@ describe.skipIf(!hasSupabaseTestEnv())('M3F4 quota reset on invoice.paid', () =>
           subscriptionId: 'sub_fake',
           periodStart: 100,
           periodEnd: 200,
-        })
+        }),
       )
     )
     expect(secondRes.status).toBe(200)
