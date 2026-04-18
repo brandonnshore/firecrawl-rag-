@@ -1,0 +1,67 @@
+{
+  "milestone": "quota-meter",
+  "sealedAt": "2026-04-18",
+  "automatedValidators": {
+    "vitest": "325 passed / 1 skipped / 46 files",
+    "typecheck": "0 errors",
+    "lint": "clean"
+  },
+  "featuresReviewed": [
+    {
+      "id": "usage-counters-schema-rpc",
+      "correctness": "Table + FK cascade + RLS + trigger + RPC all verified. 20-way parallel at budget=10 proves atomicity of SELECT FOR UPDATE pattern.",
+      "security": "Owner-only SELECT RLS; writes gated by SECURITY DEFINER RPC that only takes p_user_id (no SQL injection surface). Non-negative CHECK constraints on all counter columns.",
+      "quality": "Single migration per concern; idempotent backfill for pre-existing profiles.",
+      "testing": "9 assertions — happy path, at-budget denial, 20-parallel race, RLS owner/cross-user/anon/service-role, PostgREST write suppression.",
+      "issues": []
+    },
+    {
+      "id": "message-quota-enforcement",
+      "correctness": "Route gates at the owner (not caller), resolves plan limit, calls RPC before any OpenAI work. 402 includes upgrade_url + used/limit.",
+      "security": "Uses the existing service-role client (already required for the widget path). resolveOwnerMessageLimit() narrow reads only plan_id + monthly_message_limit.",
+      "quality": "Helper extracted cleanly; Starter fallback prevents unlimited trial abuse.",
+      "testing": "5 unit tests including embed() spy for VAL-QUOTA-002 non-invocation assertion.",
+      "issues": ["Widget-side UI for 402 (VAL-QUOTA-011) deferred — API contract complete."]
+    },
+    {
+      "id": "crawl-quota-enforcement",
+      "correctness": "Start gate pre-Firecrawl; webhook processor increments by actual unique page count post-swap.",
+      "security": "checkCrawlQuota runs with the authenticated user's supabase client; plans is public-readable; usage_counters is owner-readable.",
+      "quality": "Increment happens after the atomic swap so failed crawls don't burn quota. Defensive ownerId guard avoids crash on malformed site rows.",
+      "testing": "5 route tests + 2 process tests. Pre-existing crawl-start/crawl-process suites updated in-place to keep 316 green.",
+      "issues": ["Two-step SELECT/UPDATE increment in process.ts isn't atomic; acceptable because crawl completion is serialized per site. Flagged for M8 audit."]
+    },
+    {
+      "id": "quota-reset-on-invoice-paid",
+      "correctness": "messages_used + crawl_pages_used zeroed; period_start/end rolled; files_stored + openai_tokens_used preserved.",
+      "security": "Webhook path already uses service-role. Event idempotency inherited from M2F3's processed_stripe_events gate.",
+      "quality": "Removed M2-era try/catch workaround cleanly now that the table exists permanently.",
+      "testing": "3 integration tests — reset values, post-reset RPC recovery, duplicate-event idempotency.",
+      "issues": []
+    },
+    {
+      "id": "usage-meter-ui",
+      "correctness": "Pure view-model covers empty / normal / overshoot; Realtime subscription uses filtered postgres_changes.",
+      "security": "Client subscription scoped to user_id=eq.X; RLS ensures the user can only receive their own row events.",
+      "quality": "Purity boundary kept clean — subscription lifecycle via useEffect with cleanup.",
+      "testing": "6 pure-function tests; DOM/Realtime coverage deferred to Playwright.",
+      "issues": ["Plan-change live propagation (VAL-QUOTA-009) relies on window.location.reload() after upgrade today; tighter wiring deferred to M8."]
+    }
+  ],
+  "sharedStateUpdates": {
+    "AGENTS.md": "No change — M3 added no new architectural boundary rules.",
+    "servicesYaml": "No change.",
+    "libraryFiles": "No change — next update lands in M4 settings-sidebar (new routes) or M8 (hardening library)."
+  },
+  "parallelTestFix": "Discovered + fixed during M3F5: test files sharing processed_stripe_events were deleting each other's rows under vitest parallel workers (LIKE 'evt_%'). Namespaced fixture IDs by feature prefix; cleanup patterns now scoped to the file's own prefix. Lesson recorded in M3F5 handoff.",
+  "assertionSummary": {
+    "totalInMilestone": 15,
+    "passed": 12,
+    "pendingPlaywright": 3
+  },
+  "crossMilestoneReconfirms": {
+    "VAL-BILLING-014": "Flipped to passed in M3F4 (M2 did the profile-side rollover; M3F4 added the usage_counters reset).",
+    "VAL-RLS-015": "Flipped to passed in M3F1 (deferred from foundation-rls pending usage_counters table creation)."
+  },
+  "result": "PASS — all automated validators green; 3 UI assertions deferred with documented Playwright follow-up."
+}
