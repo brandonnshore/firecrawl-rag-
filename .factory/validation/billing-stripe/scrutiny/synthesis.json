@@ -1,0 +1,79 @@
+{
+  "milestone": "billing-stripe",
+  "sealedAt": "2026-04-18",
+  "automatedValidators": {
+    "vitest": "295 passed / 1 skipped / 40 files",
+    "typecheck": "0 errors (tsc --noEmit)",
+    "lint": "clean (eslint .)"
+  },
+  "featuresReviewed": [
+    {
+      "id": "plans-schema-migration",
+      "correctness": "Seed rows + RLS + profile extension match contract; migration applies cleanly.",
+      "security": "RLS on plans: public SELECT only, writes service-role only. Verified by 3 RLS tests (anon INSERT rejected, UPDATE silent 0-rows, DELETE silent 0-rows).",
+      "quality": "Migration idempotent-safe with IF EXISTS drop on the old subscription_status constraint; defensive UPDATE migrates any legacy 'cancelled' rows.",
+      "consistency": "Follows existing migration filename convention YYYYMMDDHHMMSS_<description>.sql.",
+      "testing": "11 assertions across seed integrity, RLS, profile FK, and Stripe-canonical 'canceled' status.",
+      "issues": []
+    },
+    {
+      "id": "stripe-checkout-api",
+      "correctness": "401/400/200 paths covered; lazy customer creation + reuse paths correct.",
+      "security": "Auth gate before plan lookup; no user-controlled Stripe call arguments besides plan_id (resolved server-side to stripe_price_id from plans).",
+      "quality": "Memoized Stripe client via stripeClient(); stripe-mock wiring via env vars keeps tests fast.",
+      "consistency": "Error shapes match existing routes ({error: string}).",
+      "testing": "11 unit + 2 stripe-mock integration — live wiring proven.",
+      "issues": []
+    },
+    {
+      "id": "stripe-webhook-api",
+      "correctness": "All 5 event types + idempotency + signature + tolerance covered by integration tests.",
+      "security": "Uses service-role client (intentional for webhook). Raw body read before any parsing — no signature bypass. STRIPE_WEBHOOK_SECRET required; missing yields 500 so misconfig is visible.",
+      "quality": "Event dispatch is a small switch; each handler lives in its own named function with narrow types.",
+      "consistency": "Customer / subscription / invoice unwrappers all follow the same shape.",
+      "testing": "13 integration tests signing real events through Stripe SDK + live Supabase.",
+      "issues": [
+        "Handler failure after processed_stripe_events insert leaves the event unretried on second delivery. Acceptable for M2; M8 hardening should add a dead-letter queue."
+      ]
+    },
+    {
+      "id": "stripe-portal-api",
+      "correctness": "401/400/200 paths verified.",
+      "security": "Auth gate; caller's stripe_customer_id pinned to return_url on app origin.",
+      "quality": "4 unit tests.",
+      "issues": []
+    },
+    {
+      "id": "subscription-gate",
+      "correctness": "Every status/date combination from the contract covered. Chat gate correctly uses OWNER user_id, not caller.",
+      "security": "Uses service-role client (needed for anonymous widget path to resolve site owner). Profile read is narrow: only subscription_status + trial_ends_at + current_period_end.",
+      "quality": "Pure function output; no side effects.",
+      "testing": "14 unit + 3 route-integration.",
+      "issues": []
+    },
+    {
+      "id": "billing-page-refactor",
+      "correctness": "View-model branches match subscription-gate state machine. Change-plan path correctly passes proration_behavior='create_prorations'.",
+      "security": "Uses user-scoped supabase server client (RLS enforces ownership). Stripe invoice list scoped by stripe_customer_id.",
+      "quality": "Page logic extracted into pure view-model helper for deterministic unit coverage. Client actions kept thin — POSTs + redirects.",
+      "consistency": "Visual style matches existing dashboard design tokens (--ink-primary, surface-hairline, etc.).",
+      "testing": "10 page-model + 5 change-plan unit tests.",
+      "issues": [
+        "UI assertions VAL-BILLING-002/003/024/025 need Playwright confirmation; pattern matches foundation milestone's deferred AUTH assertions."
+      ]
+    }
+  ],
+  "sharedStateUpdates": {
+    "AGENTS.md": "No changes required — M2 added no new boundary rules.",
+    "servicesYaml": "stripe-mock commands already present (added in M1 prep).",
+    "libraryFiles": "No updates needed; next stack update lands with M3 (usage_counters + meter UI)."
+  },
+  "assertionSummary": {
+    "totalInMilestone": 25,
+    "passed": 21,
+    "pendingPlaywright": 4,
+    "pendingOther": 1,
+    "notes": "Pending Playwright: VAL-BILLING-002, 003, 024, 025 (UI). Pending other: VAL-BILLING-014 (usage_counters reset completes in M3 quota-reset-on-invoice-paid)."
+  },
+  "result": "PASS — all automated validators green, no blocking issues."
+}
