@@ -48,7 +48,7 @@
     "VAL-BILLING-018": { "status": "pending" },
     "VAL-BILLING-019": { "status": "pending" },
     "VAL-BILLING-020": { "status": "pending" },
-    "VAL-BILLING-021": { "status": "pending" },
+    "VAL-BILLING-021": { "status": "passed", "feature": "stripe-portal-api" },
     "VAL-BILLING-022": { "status": "pending" },
     "VAL-BILLING-023": { "status": "pending" },
     "VAL-BILLING-024": { "status": "pending" },

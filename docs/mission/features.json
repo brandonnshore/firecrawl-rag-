@@ -200,7 +200,7 @@
         "pnpm vitest run src/__tests__/stripe-portal.test.ts"
       ],
       "fulfills": ["VAL-BILLING-021"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "subscription-gate",

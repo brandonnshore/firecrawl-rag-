@@ -1,0 +1,28 @@
+{
+  "feature": "stripe-portal-api",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-BILLING-021"],
+  "whatWasImplemented": [
+    "src/app/api/stripe/portal/route.ts — POST handler. 401 without session. Looks up profiles.stripe_customer_id; 400 if null (first subscription hasn't run yet). Calls stripe.billingPortal.sessions.create with the caller's customer and return_url=NEXT_PUBLIC_APP_URL/dashboard/billing. Returns {url}.",
+    "src/__tests__/stripe-portal.test.ts — 4 unit tests: auth (401), no customer (400), happy path (200 with URL), customer id and return_url passed through correctly."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 264 passed / 1 skipped / 36 files (+4 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "mock-authenticated POST with stripe_customer_id set", "expected": "200 with billing.stripe.com URL", "observed": "pass via unit test" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/api/stripe/portal/route.ts (created)",
+    "src/__tests__/stripe-portal.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-BILLING-021 -> passed)",
+    "docs/mission/handoffs/stripe-portal-api.json (created)"
+  ]
+}
