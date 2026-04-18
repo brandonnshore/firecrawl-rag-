@@ -252,6 +252,110 @@
         "VAL-BILLING-025"
       ],
       "status": "pending"
+    },
+    {
+      "id": "usage-counters-schema-rpc",
+      "description": "Create supabase/migrations/<ts>_usage_counters.sql: table usage_counters (user_id uuid PK FK profiles(id) ON DELETE CASCADE, period_start timestamptz, period_end timestamptz, messages_used int default 0, crawl_pages_used int default 0, files_stored int default 0, openai_tokens_used bigint default 0). RLS: users SELECT own row only; writes service-role only. Add Postgres RPC increment_message_counter(user_id uuid, limit int) that atomically: SELECT ... FOR UPDATE, check messages_used < limit, if yes increment and return {ok:true, used, limit}, else return {ok:false, used, limit}. All in one transaction for race safety. Trigger on profiles insert creates the usage_counters row with period_start = now() and period_end = now() + '1 month'. Tests cover RLS isolation and RPC atomicity.",
+      "skillName": "fullstack-worker",
+      "milestone": "quota-meter",
+      "preconditions": ["plans-schema-migration is completed"],
+      "expectedBehavior": [
+        "usage_counters table exists with correct columns and FK cascade",
+        "RLS: user A cannot SELECT user B's usage_counters row",
+        "Service role SELECT returns all rows",
+        "increment_message_counter RPC returns {ok, used, limit} atomically",
+        "New profile insert triggers a usage_counters row with period defaults"
+      ],
+      "verificationSteps": [
+        "supabase db reset and verify table + trigger + RPC via psql",
+        "pnpm vitest run src/__tests__/usage-counters-schema.test.ts"
+      ],
+      "fulfills": ["VAL-QUOTA-012", "VAL-RLS-015"],
+      "status": "pending"
+    },
+    {
+      "id": "message-quota-enforcement",
+      "description": "Integrate increment_message_counter RPC into /api/chat/session: before embedding/LLM, call the RPC with user's monthly_message_limit from their plan. If {ok:false}, return 402 with {error:'quota_exceeded', upgrade_url:'/dashboard/billing'} and do NOT make any OpenAI call. Widget handling: on 402 response, render a polite 'monthly chat limit reached' message (generic — no owner dashboard URL exposed to visitors). Adversarial test: fast-check property with 20 parallel requests at budget=10 asserts exactly 10 succeed. Idempotency: duplicate invoice.paid does not double-reset (covered in stripe-webhook-api but asserted here from quota side).",
+      "skillName": "fullstack-worker",
+      "milestone": "quota-meter",
+      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "expectedBehavior": [
+        "Each successful /api/chat/session increments messages_used by exactly 1",
+        "At messages_used >= limit, next call returns 402 with {error:'quota_exceeded', upgrade_url}",
+        "No OpenAI call made on 402 response",
+        "20 concurrent requests at budget=10 yield exactly 10 successes, 10 x 402",
+        "Widget on 402 renders generic 'limit reached' message (no owner-dashboard URL)",
+        "Duplicate invoice.paid event does not double-reset counters"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/quota-message-*.test.ts",
+        "Playwright: widget over-quota state screenshot"
+      ],
+      "fulfills": [
+        "VAL-QUOTA-001", "VAL-QUOTA-002", "VAL-QUOTA-003",
+        "VAL-QUOTA-010", "VAL-QUOTA-011"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "crawl-quota-enforcement",
+      "description": "Gate /api/crawl/start with plan's monthly_crawl_page_limit. Before calling Firecrawl: SELECT usage_counters.crawl_pages_used for the user and plan.monthly_crawl_page_limit. If crawl_pages_used + estimated_pages_for_this_crawl > limit, return 402 with {error:'crawl_quota_exceeded', upgrade_url}. Firecrawl webhook processor increments crawl_pages_used by the actual indexed page count after completion (not estimate). This means a crawl is allowed if even partially within budget; if it grossly overshoots, the next crawl is blocked until reset.",
+      "skillName": "fullstack-worker",
+      "milestone": "quota-meter",
+      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "expectedBehavior": [
+        "Crawl start blocked with 402 when crawl_pages_used already >= limit",
+        "Firecrawl webhook processor increments crawl_pages_used by actual page count",
+        "No Firecrawl API call made on 402 rejection"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/quota-crawl.test.ts",
+        "Simulate webhook completion with 120 pages; verify counter += 120"
+      ],
+      "fulfills": ["VAL-QUOTA-004", "VAL-QUOTA-005"],
+      "status": "pending"
+    },
+    {
+      "id": "quota-reset-on-invoice-paid",
+      "description": "Extend stripe-webhook-api's invoice.paid handler to reset usage_counters for the user: messages_used=0, crawl_pages_used=0, files_stored unchanged (storage persists across billing periods), period_start=invoice.period_start, period_end=invoice.period_end. Idempotent via processed_stripe_events. Tested separately from the webhook signature/event-routing tests so quota-specific behavior has its own coverage.",
+      "skillName": "fullstack-worker",
+      "milestone": "quota-meter",
+      "preconditions": ["stripe-webhook-api is completed", "usage-counters-schema-rpc is completed"],
+      "expectedBehavior": [
+        "invoice.paid resets messages_used and crawl_pages_used to 0",
+        "period_start and period_end updated to invoice period",
+        "files_stored is NOT reset (storage is cumulative)",
+        "Duplicate event does not re-reset"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/quota-reset.test.ts"
+      ],
+      "fulfills": ["VAL-QUOTA-006"],
+      "status": "pending"
+    },
+    {
+      "id": "usage-meter-ui",
+      "description": "Build UsageMeterSet component per Appendix B.7. Renders N horizontal progress bars (label + current/max + bar). Mount on /dashboard overview and /dashboard/settings/billing. Data flow: server-side fetch of usage_counters + plan on initial render; client-side Supabase Realtime subscription on usage_counters for live updates. On upgrade, limits update without page reload (Realtime fires on profiles.plan_id change OR we revalidate via server action). Progress bar width capped at 100% even if overshoot. Empty state (new user, zero usage) shows 0/limit cleanly. Screenshot evidence for each state.",
+      "skillName": "fullstack-worker",
+      "milestone": "quota-meter",
+      "preconditions": ["billing-page-refactor is completed", "message-quota-enforcement is completed"],
+      "expectedBehavior": [
+        "UsageMeterSet renders 3 bars (messages, crawl pages, files) with current/max",
+        "Bars on /dashboard and /dashboard/settings/billing match",
+        "Realtime: updating usage_counters in DB updates the meter within 3s",
+        "Upgrade changes the max values without a full reload",
+        "Overshoot (used > limit) caps bar width at 100%",
+        "Empty state (0 usage) renders cleanly"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/usage-meter.spec.ts covers render, live update, overshoot cap",
+        "Manual: open two tabs, send chat in one, watch the meter update in the other"
+      ],
+      "fulfills": [
+        "VAL-QUOTA-007", "VAL-QUOTA-008", "VAL-QUOTA-009",
+        "VAL-QUOTA-013", "VAL-QUOTA-014", "VAL-QUOTA-015"
+      ],
+      "status": "pending"
     }
   ]
 }
