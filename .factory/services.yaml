@@ -1,12 +1,41 @@
+# Commands and services manifest.
+# Single source of truth. All ports hardcoded.
+# Extended 2026-04-18 for prod-saas mission. Originals preserved at top.
+
 commands:
+  # Dependency management
   install: pnpm install
-  dev: pnpm dev
-  build: pnpm build
+  install-frozen: pnpm install --frozen-lockfile
+
+  # Static validators (must pass before any commit)
   typecheck: pnpm run typecheck
   lint: pnpm run lint
   test: pnpm vitest run
-  widget-build: cd widget && pnpm install && pnpm build
+  test-watch: pnpm vitest
+  test-coverage: pnpm vitest run --coverage           # added M1
+  test-e2e: pnpm exec playwright test                 # added M1
+
+  # Build
+  build: pnpm build
+  build-widget: pnpm build:widget
   widget-test: cd widget && pnpm vitest run
+
+  # Supabase local (added M1)
+  db-start: supabase start
+  db-stop: supabase stop
+  db-status: supabase status
+  db-reset: supabase db reset
+  db-migrate: supabase migration up
+  db-diff: supabase db diff -f
+
+  # Stripe (added M2)
+  stripe-mock-start: docker run -d --name stripe-mock -p 12111:12111 stripe/stripe-mock:latest
+  stripe-mock-stop: docker stop stripe-mock && docker rm stripe-mock 2>/dev/null || true
+  stripe-listen: stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+  # Mission helpers
+  validate-coverage: node scripts/validate-assertion-coverage.mjs   # added M1
+  reset-my-data: psql "$SUPABASE_DB_URL" -f scripts/reset-my-data.sql  # added M8
 
 services:
   nextjs:
@@ -15,6 +44,7 @@ services:
     healthcheck: curl -sf http://localhost:3000 || curl -sf http://localhost:3000/login
     port: 3000
     depends_on: []
+    notes: Next.js dev server. Edge runtime for chat routes.
 
   redis:
     start: redis-server --daemonize yes --port 6379
@@ -22,3 +52,51 @@ services:
     healthcheck: redis-cli -p 6379 ping
     port: 6379
     depends_on: []
+    notes: |
+      Local Redis for rate limiting. In M8 we switch the app to Upstash;
+      this local Redis remains for dev convenience only.
+
+  supabase:
+    start: supabase start
+    stop: supabase stop
+    healthcheck: supabase status --output json > /dev/null
+    port: 54321
+    depends_on: []
+    notes: |
+      Added in M1. Docker required. First `supabase start` pulls images (~5 min).
+      Exposes: API :54321, DB :54322, Studio :54323, Inbucket :54324.
+
+  stripe_mock:
+    start: docker run -d --name stripe-mock -p 12111:12111 stripe/stripe-mock:latest
+    stop: docker stop stripe-mock && docker rm stripe-mock 2>/dev/null || true
+    healthcheck: curl -sf http://localhost:12111/v1/customers -H "Authorization:Bearer sk_test_mock"
+    port: 12111
+    depends_on: []
+    notes: Required for Stripe integration tests starting M2.
+
+test_parallelism:
+  vitest_workers: 4
+  playwright_workers: 1
+  notes: Playwright serial to avoid shared-DB race. Vitest workers tuned per CI box.
+
+env_requirements:
+  required_day_1:
+    - NEXT_PUBLIC_SUPABASE_URL
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY
+    - SUPABASE_SERVICE_ROLE_KEY
+    - OPENAI_API_KEY
+    - FIRECRAWL_API_KEY
+    - NEXT_PUBLIC_APP_URL
+  added_m2:
+    - STRIPE_SECRET_KEY
+    - STRIPE_WEBHOOK_SECRET
+    - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  added_m8:
+    - UPSTASH_REDIS_REST_URL
+    - UPSTASH_REDIS_REST_TOKEN
+    - RESEND_API_KEY
+    - SENTRY_DSN
+  test_only:
+    - SUPABASE_TEST_URL
+    - SUPABASE_TEST_ANON_KEY
+    - SUPABASE_TEST_SERVICE_ROLE_KEY
