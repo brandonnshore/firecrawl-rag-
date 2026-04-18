@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceClient } from '@/lib/supabase/service'
 import { buildSystemPrompt } from '@/lib/chat/system-prompt'
 import { rewriteQuery } from '@/lib/chat/query-rewrite'
@@ -111,6 +112,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Message-quota gate (M3F2). Resolve the site owner's monthly limit,
+    // then atomically increment via RPC. On deny, 402 and skip all OpenAI
+    // work — we never pay for inference we're about to reject.
+    const messageLimit = await resolveOwnerMessageLimit(supabase, site.user_id)
+    const { data: quota, error: quotaErr } = await supabase.rpc(
+      'increment_message_counter',
+      { p_user_id: site.user_id, p_limit: messageLimit }
+    )
+    if (quotaErr) {
+      console.error('[chat-session] quota RPC failed:', quotaErr)
+      return Response.json(
+        { error: 'Quota check failed' },
+        { status: 500, headers: corsHeaders }
+      )
+    }
+    if (!quota?.ok) {
+      return Response.json(
+        {
+          error: 'quota_exceeded',
+          upgrade_url: '/dashboard/billing',
+          used: quota?.used,
+          limit: quota?.limit,
+        },
+        { status: 402, headers: corsHeaders }
+      )
+    }
+
     const typedHistory = (history || []).filter(
       (m): m is { role: 'user' | 'assistant'; content: string } =>
         (m.role === 'user' || m.role === 'assistant') &&
@@ -177,4 +205,35 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: corsHeaders }
     )
   }
+}
+
+/**
+ * Resolve the monthly message limit for the site owner.
+ *
+ * Lookup chain: profiles.plan_id -> plans.monthly_message_limit.
+ * Fallback: Starter cap (2000) — used when a trialing account hasn't
+ * picked a plan yet. We gate against a real cap rather than infinite, so
+ * malicious trial signups can't mint unlimited LLM calls.
+ */
+const STARTER_MESSAGE_LIMIT_FALLBACK = 2000
+
+async function resolveOwnerMessageLimit(
+  supabase: SupabaseClient,
+  ownerId: string
+): Promise<number> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan_id')
+    .eq('id', ownerId)
+    .maybeSingle<{ plan_id: string | null }>()
+
+  if (!profile?.plan_id) return STARTER_MESSAGE_LIMIT_FALLBACK
+
+  const { data: plan } = await supabase
+    .from('plans')
+    .select('id, monthly_message_limit')
+    .eq('id', profile.plan_id)
+    .maybeSingle<{ id: string; monthly_message_limit: number }>()
+
+  return plan?.monthly_message_limit ?? STARTER_MESSAGE_LIMIT_FALLBACK
 }

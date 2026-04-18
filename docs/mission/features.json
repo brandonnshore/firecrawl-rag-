@@ -295,7 +295,7 @@
         "VAL-QUOTA-001", "VAL-QUOTA-002", "VAL-QUOTA-003",
         "VAL-QUOTA-010", "VAL-QUOTA-011"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "crawl-quota-enforcement",

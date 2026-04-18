@@ -140,6 +140,7 @@ describe('POST /api/chat/session', () => {
   })
 
   it('returns 200 with sessionId on success', async () => {
+    // sites lookup
     mockMaybeSingle.mockResolvedValueOnce({
       data: {
         id: 'site-1',
@@ -152,12 +153,23 @@ describe('POST /api/chat/session', () => {
       },
       error: null,
     })
-    mockRpc.mockResolvedValueOnce({
-      data: [
-        { chunk_text: 'test', source_url: 'https://acme.test/x' },
-      ],
+    // owner profile lookup (for quota limit resolution)
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: { plan_id: null },
       error: null,
     })
+    // RPC call order: increment_message_counter, then match_chunks
+    mockRpc
+      .mockResolvedValueOnce({
+        data: { ok: true, used: 1, limit: 2000 },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          { chunk_text: 'test', source_url: 'https://acme.test/x' },
+        ],
+        error: null,
+      })
 
     const res = await POST(makeRequest({ message: 'hi', site_key: 'sk_ok' }))
     expect(res.status).toBe(200)
