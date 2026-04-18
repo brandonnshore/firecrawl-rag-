@@ -570,6 +570,163 @@
         "VAL-FILE-001", "VAL-FILE-002", "VAL-FILE-015", "VAL-FILE-025"
       ],
       "status": "pending"
+    },
+    {
+      "id": "custom-responses-schema",
+      "description": "Create supabase/migrations/<ts>_custom_responses.sql: table custom_responses (id uuid PK, site_id uuid FK sites(id) ON DELETE CASCADE, trigger_type text CHECK (trigger_type IN ('keyword','intent')), triggers text[] NOT NULL, response text NOT NULL, priority int default 0, is_active boolean default true, created_at timestamptz default now()). Index on (site_id, is_active, priority DESC). RLS: owner reads/writes their site's rules; widget cannot access directly (runtime matching happens server-side with service role).",
+      "skillName": "fullstack-worker",
+      "milestone": "custom-responses",
+      "preconditions": ["supplementary-files-schema-storage is completed"],
+      "expectedBehavior": [
+        "custom_responses table exists with correct schema + constraints + index",
+        "RLS: user A cannot read user B's rules; service role reads all",
+        "Cascade: deleting a site deletes its rules"
+      ],
+      "verificationSteps": [
+        "supabase db reset; pnpm vitest run src/__tests__/custom-responses-schema.test.ts"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "responses-matcher-runtime",
+      "description": "Create src/lib/chat/response-matcher.ts: pure functions for keyword matching and (conditionally) intent classification. Keyword matcher: normalize message (lowercase, Unicode NFD + strip combining marks for diacritic-insensitivity), split on word-boundary regex, check each keyword against tokens. Returns best match by priority DESC, tie-break by created_at ASC. Intent classifier (only invoked if any intent-type rule exists for the site): tiny gpt-4o-mini call with schema-constrained JSON output {intent: string}, cached per session_id. Wire into /api/chat/session BEFORE embedding/LLM call: (1) fetch active rules for site_id; (2) try keyword match first — if hit, skip LLM, save canned response to conversations, return directly; (3) if intent rules exist and no keyword hit, run classifier; (4) if intent match, skip LLM, return canned response; (5) otherwise proceed with normal RAG. Tests: case, diacritics, word boundaries, priority, no-LLM-call assertions via mock.",
+      "skillName": "fullstack-worker",
+      "milestone": "custom-responses",
+      "preconditions": ["custom-responses-schema is completed"],
+      "expectedBehavior": [
+        "Keyword match bypasses main LLM call (OpenAI mock call count = 0 for chat completion)",
+        "Case-insensitive: 'Help' matches 'help me', 'HELP', 'Help?'",
+        "Word-boundary: 'help' does not match 'helper' or 'alphelp'",
+        "Diacritic-insensitive: 'café' matches 'cafe'",
+        "Priority tiebreaker: higher priority wins, ties by older created_at",
+        "Intent classifier only invoked when site has intent-type rules",
+        "Matched canned response saved to conversations like a normal message"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/responses-matcher.test.ts (15+ unit cases)",
+        "pnpm vitest run src/__tests__/responses-integration.test.ts (fastpath LLM bypass)"
+      ],
+      "fulfills": [
+        "VAL-RESP-007", "VAL-RESP-008", "VAL-RESP-009",
+        "VAL-RESP-010", "VAL-RESP-011"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "responses-ui",
+      "description": "Build /dashboard/settings/responses page per Appendix B.5. ResponseTable component: columns for trigger type, triggers (as chips via ChipInput), response preview (truncated), priority, active toggle, actions (edit/test/delete). ResponseModal: form with trigger_type dropdown (keyword|intent), ChipInput for triggers, textarea for response, priority slider (0-10), active toggle. Uses zod + react-hook-form for validation. TestDrawer side panel: sample message input + Run button -> calls a new POST /api/responses/test endpoint that runs the matcher against the site's rules, returns {matched, rule_id, confidence, response}. Toast on save/delete. Add POST /api/responses (create), PATCH /api/responses/{id} (update), DELETE /api/responses/{id}. Auth + RLS enforced.",
+      "skillName": "fullstack-worker",
+      "milestone": "custom-responses",
+      "preconditions": ["settings-layout is completed", "responses-matcher-runtime is completed", "toast-system is completed"],
+      "expectedBehavior": [
+        "Empty state renders for new user",
+        "Add Response modal validates: triggers and response required",
+        "Keyword rule creation persists and appears in list",
+        "Intent rule creation persists and appears in list",
+        "Table renders triggers as chips (not raw strings)",
+        "Test drawer runs a sample through matcher and shows {matched, rule, response}",
+        "Delete removes rule from UI + DB"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/responses-crud.spec.ts covers create/edit/delete/test",
+        "pnpm vitest run src/__tests__/responses-api.test.ts"
+      ],
+      "fulfills": [
+        "VAL-RESP-001", "VAL-RESP-002", "VAL-RESP-003",
+        "VAL-RESP-004", "VAL-RESP-005", "VAL-RESP-006",
+        "VAL-RESP-012"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "escalation-rules-schema",
+      "description": "Create supabase/migrations/<ts>_escalation_rules.sql: table escalation_rules (id uuid PK, site_id uuid FK sites(id) ON DELETE CASCADE, rule_type text CHECK (rule_type IN ('turn_count','keyword','intent')), config jsonb NOT NULL, action text CHECK (action IN ('ask_email','ask_phone','show_form','calendly_link','handoff')), action_config jsonb default '{}', priority int default 0, is_active boolean default true, created_at timestamptz default now()). Also extend conversations table: ADD COLUMN needs_human boolean default false (for the handoff action). Index on (site_id, is_active, priority DESC). RLS owner-scoped.",
+      "skillName": "fullstack-worker",
+      "milestone": "escalation",
+      "preconditions": ["custom-responses-schema is completed"],
+      "expectedBehavior": [
+        "escalation_rules table exists with correct schema",
+        "conversations.needs_human column exists with default false",
+        "RLS owner-scoped; cascade on site delete"
+      ],
+      "verificationSteps": [
+        "supabase db reset; pnpm vitest run src/__tests__/escalation-schema.test.ts"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "escalation-runtime-trigger-eval",
+      "description": "Create src/lib/chat/escalation.ts: evaluates escalation rules against session context AFTER the main LLM response (or custom-response fast-path) completes. Inputs: {site_id, message, message_count, intent (if classified)}. For each rule (ordered by priority DESC): rule_type='turn_count' -> match if message_count >= config.turns; 'keyword' -> match if normalized message contains any config.keywords (reusing the matcher from responses-matcher-runtime); 'intent' -> match if intent matches any config.intents. First matching rule wins. Attach {pending_action: {action, action_config}} to the session state. /api/chat/stream's onFinish includes pending_action in the emitted end-of-stream event (JSON metadata). For 'handoff' action, UPDATE conversations SET needs_human = true. Tests cover each rule type firing + priority order.",
+      "skillName": "fullstack-worker",
+      "milestone": "escalation",
+      "preconditions": ["escalation-rules-schema is completed", "responses-matcher-runtime is completed"],
+      "expectedBehavior": [
+        "turn_count rule fires at configured N turns",
+        "keyword rule fires on normalized match (reusing matcher)",
+        "intent rule fires on classifier match",
+        "Higher-priority rule wins when multiple match",
+        "pending_action emitted to widget via stream end event",
+        "handoff action sets conversations.needs_human = true"
+      ],
+      "verificationSteps": [
+        "pnpm vitest run src/__tests__/escalation-runtime.test.ts",
+        "Integration: send a message sequence triggering turn_count, verify stream metadata"
+      ],
+      "fulfills": [
+        "VAL-ESCAL-006", "VAL-ESCAL-007", "VAL-ESCAL-008",
+        "VAL-ESCAL-009", "VAL-ESCAL-010"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "escalation-ui-dashboard",
+      "description": "Build /dashboard/settings/escalation page per Appendix B.6. RuleCard component (drag handle, rule summary text, action pill, priority, active toggle, edit/delete buttons). RuleList with HTML5 drag-drop reordering updating priority in DB (server action). EscalationModal form: rule_type dropdown with conditional config fields (turn_count shows a number input for turns; keyword shows ChipInput; intent shows ChipInput with intent labels); action dropdown with 5 options; action_config conditional fields (calendly_link shows URL input; show_form shows ChipInput for field names; others have no extra config). Uses zod + react-hook-form. POST /api/escalation-rules (create), PATCH (update + reorder via single endpoint accepting rule list), DELETE. Empty state per convention.",
+      "skillName": "fullstack-worker",
+      "milestone": "escalation",
+      "preconditions": ["settings-layout is completed", "escalation-runtime-trigger-eval is completed"],
+      "expectedBehavior": [
+        "Empty state renders for new user",
+        "Add rule modal supports turn_count / keyword / intent triggers",
+        "Modal supports all 5 actions with conditional config fields",
+        "Rules list renders cards with drag handles",
+        "Drag-reorder persists new priority to DB",
+        "Delete removes rule"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/escalation-crud.spec.ts covers create/edit/reorder/delete",
+        "pnpm vitest run src/__tests__/escalation-api.test.ts"
+      ],
+      "fulfills": [
+        "VAL-ESCAL-001", "VAL-ESCAL-002", "VAL-ESCAL-003",
+        "VAL-ESCAL-004", "VAL-ESCAL-005"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "escalation-widget-actions",
+      "description": "Extend widget/src/widget.tsx to render escalation UIs inline when stream finish event carries pending_action. Five action renderers per Appendix B.8: ask_email (email input + Send -> POST /api/leads with source='escalation'); ask_phone (tel input + Request Call -> POST /api/leads); show_form (dynamic fields from action_config.fields[] -> POST /api/leads); calendly_link (iframe src=action_config.url at 100% x 600px); handoff (animated dots + 'A team member will be with you shortly' + already-set needs_human flag). Add .rc-escalation* styles in shadow DOM CSS. Dashboard conversations page shows a flag icon next to conversations with needs_human=true.",
+      "skillName": "widget-worker",
+      "milestone": "escalation",
+      "preconditions": ["escalation-runtime-trigger-eval is completed"],
+      "expectedBehavior": [
+        "ask_email renders email input + Send button, posts to /api/leads",
+        "ask_phone renders tel input + Request Call, posts to /api/leads",
+        "show_form renders dynamic inputs from action_config.fields, posts to /api/leads",
+        "calendly_link renders an iframe to action_config.url",
+        "handoff renders animated connecting indicator and sets needs_human=true on the conversation",
+        "Dashboard conversation list shows flag for needs_human=true"
+      ],
+      "verificationSteps": [
+        "Playwright: e2e/widget-escalation.spec.ts tests each action by seeding a rule and triggering",
+        "Visual: each action type screenshots match Appendix B.8 style"
+      ],
+      "fulfills": [
+        "VAL-ESCAL-011", "VAL-ESCAL-012", "VAL-ESCAL-013",
+        "VAL-ESCAL-014", "VAL-ESCAL-015"
+      ],
+      "status": "pending"
     }
   ]
 }
