@@ -50,7 +50,7 @@
         "VAL-RLS-009", "VAL-RLS-010", "VAL-RLS-011", "VAL-RLS-012",
         "VAL-RLS-014"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "site-key-rotation-api",

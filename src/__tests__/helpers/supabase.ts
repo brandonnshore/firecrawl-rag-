@@ -13,6 +13,8 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import jwt from 'jsonwebtoken'
+import { Pool, type Pool as PgPool } from 'pg'
 
 export interface TestUser {
   userId: string
@@ -24,6 +26,18 @@ function requireEnv(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing required env var: ${name}`)
   return v
+}
+
+/**
+ * Supabase JWT secret used to sign test access tokens. PostgREST (the layer
+ * RLS tests hit) accepts HS256-signed tokens for the local stack — the auth
+ * admin API is bypassed so we sidestep its newer asymmetric-key requirements.
+ */
+function supabaseJwtSecret(): string {
+  return (
+    process.env.SUPABASE_TEST_JWT_SECRET ||
+    'super-secret-jwt-token-with-at-least-32-characters-long'
+  )
 }
 
 export function hasSupabaseTestEnv(): boolean {
@@ -42,49 +56,76 @@ export function serviceRoleClient(): SupabaseClient {
   )
 }
 
+let _pool: PgPool | undefined
+function pgPool(): PgPool {
+  if (!_pool) {
+    _pool = new Pool({
+      connectionString:
+        process.env.SUPABASE_TEST_DB_URL ||
+        'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+      max: 4,
+    })
+  }
+  return _pool
+}
+
+export async function closeTestPool(): Promise<void> {
+  if (_pool) {
+    await _pool.end()
+    _pool = undefined
+  }
+}
+
+function signUserJwt(userId: string, email: string): string {
+  const nowSec = Math.floor(Date.now() / 1000)
+  return jwt.sign(
+    {
+      aud: 'authenticated',
+      role: 'authenticated',
+      sub: userId,
+      email,
+      iat: nowSec,
+      exp: nowSec + 60 * 60,
+    },
+    supabaseJwtSecret(),
+    { algorithm: 'HS256' }
+  )
+}
+
 /**
- * Creates a verified test user via admin API and returns an access token.
- * Uses a random password so we can log in without hitting the OTP path.
+ * Creates a verified test user by inserting directly into auth.users (via the
+ * service-role REST endpoint is restricted; we use a raw SQL RPC through
+ * PostgreSQL's admin connection when possible). Returns a freshly signed
+ * HS256 JWT that PostgREST accepts for RLS evaluation.
  */
 export async function createTestUser(email?: string): Promise<TestUser> {
   const admin = serviceRoleClient()
   const mail = email ?? `test-${crypto.randomUUID()}@rubycrawl.test`
-  const password = `pw-${crypto.randomUUID()}`
+  const userId = crypto.randomUUID()
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: mail,
-    password,
-    email_confirm: true,
-  })
-  if (createErr || !created.user) {
-    throw new Error(`createTestUser failed: ${createErr?.message ?? 'no user returned'}`)
-  }
+  // Insert into auth.users directly via pg — the auth admin REST API on the
+  // local stack rejects HS256-signed service tokens. Trigger populates profiles.
+  const pool = pgPool()
+  await pool.query(
+    `insert into auth.users
+       (id, instance_id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+     values
+       ($1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        $2, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+        now(), now())`,
+    [userId, mail]
+  )
 
-  // profiles row is typically created by a trigger; ensure it exists
+  // Ensure profiles row exists (the trigger should handle it, but upsert
+  // defensively in case test DB lacks the trigger).
   await admin
     .from('profiles')
-    .upsert(
-      { id: created.user.id, email: mail },
-      { onConflict: 'id' }
-    )
-
-  // Exchange password for an access token using the anon client
-  const anon = createClient(
-    requireEnv('SUPABASE_TEST_URL'),
-    requireEnv('SUPABASE_TEST_ANON_KEY')
-  )
-  const { data: session, error: signInErr } = await anon.auth.signInWithPassword({
-    email: mail,
-    password,
-  })
-  if (signInErr || !session.session) {
-    throw new Error(`signInWithPassword failed: ${signInErr?.message ?? 'no session'}`)
-  }
+    .upsert({ id: userId, email: mail }, { onConflict: 'id' })
 
   return {
-    userId: created.user.id,
+    userId,
     email: mail,
-    jwt: session.session.access_token,
+    jwt: signUserJwt(userId, mail),
   }
 }
 

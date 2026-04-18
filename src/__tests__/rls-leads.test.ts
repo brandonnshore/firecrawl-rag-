@@ -1,0 +1,49 @@
+/**
+ * VAL-RLS-004: User A cannot SELECT user B's leads.
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  createTestUser,
+  clientAs,
+  truncateUserData,
+  hasSupabaseTestEnv,
+} from './helpers/supabase'
+import { seedUserFixture, type UserFixture } from './helpers/rls-fixtures'
+
+describe.skipIf(!hasSupabaseTestEnv())('RLS: leads cross-user isolation', () => {
+  let userA: UserFixture
+  let userB: UserFixture
+
+  beforeAll(async () => {
+    userA = await seedUserFixture(await createTestUser())
+    userB = await seedUserFixture(await createTestUser())
+  })
+
+  afterAll(async () => {
+    await truncateUserData(userA.user.userId)
+    await truncateUserData(userB.user.userId)
+  })
+
+  it("user A cannot read leads for user B's site", async () => {
+    const client = clientAs(userA.user.jwt)
+    const { data, error } = await client
+      .from('leads')
+      .select('id')
+      .eq('site_id', userB.siteId)
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+  })
+
+  it('user A can read their own leads', async () => {
+    const client = clientAs(userA.user.jwt)
+    const { data, error } = await client
+      .from('leads')
+      .select('id')
+      .eq('site_id', userA.siteId)
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+  })
+})

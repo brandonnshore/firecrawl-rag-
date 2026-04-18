@@ -1,0 +1,59 @@
+{
+  "feature": "rls-cross-user-tests",
+  "milestone": "foundation-rls",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-RLS-001", "VAL-RLS-002", "VAL-RLS-003", "VAL-RLS-004",
+    "VAL-RLS-005", "VAL-RLS-006", "VAL-RLS-007", "VAL-RLS-008",
+    "VAL-RLS-009", "VAL-RLS-010", "VAL-RLS-011", "VAL-RLS-012",
+    "VAL-RLS-014"
+  ],
+  "whatWasImplemented": [
+    "Added supabase local config (supabase/config.toml, supabase/migrations/) — project_id renamed to rubycrawl to avoid docker network hostname issues (firecrawl-rag- trailing dash).",
+    "Copied supabase/schema.sql into supabase/migrations/20260418165737_initial_schema.sql as the initial migration (supabase start applies migrations automatically).",
+    "Added supabase/migrations/20260418170953_rls_widget_insert_fix.sql — introduces public.site_has_key(uuid) security-definer helper and swaps the leads + conversations widget-insert policies to use it. Previous `exists (select 1 from sites ...)` check was unreachable from the anon role because sites RLS blocks anon reads.",
+    "Extended src/__tests__/helpers/supabase.ts: createTestUser now bypasses auth admin API (which local stack rejects for HS256) by inserting directly into auth.users via pg, then signing an HS256 user JWT with the shared Supabase JWT secret — PostgREST accepts these for RLS evaluation.",
+    "Added pg + jsonwebtoken (+ types) to devDependencies for the helper.",
+    "Added src/__tests__/helpers/rls-fixtures.ts (seedUserFixture builds site + page + embedding + conversation + lead per user).",
+    "10 RLS test files covering the feature's expectedBehavior: rls-sites, rls-pages, rls-embeddings, rls-leads, rls-conversations (SELECT isolation); rls-mutations (UPDATE + DELETE blocked); rls-widget (anon site_key scoping + widget-insert policy); rls-bypass (service-role reads across users); rls-anonymous (anon reads zero across 6 tables); rls-concurrent (50 parallel alternating reads with no cross-pollution).",
+    "Eslint config updated to ignore coverage/, playwright-report/, test-results/ so generated files don't trigger warnings."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [
+    "Newer Supabase CLI (2.75+) auth stack rejects HS256-signed service tokens; the auth admin API only accepts ES256-signed JWTs from the auto-generated JWK Set. We sidestepped this for tests by inserting auth.users directly via pg. Production code paths are unaffected because the app uses @supabase/ssr with cookie sessions (not raw admin-API calls). Worth revisiting in M8 hardening to document the preferred key rotation pattern.",
+    "VAL-RLS-010 originally written assuming the widget anon-insert RLS policy was reachable; it wasn't. The fix migration (20260418170953) is now applied locally. The production cloud project (luznxhpadjblwnkfzjhn) still has the old policy — when M8 hardening runs, push these migrations to production or create a fix feature.",
+    "Anon INSERT with `Prefer: return=representation` still fails on leads (insert succeeds, but RETURNING * can't pass anon SELECT RLS). The test now uses return=minimal, matching real widget flow (the API route uses service-role for readback). Documented in the widget test's comment."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 178 passed / 1 skipped / 24 files (includes 26 new RLS assertions across 10 files).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "rlsSuiteEvidence": "50 concurrent reads complete in ~1s with 0 cross-pollution (logged per-run by rls-concurrent.test.ts).",
+    "manualChecks": [
+      { "action": "supabase start", "expected": "local stack healthy", "observed": "healthy after project_id rename to rubycrawl" },
+      { "action": "supabase db reset", "expected": "migrations applied cleanly", "observed": "20260418165737_initial_schema + 20260418170953_rls_widget_insert_fix both applied" },
+      { "action": "pnpm vitest run src/__tests__/rls-*.test.ts", "expected": "all pass with live Supabase", "observed": "26 passed / 0 failed" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/config.toml (modified — project_id: rubycrawl)",
+    "supabase/migrations/20260418165737_initial_schema.sql (created — copy of schema.sql)",
+    "supabase/migrations/20260418170953_rls_widget_insert_fix.sql (created — site_has_key + policy swap)",
+    "src/__tests__/helpers/supabase.ts (modified — pg-direct user creation + HS256 JWT signing)",
+    "src/__tests__/helpers/rls-fixtures.ts (created)",
+    "src/__tests__/rls-sites.test.ts (created)",
+    "src/__tests__/rls-pages.test.ts (created)",
+    "src/__tests__/rls-embeddings.test.ts (created)",
+    "src/__tests__/rls-leads.test.ts (created)",
+    "src/__tests__/rls-conversations.test.ts (created)",
+    "src/__tests__/rls-mutations.test.ts (created)",
+    "src/__tests__/rls-widget.test.ts (created)",
+    "src/__tests__/rls-bypass.test.ts (created)",
+    "src/__tests__/rls-anonymous.test.ts (created)",
+    "src/__tests__/rls-concurrent.test.ts (created)",
+    "eslint.config.mjs (modified — ignore coverage/playwright-report/test-results)",
+    "package.json (modified — +jsonwebtoken, @types/jsonwebtoken, pg, @types/pg)",
+    "pnpm-lock.yaml (modified)"
+  ]
+}
