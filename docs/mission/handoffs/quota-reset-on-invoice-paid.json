@@ -1,0 +1,33 @@
+{
+  "feature": "quota-reset-on-invoice-paid",
+  "milestone": "quota-meter",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-QUOTA-006"],
+  "reconfirms": {
+    "VAL-BILLING-014": "M2F3 implemented the profile-side period rollover with a forward-compatible no-op for usage_counters. Now that the table exists (M3F1), invoice.paid fully resets messages_used + crawl_pages_used and rolls period_start/end on usage_counters."
+  },
+  "whatWasImplemented": [
+    "src/app/api/stripe/webhook/route.ts — handleInvoicePaid now issues a real UPDATE on usage_counters (messages_used=0, crawl_pages_used=0, period_start/end rolled to the invoice window, updated_at=now()). files_stored and openai_tokens_used are intentionally preserved — storage is cumulative across billing periods and token attribution is long-term.",
+    "Removed the pre-M3 try/catch guard that existed only to tolerate a missing usage_counters table. With the table now present, the update is a first-class operation.",
+    "src/__tests__/quota-reset.test.ts — 3 integration tests: (1) reset zeros messages_used + crawl_pages_used, preserves files_stored, rolls period_start/end; (2) post-reset the increment RPC succeeds from 0 (VAL-QUOTA-006 recovery story); (3) duplicate invoice.paid with a preserved intermediate mutation survives — idempotency via processed_stripe_events (VAL-QUOTA-010 re-confirmation from the quota side)."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 319 passed / 1 skipped / 45 files (+3 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "invoice.paid with seed counters (messages:150, crawl:42, files:7)", "expected": "messages=0, crawl=0, files=7 (unchanged), period rolled", "observed": "pass" },
+      { "action": "duplicate invoice.paid with intermediate mutation", "expected": "intermediate mutation survives (idempotency)", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/api/stripe/webhook/route.ts (modified — full reset, no more try/catch)",
+    "src/__tests__/quota-reset.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-QUOTA-006 -> passed; VAL-BILLING-014 re-confirmed -> passed)",
+    "docs/mission/handoffs/quota-reset-on-invoice-paid.json (created)"
+  ]
+}

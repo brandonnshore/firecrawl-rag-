@@ -259,22 +259,19 @@ async function handleInvoicePaid(
     })
     .eq('id', userId)
 
-  // usage_counters reset lands in M3 (quota-reset-on-invoice-paid). Until
-  // then the table doesn't exist; we silently skip so this handler still
-  // succeeds on a pre-M3 stack.
-  try {
-    await admin
-      .from('usage_counters')
-      .update({
-        messages_used: 0,
-        crawl_pages_used: 0,
-        period_start: toIsoFromSeconds(invoice.period_start),
-        period_end: toIsoFromSeconds(invoice.period_end),
-      })
-      .eq('user_id', userId)
-  } catch {
-    // Table missing pre-M3 — ignore.
-  }
+  // Reset usage counters for the new billing window. files_stored is NOT
+  // reset — storage persists across billing periods. openai_tokens_used
+  // is also preserved for long-term attribution / cost audits.
+  await admin
+    .from('usage_counters')
+    .update({
+      messages_used: 0,
+      crawl_pages_used: 0,
+      period_start: toIsoFromSeconds(invoice.period_start),
+      period_end: toIsoFromSeconds(invoice.period_end),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
 }
 
 async function handleInvoicePaymentFailed(

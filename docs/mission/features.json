@@ -331,7 +331,7 @@
         "pnpm vitest run src/__tests__/quota-reset.test.ts"
       ],
       "fulfills": ["VAL-QUOTA-006"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "usage-meter-ui",
