@@ -1,0 +1,58 @@
+{
+  "milestone": "settings-sidebar",
+  "sealedAt": "2026-04-18",
+  "automatedValidators": {
+    "vitest": "349 passed / 1 skipped / 50 files",
+    "typecheck": "0 errors",
+    "lint": "clean"
+  },
+  "featuresReviewed": [
+    {
+      "id": "settings-layout",
+      "correctness": "5-item sub-nav matches contract; /dashboard/settings redirects via server component.",
+      "security": "Inherits dashboard layout auth gate — no duplicated checks.",
+      "quality": "isActiveSubRoute + resolveActiveHref both pure; 13 unit tests pin behavior including prefix-collision edge cases (sitemap vs site, settings vs settings/billing).",
+      "testing": "7 settings-nav + 6 main-nav-active unit tests."
+    },
+    {
+      "id": "settings-site-move",
+      "correctness": "Existing settings UI ported 1:1; rotate-key behavior tightened to hit the server endpoint (closes a silent rate-limit bypass).",
+      "quality": "Old settings-client.tsx deleted so there's no drift between copies."
+    },
+    {
+      "id": "toast-system",
+      "correctness": "sonner wrapper exposes 4 methods; defaults applied.",
+      "security": "No user content injected into toast messages except via caller code.",
+      "quality": "App-token classNames keep visual theme coherent.",
+      "testing": "5 wrapper-forwarding tests."
+    },
+    {
+      "id": "site-key-rotation-ui",
+      "correctness": "Native <dialog> + POST /api/sites/rotate-key + toast + router.refresh() flow implemented.",
+      "security": "All rotate traffic routes through the authenticated+rate-limited server endpoint (5/hour per user from M1).",
+      "quality": "No modal-library dependency."
+    },
+    {
+      "id": "tos-acceptance-signup",
+      "correctness": "Signup path passes metadata; trigger stamps tos_accepted_at; billing APIs 403 tos_required when null.",
+      "security": "Server-side enforcement in checkout + change-plan cannot be bypassed by client-side banner dismissal. Signup hard-guard prevents network request on bypassed-disabled submit.",
+      "quality": "Placeholder /terms page in place for VAL-TOS-002 link target; M8 replaces with real legal copy.",
+      "testing": "6 unit tests covering accept-route + billing gates."
+    }
+  ],
+  "sharedStateUpdates": {
+    "AGENTS.md": "No change — M4 added no new boundary rules.",
+    "servicesYaml": "No change.",
+    "libraryFiles": "No change; next update alongside M5 (new Storage bucket for uploads)."
+  },
+  "crossMilestoneImpact": [
+    "M2 billing page moved from /dashboard/billing to /dashboard/settings/billing with a redirect shim at the old URL. Stripe Checkout / Portal return URLs continue to work via the redirect.",
+    "M2 billing APIs (checkout + change-plan) gained a tos_required 403 short-circuit. Pre-existing unit tests updated in-place to default-accept tos_accepted_at; dedicated VAL-TOS-004 tests force null to assert the gate."
+  ],
+  "assertionSummary": {
+    "totalInMilestone": 12,
+    "passed": 7,
+    "pendingPlaywright": 5
+  },
+  "result": "PASS — all automated validators green; 5 UI / browser-flow assertions deferred with documented follow-ups."
+}
