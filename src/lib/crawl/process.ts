@@ -27,10 +27,11 @@ export async function processCrawlData(
 ): Promise<void> {
   const supabase = createServiceClient()
 
-  // Get current site info to determine the new batch number
+  // Get current site info to determine the new batch number + owner id
+  // for the usage_counters increment at step 5b.
   const { data: site, error: siteError } = await supabase
     .from('sites')
-    .select('active_crawl_batch')
+    .select('active_crawl_batch, user_id')
     .eq('id', siteId)
     .single()
 
@@ -39,6 +40,7 @@ export async function processCrawlData(
   }
 
   const newBatch = (site.active_crawl_batch ?? 0) + 1
+  const ownerId = site.user_id as string
 
   // Step 1: Process each page — clean markdown, generate chunks
   const allChunks: Array<{
@@ -239,6 +241,26 @@ export async function processCrawlData(
 
   if (swapError) {
     throw new Error(`Failed to swap active batch: ${swapError.message}`)
+  }
+
+  // Step 5b: Increment crawl_pages_used by the unique page count for this
+  // batch (M3F3 crawl-quota-enforcement). Cumulative within the billing
+  // period — the invoice.paid webhook resets it (M3F4).
+  const pagesLanded = uniquePages.size
+  if (pagesLanded > 0) {
+    const { data: counter } = await supabase
+      .from('usage_counters')
+      .select('crawl_pages_used')
+      .eq('user_id', ownerId)
+      .single<{ crawl_pages_used: number }>()
+    const currentUsed = counter?.crawl_pages_used ?? 0
+    await supabase
+      .from('usage_counters')
+      .update({
+        crawl_pages_used: currentUsed + pagesLanded,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', ownerId)
   }
 
   // Step 6: Cleanup old batch data

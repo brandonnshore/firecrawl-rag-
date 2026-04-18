@@ -1,8 +1,46 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
 import { validateCrawlUrl } from '@/lib/crawl/validate-url'
 import Firecrawl from '@mendable/firecrawl-js'
 import crypto from 'crypto'
+
+const STARTER_CRAWL_PAGES_LIMIT_FALLBACK = 500
+
+async function checkCrawlQuota(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ allowed: true } | { allowed: false; used: number; limit: number }> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan_id')
+    .eq('id', userId)
+    .maybeSingle<{ plan_id: string | null }>()
+
+  const { data: plan } = profile?.plan_id
+    ? await supabase
+        .from('plans')
+        .select('id, monthly_crawl_page_limit')
+        .eq('id', profile.plan_id)
+        .maybeSingle<{ id: string; monthly_crawl_page_limit: number }>()
+    : { data: null }
+
+  const limit =
+    plan?.monthly_crawl_page_limit ?? STARTER_CRAWL_PAGES_LIMIT_FALLBACK
+
+  const { data: counter } = await supabase
+    .from('usage_counters')
+    .select('crawl_pages_used')
+    .eq('user_id', userId)
+    .maybeSingle<{ crawl_pages_used: number }>()
+
+  const used = counter?.crawl_pages_used ?? 0
+
+  if (used >= limit) {
+    return { allowed: false, used, limit }
+  }
+  return { allowed: true }
+}
 
 export async function POST(request: Request) {
   // 1. Authenticate user
@@ -39,6 +77,20 @@ export async function POST(request: Request) {
         error: 'subscription_inactive',
         reason: subscription.reason,
         upgrade_url: subscription.upgradeUrl ?? '/dashboard/billing',
+      },
+      { status: 402 }
+    )
+  }
+
+  // 3b. Crawl-pages quota gate (M3F3).
+  const crawlCheck = await checkCrawlQuota(supabase, user.id)
+  if (!crawlCheck.allowed) {
+    return Response.json(
+      {
+        error: 'crawl_quota_exceeded',
+        upgrade_url: '/dashboard/billing',
+        used: crawlCheck.used,
+        limit: crawlCheck.limit,
       },
       { status: 402 }
     )

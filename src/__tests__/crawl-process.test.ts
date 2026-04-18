@@ -36,7 +36,22 @@ function setupFullMocks(options: {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { active_crawl_batch: activeBatch },
+              data: { active_crawl_batch: activeBatch, user_id: 'owner-test' },
+              error: null,
+            }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }
+    }
+    if (table === 'usage_counters') {
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { crawl_pages_used: 0 },
               error: null,
             }),
           }),

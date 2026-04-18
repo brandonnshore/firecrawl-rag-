@@ -313,7 +313,7 @@
         "Simulate webhook completion with 120 pages; verify counter += 120"
       ],
       "fulfills": ["VAL-QUOTA-004", "VAL-QUOTA-005"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "quota-reset-on-invoice-paid",

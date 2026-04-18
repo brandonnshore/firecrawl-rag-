@@ -178,6 +178,42 @@ describe('POST /api/crawl/start', () => {
           update: updateMock,
         }
       }
+      if (table === 'profiles') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { plan_id: 'starter' },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'plans') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: 'starter', monthly_crawl_page_limit: 500 },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'usage_counters') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { crawl_pages_used: 0 },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
       return {}
     })
 
@@ -238,6 +274,42 @@ describe('POST /api/crawl/start', () => {
           select: selectMock,
           insert: insertMock,
           update: updateMock,
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { plan_id: 'starter' },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'plans') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: 'starter', monthly_crawl_page_limit: 500 },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'usage_counters') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { crawl_pages_used: 0 },
+                error: null,
+              }),
+            }),
+          }),
         }
       }
       return {}
