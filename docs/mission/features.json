@@ -69,7 +69,7 @@
         "curl rotation twice; verify second returns 429 or succeeds depending on rate window"
       ],
       "fulfills": ["VAL-AUTH-013"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "auth-revalidation-fixes",

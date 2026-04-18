@@ -11,7 +11,7 @@
     "VAL-AUTH-009": { "status": "pending" },
     "VAL-AUTH-010": { "status": "pending" },
     "VAL-AUTH-012": { "status": "pending" },
-    "VAL-AUTH-013": { "status": "pending" },
+    "VAL-AUTH-013": { "status": "passed" },
 
     "VAL-RLS-001":  { "status": "passed" },
     "VAL-RLS-002":  { "status": "passed" },

@@ -1,0 +1,33 @@
+{
+  "feature": "site-key-rotation-api",
+  "milestone": "foundation-rls",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-AUTH-013"],
+  "whatWasImplemented": [
+    "POST /api/sites/rotate-key — authenticated route (401 without session).",
+    "Generates a new 32-char hex site_key via crypto.randomBytes(16).toString('hex'), matching the existing default shape.",
+    "UPDATEs sites scoped by user_id = auth.uid() and returns the new key. Old key is immediately invalid — widget calls resolve site by site_key, so the stale key yields zero rows (production chat/session already returns 401 on missing site).",
+    "Returns 404 when the user has no site (PGRST116 from PostgREST), 500 on other DB errors.",
+    "Per-user rate limit: 5 rotations/hour (in-memory Map). 6th call returns 429 with Retry-After header. Isolated from the chat/leads limiter; state lives in src/lib/sites/rotation-rate-limit.ts. M8 will migrate to Upstash.",
+    "Unit tests in src/__tests__/site-key-rotation.test.ts (6 tests — auth, happy path, hex shape, 404 no-site, rate limit, per-user scoping).",
+    "Integration test in src/__tests__/site-key-rotation-integration.test.ts — lookup by old key returns the site pre-rotation; after rotation, old key misses and new key hits. Exercises real local Supabase (gates on SUPABASE_TEST_URL)."
+  ],
+  "whatWasLeftUndone": "UI integration with /dashboard/settings/site (VAL-SET-005 button that calls this endpoint) lives in M4 settings-sidebar — separate feature.",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 185 passed / 1 skipped / 26 files (7 new tests).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "curl POST /api/sites/rotate-key unauthenticated", "expected": "401 {\"error\":\"Unauthorized\"}", "observed": "401 {\"error\":\"Unauthorized\"}" },
+      { "action": "curl GET /api/sites/rotate-key", "expected": "405 method not allowed", "observed": "405" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/sites/rotation-rate-limit.ts (created)",
+    "src/app/api/sites/rotate-key/route.ts (created)",
+    "src/__tests__/site-key-rotation.test.ts (created)",
+    "src/__tests__/site-key-rotation-integration.test.ts (created)"
+  ]
+}
