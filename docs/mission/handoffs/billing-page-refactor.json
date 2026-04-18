@@ -1,0 +1,49 @@
+{
+  "feature": "billing-page-refactor",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-BILLING-001", "VAL-BILLING-002", "VAL-BILLING-003",
+    "VAL-BILLING-022", "VAL-BILLING-023", "VAL-BILLING-024",
+    "VAL-BILLING-025"
+  ],
+  "whatWasImplemented": [
+    "src/lib/billing/page-model.ts — pure view-model helper. buildBillingViewModel() maps {profile, plans, invoices, now} into a discriminated BillingState + StatusPill tone + trialCountdownDays + nextInvoiceIso + capped invoice list + two CTA booleans (showUpgradeCta, showPortalCta). Covers every state/date branch out of subscription-gate.",
+    "src/app/dashboard/billing/page.tsx — server component. Parallel-fetches profile + plans, then fetches last-12 invoices from Stripe when stripe_customer_id exists. Renders: trial banner (if trialing), plan card with status pill + price + next-invoice date, manage-billing/upgrade CTAs (via client actions), 3-up plan grid, and invoice table with Stripe-hosted PDF links.",
+    "src/app/dashboard/billing/client-actions.tsx — 'use client' BillingAction button. POSTs to /api/stripe/{checkout,portal,change-plan}, redirects on {url}, reloads otherwise. Pending state + inline error — no toast system yet (M4 adds sonner).",
+    "src/app/api/stripe/change-plan/route.ts — POST {plan_id}. Auth + profile lookup + existing-subscription guard. Calls stripe.subscriptions.update with items=[{id, price}] and proration_behavior='create_prorations' — Stripe proration (upgrade -> invoice, downgrade -> credit) flows automatically.",
+    "src/__tests__/billing-page-model.test.ts — 10 unit tests exercising every state branch (no_subscription, trialing, expired-trial, active, past_due, canceled_active, canceled_expired) plus status-pill tones (Canceling for active+cancel_at_period_end) and invoice cap-at-12 invariant.",
+    "src/__tests__/stripe-change-plan.test.ts — 5 unit tests: 401 (auth), 400 (missing plan_id, no subscription, empty items defensive), happy path verifying proration_behavior='create_prorations' lands in the Stripe update args."
+  ],
+  "whatWasLeftUndone": [
+    "UI assertions VAL-BILLING-002 (logged-in-sees-plan-options vs current-plan), VAL-BILLING-003 (trial countdown visible), VAL-BILLING-024 (12-invoice table), VAL-BILLING-025 (next-invoice date visible) are implemented in code but their contract entries specify 'browser automation' as the tool. Marked 'pending' in validation-state.json pending the Playwright user-testing pass (same pattern foundation milestone used for deferred AUTH assertions).",
+    "VAL-BILLING-001 marked 'passed' because the dashboard/layout.tsx already redirects unauthenticated users to /login — the billing page is under that layout, so the redirect chain is deterministic and testable without a browser.",
+    "Real Stripe test-mode keys not yet swapped in. Page renders fine with stripe-mock; invoice list will be empty until stripe-mock has prior invoices or Brandon swaps in sk_test_... + real customer history."
+  ],
+  "discoveredIssues": [
+    "vitest hoisting trap: mock function references in vi.mock() factories must be declared via vi.hoisted(); reinforced the convention after applying it a second time in stripe-change-plan.test.ts.",
+    "Plan-card CTA logic: 'Switch' for existing subscribers calls the change-plan route; 'Start Starter/Pro/Scale' for pre-subscription users calls checkout. Kept as two different intents because checkout (no subscription yet) and subscriptions.update (has subscription) are non-interchangeable Stripe APIs.",
+    "Plans query uses anon-readable RLS (added in M2F1). Verified the server-side user client can read plans without service-role escalation."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 295 passed / 1 skipped / 40 files (+15 new: 10 page-model + 5 change-plan). 0 regressions.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "buildBillingViewModel({trialing + past trial_ends_at})", "expected": "state=other_inactive, showUpgradeCta=true", "observed": "pass" },
+      { "action": "stripe.subscriptions.update invocation from change-plan", "expected": "proration_behavior='create_prorations', items=[{id:existing, price:target}]", "observed": "pass (unit test verified)" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/billing/page-model.ts (created)",
+    "src/app/dashboard/billing/page.tsx (replaced static version)",
+    "src/app/dashboard/billing/client-actions.tsx (created)",
+    "src/app/api/stripe/change-plan/route.ts (created)",
+    "src/__tests__/billing-page-model.test.ts (created)",
+    "src/__tests__/stripe-change-plan.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-BILLING-001/022/023 -> passed; 002/003/024/025 pending Playwright)",
+    "docs/mission/handoffs/billing-page-refactor.json (created)"
+  ]
+}

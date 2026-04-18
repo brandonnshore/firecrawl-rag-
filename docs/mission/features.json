@@ -251,7 +251,7 @@
         "VAL-BILLING-022", "VAL-BILLING-023", "VAL-BILLING-024",
         "VAL-BILLING-025"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "usage-counters-schema-rpc",
