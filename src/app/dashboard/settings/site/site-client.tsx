@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { IconCheck, IconSpinner } from '@/components/icons'
+import { toast } from '@/lib/toast'
+import { RotateKeyButton } from './rotate-key-button'
 
 interface Site {
   id: string
@@ -27,7 +29,7 @@ export default function SiteClient({ site }: { site: Site }) {
 
   const handleSave = async () => {
     setSaving(true)
-    await supabase
+    const { error } = await supabase
       .from('sites')
       .update({
         calendly_url: calendly.trim() || null,
@@ -37,7 +39,12 @@ export default function SiteClient({ site }: { site: Site }) {
       })
       .eq('id', site.id)
     setSaving(false)
+    if (error) {
+      toast.error('Failed to save settings')
+      return
+    }
     setSaved(true)
+    toast.success('Saved')
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -50,22 +57,6 @@ export default function SiteClient({ site }: { site: Site }) {
       return
     await fetch('/api/crawl/retry', { method: 'POST' })
     window.location.href = '/dashboard/setup'
-  }
-
-  const handleRotateKey = async () => {
-    if (
-      !confirm(
-        'Generate a new site key? Your existing embed code will stop working until you update it on your site.'
-      )
-    )
-      return
-    const res = await fetch('/api/sites/rotate-key', { method: 'POST' })
-    if (!res.ok) {
-      alert('Failed to rotate key — please try again.')
-      return
-    }
-    const body = (await res.json()) as { site_key?: string }
-    if (body.site_key) setSiteKey(body.site_key)
   }
 
   return (
@@ -154,12 +145,7 @@ export default function SiteClient({ site }: { site: Site }) {
             <code className="flex-1 rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--bg-inset)] px-3 py-2 font-mono text-xs text-[color:var(--ink-primary)]">
               {siteKey.slice(0, 10)}…{siteKey.slice(-6)}
             </code>
-            <button
-              onClick={handleRotateKey}
-              className="btn-press focus-ring rounded-md border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs font-medium text-[color:var(--accent-danger)] hover:border-[color:var(--accent-danger)]/30"
-            >
-              Rotate key
-            </button>
+            <RotateKeyButton onRotated={setSiteKey} />
           </div>
         </Field>
 

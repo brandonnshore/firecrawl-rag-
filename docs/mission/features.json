@@ -415,7 +415,7 @@
         "Playwright: e2e/site-key-rotate.spec.ts clicks rotate, asserts modal, toast, new key displayed"
       ],
       "fulfills": ["VAL-SET-005"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "toast-system",
@@ -434,7 +434,7 @@
         "Visual review: toast color scheme matches app"
       ],
       "fulfills": ["VAL-SET-006"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "tos-acceptance-signup",

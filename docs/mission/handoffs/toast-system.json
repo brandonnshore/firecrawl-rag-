@@ -1,0 +1,35 @@
+{
+  "feature": "toast-system",
+  "milestone": "settings-sidebar",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-SET-006"],
+  "whatWasImplemented": [
+    "sonner@2.0.7 added as a dependency.",
+    "<Toaster /> mounted once in src/app/layout.tsx with position='top-right', richColors, closeButton, and custom classNames pulling from app CSS tokens so the toast chrome matches the rest of the app.",
+    "src/lib/toast.ts — thin wrapper exporting toast.success / toast.error / toast.loading / toast.dismiss with a 4000ms default duration. Settings save, billing actions, and future file-upload / responses / escalation features consume this single import.",
+    "Wired first caller: handleSave in site/site-client.tsx now calls toast.success('Saved') on success and toast.error on failure.",
+    "src/__tests__/toast-wrapper.test.ts — 5 unit tests verifying the wrapper forwards correctly with the configured defaults. sonner itself is mocked."
+  ],
+  "whatWasLeftUndone": "Visual theme match confirmation needs a browser screenshot (VAL-SET-006 tool: Playwright). Token wiring done via classNames.",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 343 passed / 1 skipped / 49 files (+5 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "toast.success('Saved')", "expected": "sonner.success called with message + {duration:4000}", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "package.json (modified — +sonner@2.0.7)",
+    "pnpm-lock.yaml (modified)",
+    "src/app/layout.tsx (modified — mount Toaster)",
+    "src/lib/toast.ts (created)",
+    "src/app/dashboard/settings/site/site-client.tsx (modified — call toast.success on save)",
+    "src/__tests__/toast-wrapper.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-SET-006 deferred to Playwright — logic in place)",
+    "docs/mission/handoffs/toast-system.json (created)"
+  ]
+}

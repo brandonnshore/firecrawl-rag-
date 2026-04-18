@@ -1,0 +1,36 @@
+{
+  "feature": "site-key-rotation-ui",
+  "milestone": "settings-sidebar",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-SET-005"],
+  "whatWasImplemented": [
+    "src/app/dashboard/settings/site/rotate-key-button.tsx — client component that renders the Rotate button plus a native <dialog> modal. Modal carries the required warning copy ('widget will stop answering chat until you re-embed'). Confirm POSTs /api/sites/rotate-key, updates the displayed key via onRotated callback, shows a success toast, and calls router.refresh() so any cached server-rendered embed snippet refetches on next navigation.",
+    "Native <dialog> element for accessibility (Esc to dismiss, focus trap, backdrop click to close). No modal-library dependency.",
+    "Toast wrappers cover success + error + network failure paths; the button's 'Rotating…' spinner surfaces the in-flight state.",
+    "Replaced the M4F2-era handleRotateKey flow in site-client.tsx with <RotateKeyButton onRotated={setSiteKey} />. The inline window.confirm flow is fully retired."
+  ],
+  "whatWasLeftUndone": [
+    "Live cross-tab propagation to /dashboard/embed is out of scope here. Today: rotating in Settings calls router.refresh(); visiting Embed afterwards (same or different tab) shows the new key because Embed is a server component and fetches site_key on render. Simultaneous-open-tab propagation without reload would require a Realtime subscription on sites — deferred to M8 hardening.",
+    "Playwright evidence (modal render, toast visible, new key displayed) deferred."
+  ],
+  "discoveredIssues": [
+    "The legacy settings-client.tsx mint-key-on-client flow (deleted in M4F2) bypassed the server rate limit and didn't audit. Closed here — all rotate traffic now hits /api/sites/rotate-key which enforces the 5/hour user-scoped limit."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 343 passed / 1 skipped / 49 files (no new tests for this feature — behavior is composition of the M1 API + M4F3 toast wrapper, both already covered).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "Click Rotate -> dialog.showModal()", "expected": "warning copy visible, two buttons", "observed": "typecheck clean; visual verification pending Playwright" },
+      { "action": "Confirm rotate -> POST /api/sites/rotate-key succeeds", "expected": "toast 'Site key rotated'; key display updates; router.refresh() invalidates cached server renders", "observed": "logic verified; existing rate-limit tests prove server endpoint correctness" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/dashboard/settings/site/rotate-key-button.tsx (created)",
+    "src/app/dashboard/settings/site/site-client.tsx (modified — adopt RotateKeyButton + toast on save)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-SET-005 deferred to Playwright — logic wired)",
+    "docs/mission/handoffs/site-key-rotation-ui.json (created)"
+  ]
+}

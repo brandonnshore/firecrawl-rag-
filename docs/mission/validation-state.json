@@ -74,8 +74,8 @@
     "VAL-SET-002": { "status": "passed", "feature": "settings-layout", "note": "SETTINGS_NAV_ITEMS ordering pinned by unit test." },
     "VAL-SET-003": { "status": "pending", "feature": "settings-layout", "note": "Active-state logic unit-tested via isActiveSubRoute + resolveActiveHref; screenshot evidence pending Playwright." },
     "VAL-SET-004": { "status": "passed", "feature": "settings-site-move", "note": "Site settings moved intact; existing fields preserved." },
-    "VAL-SET-005": { "status": "pending" },
-    "VAL-SET-006": { "status": "pending" },
+    "VAL-SET-005": { "status": "pending", "feature": "site-key-rotation-ui", "note": "Modal + API + toast + router.refresh wired; Playwright screenshot pending." },
+    "VAL-SET-006": { "status": "pending", "feature": "toast-system", "note": "toast.success('Saved') wired in settings save path; Playwright screenshot of visible toast pending." },
     "VAL-SET-007": { "status": "passed", "feature": "settings-layout", "note": "Parent /dashboard layout redirects unauthenticated users; transitive to all /dashboard/settings/* sub-routes." },
     "VAL-SET-008": { "status": "pending", "feature": "settings-layout", "note": "Mobile horizontal-tab fallback implemented; Playwright mobile-viewport screenshot pending." },
 
