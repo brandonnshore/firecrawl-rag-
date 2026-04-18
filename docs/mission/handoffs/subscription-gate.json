@@ -1,0 +1,52 @@
+{
+  "feature": "subscription-gate",
+  "milestone": "billing-stripe",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-BILLING-016", "VAL-BILLING-017", "VAL-BILLING-018",
+    "VAL-BILLING-019", "VAL-BILLING-020"
+  ],
+  "whatWasImplemented": [
+    "src/lib/subscription.ts — replaces the always-true stub. checkSubscription(userId) reads profiles.subscription_status, trial_ends_at, current_period_end via service-role client and returns {active, status, reason, upgradeUrl}. Rules match the validation contract:",
+    "  - trialing + trial_ends_at > now -> active",
+    "  - trialing + trial_ends_at <= now -> inactive (trial_expired)",
+    "  - active -> active (period_end null is treated as active to tolerate mid-flight Stripe sync)",
+    "  - past_due -> inactive",
+    "  - canceled + current_period_end > now -> active (paid-through grace)",
+    "  - canceled + current_period_end <= now -> inactive",
+    "  - incomplete / incomplete_expired / unpaid / paused -> inactive",
+    "  - profile missing -> inactive ('not_found')",
+    "src/app/api/crawl/start/route.ts — replaces the 403 reject with 402 {error:'subscription_inactive', reason, upgrade_url}.",
+    "src/app/api/chat/session/route.ts — gates widget chat on the SITE OWNER's subscription (not the caller, since widget callers are anonymous). 402 response includes upgrade_url so the widget / site owner can redirect to /dashboard/billing.",
+    "src/__tests__/subscription-gate.test.ts — 14 unit tests with mocked service client; covers every status/date branch plus parametric coverage over non-recoverable statuses.",
+    "src/__tests__/subscription-gate-routes.test.ts — 3 integration-lite tests proving /api/crawl/start returns 402 and /api/chat/session checks the OWNER (not the visitor), using vi.hoisted to keep the vi.mock references pre-initialized.",
+    "vitest.config.ts — removed the M0-era coverage exclusion for src/lib/subscription.ts now that it carries real logic and is fully covered."
+  ],
+  "whatWasLeftUndone": "Widget-side UI for the 402 state is M3 (VAL-QUOTA-011 and the degrade area in M8). The API contract Brandon needs for that wiring is now set.",
+  "discoveredIssues": [
+    "vi.mock references in subscription-gate-routes.test.ts hit the 'Cannot access before initialization' hoisting trap; resolved with vi.hoisted. Worth documenting as a convention for future tests that mock factory-created fn references.",
+    "chat-session.test.ts needed owner_id added to its site fixtures + a subscription stub because every ready-site path now flows through checkSubscription. Updated in this feature so the existing suite remains green."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 280 passed / 1 skipped / 38 files (+17 new across subscription-gate + routes). 0 regressions after updating chat-session fixtures.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "Direct call checkSubscription for a trialing user with expired trial_ends_at", "expected": "{active:false, reason:'trial_expired'}", "observed": "pass via unit test" },
+      { "action": "POST /api/chat/session with owner whose subscription is past_due", "expected": "402 with upgrade_url", "observed": "pass via integration-lite test" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/subscription.ts (replaced stub with real logic)",
+    "src/app/api/crawl/start/route.ts (modified — 402 + upgrade_url)",
+    "src/app/api/chat/session/route.ts (modified — owner-level gate)",
+    "src/__tests__/chat-session.test.ts (modified — owner_id + subscription mock)",
+    "src/__tests__/subscription-gate.test.ts (created)",
+    "src/__tests__/subscription-gate-routes.test.ts (created)",
+    "vitest.config.ts (modified — removed subscription.ts coverage exclude)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-BILLING-016..020 -> passed)",
+    "docs/mission/handoffs/subscription-gate.json (created)"
+  ]
+}

@@ -35,8 +35,12 @@ export async function POST(request: Request) {
   const subscription = await checkSubscription(user.id)
   if (!subscription.active) {
     return Response.json(
-      { error: 'Active subscription required' },
-      { status: 403 }
+      {
+        error: 'subscription_inactive',
+        reason: subscription.reason,
+        upgrade_url: subscription.upgradeUrl ?? '/dashboard/billing',
+      },
+      { status: 402 }
     )
   }
 

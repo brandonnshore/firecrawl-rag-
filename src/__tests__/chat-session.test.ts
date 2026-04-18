@@ -13,6 +13,13 @@ vi.mock('@/lib/supabase/service', () => ({
   }),
 }))
 
+// Subscription gate is its own feature with its own tests; here we assert
+// the caller pre-requisite and let an always-active stub keep the route
+// under test focused on chat-session behavior.
+vi.mock('@/lib/subscription', () => ({
+  checkSubscription: vi.fn().mockResolvedValue({ active: true, status: 'active' }),
+}))
+
 vi.mock('@/lib/chat/query-rewrite', () => ({
   rewriteQuery: vi.fn(async (msg: string) => msg),
 }))
@@ -100,6 +107,7 @@ describe('POST /api/chat/session', () => {
         id: 'site-1',
         url: 'https://acme.test',
         name: 'Acme',
+        user_id: 'owner-1',
         crawl_status: 'crawling',
         calendly_url: null,
         google_maps_url: null,
@@ -116,6 +124,7 @@ describe('POST /api/chat/session', () => {
         id: 'site-1',
         url: 'https://acme.test',
         name: 'Acme',
+        user_id: 'owner-1',
         crawl_status: 'ready',
         calendly_url: null,
         google_maps_url: null,
@@ -136,6 +145,7 @@ describe('POST /api/chat/session', () => {
         id: 'site-1',
         url: 'https://acme.test',
         name: 'Acme',
+        user_id: 'owner-1',
         crawl_status: 'ready',
         calendly_url: null,
         google_maps_url: null,

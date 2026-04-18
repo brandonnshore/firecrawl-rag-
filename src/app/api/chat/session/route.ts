@@ -5,6 +5,7 @@ import { rewriteQuery } from '@/lib/chat/query-rewrite'
 import { checkRateLimit } from '@/lib/chat/rate-limit'
 import { storeSession } from '@/lib/chat/session-store'
 import { corsHeaders, handleCorsPreFlight } from '@/lib/chat/cors'
+import { checkSubscription } from '@/lib/subscription'
 import { openai } from '@ai-sdk/openai'
 import { embed } from 'ai'
 import crypto from 'crypto'
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient()
     const { data: site, error: siteError } = await supabase
       .from('sites')
-      .select('id, url, name, crawl_status, calendly_url, google_maps_url')
+      .select('id, url, name, user_id, crawl_status, calendly_url, google_maps_url')
       .eq('site_key', site_key)
       .maybeSingle()
 
@@ -65,6 +66,22 @@ export async function POST(request: NextRequest) {
       return Response.json(
         { error: 'Invalid site key' },
         { status: 404, headers: corsHeaders }
+      )
+    }
+
+    // Gate on the site OWNER's subscription — widget callers are anonymous
+    // but the owner is who pays. 402 signals "billing required" to the
+    // widget; the widget renders a generic degraded state and does not
+    // surface owner-dashboard details to visitors.
+    const subscription = await checkSubscription(site.user_id)
+    if (!subscription.active) {
+      return Response.json(
+        {
+          error: 'subscription_inactive',
+          reason: subscription.reason,
+          upgrade_url: subscription.upgradeUrl ?? '/dashboard/billing',
+        },
+        { status: 402, headers: corsHeaders }
       )
     }
 
