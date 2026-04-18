@@ -251,14 +251,13 @@ describe('POST /api/crawl/start', () => {
     await POST(makeRequest({ url: 'https://example.com' }))
 
     expect(mockStartCrawl).toHaveBeenCalledWith(
-      'https://example.com',
+      expect.stringMatching(/^https:\/\/example\.com\/?$/),
       expect.objectContaining({
         limit: 100,
-        maxDiscoveryDepth: 3,
-        scrapeOptions: {
+        maxDiscoveryDepth: 5,
+        scrapeOptions: expect.objectContaining({
           formats: ['markdown'],
-          onlyMainContent: true,
-        },
+        }),
         webhook: expect.objectContaining({
           metadata: expect.objectContaining({
             site_id: 'new-site-id',

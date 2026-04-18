@@ -24,7 +24,7 @@
         "GitHub Actions workflow shown in Actions tab after push"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "rls-cross-user-tests",

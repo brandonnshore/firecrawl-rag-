@@ -26,6 +26,15 @@ vi.mock('@/lib/crawl/process', () => ({
   markCrawlFailed: (...args: unknown[]) => mockMarkCrawlFailed(...args),
 }))
 
+// Mock Firecrawl SDK — webhook refetches pages via getCrawlStatus
+const mockGetCrawlStatus = vi.fn()
+vi.mock('@mendable/firecrawl-js', () => {
+  const FirecrawlMock = function (this: { getCrawlStatus: typeof mockGetCrawlStatus }) {
+    this.getCrawlStatus = mockGetCrawlStatus
+  } as unknown as typeof import('@mendable/firecrawl-js').default
+  return { default: FirecrawlMock }
+})
+
 import { POST } from '@/app/api/crawl/webhook/route'
 
 function makeRequest(body: Record<string, unknown>): Request {
@@ -40,6 +49,7 @@ describe('POST /api/crawl/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAfterCallbacks.length = 0
+    process.env.FIRECRAWL_API_KEY = 'test-firecrawl-key'
   })
 
   it('returns 400 for invalid JSON', async () => {
@@ -122,10 +132,17 @@ describe('POST /api/crawl/webhook', () => {
     // after() callback should have been scheduled
     expect(mockAfterCallbacks.length).toBe(1)
 
-    // Execute the callback
+    // Execute the callback — impl now refetches via Firecrawl API
+    mockGetCrawlStatus.mockResolvedValue({
+      status: 'completed',
+      total: 1,
+      completed: 1,
+      data: pageData,
+    })
     mockProcessCrawlData.mockResolvedValue(undefined)
     await mockAfterCallbacks[0]()
 
+    expect(mockGetCrawlStatus).toHaveBeenCalledWith('valid-job-id')
     expect(mockProcessCrawlData).toHaveBeenCalledWith('site-123', pageData)
   })
 
@@ -229,7 +246,13 @@ describe('POST /api/crawl/webhook', () => {
 
     expect(response.status).toBe(200)
 
-    // Simulate processing failure
+    // Simulate processing failure — getCrawlStatus succeeds, processCrawlData rejects
+    mockGetCrawlStatus.mockResolvedValue({
+      status: 'completed',
+      total: 0,
+      completed: 0,
+      data: [],
+    })
     mockProcessCrawlData.mockRejectedValue(new Error('Processing failed'))
     mockMarkCrawlFailed.mockResolvedValue(undefined)
 
