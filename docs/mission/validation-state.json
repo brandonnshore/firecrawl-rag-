@@ -26,7 +26,7 @@
     "VAL-RLS-011":  { "status": "passed" },
     "VAL-RLS-012":  { "status": "passed" },
     "VAL-RLS-014":  { "status": "passed" },
-    "VAL-RLS-015":  { "status": "pending" },
+    "VAL-RLS-015":  { "status": "passed", "feature": "usage-counters-schema-rpc" },
 
     "VAL-BILLING-001": { "status": "passed", "feature": "billing-page-refactor", "note": "Covered by dashboard/layout.tsx auth redirect — deterministic without browser." },
     "VAL-BILLING-002": { "status": "pending", "feature": "billing-page-refactor", "note": "UI logic complete and unit-tested via page-model; browser-automation evidence deferred to Playwright user-testing pass." },
@@ -65,7 +65,7 @@
     "VAL-QUOTA-009": { "status": "pending" },
     "VAL-QUOTA-010": { "status": "pending" },
     "VAL-QUOTA-011": { "status": "pending" },
-    "VAL-QUOTA-012": { "status": "pending" },
+    "VAL-QUOTA-012": { "status": "passed", "feature": "usage-counters-schema-rpc" },
     "VAL-QUOTA-013": { "status": "pending" },
     "VAL-QUOTA-014": { "status": "pending" },
     "VAL-QUOTA-015": { "status": "pending" },

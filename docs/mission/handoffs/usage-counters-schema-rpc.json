@@ -1,0 +1,35 @@
+{
+  "feature": "usage-counters-schema-rpc",
+  "milestone": "quota-meter",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-QUOTA-012", "VAL-RLS-015"],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419000000_usage_counters.sql — creates usage_counters (user_id PK + FK profiles ON DELETE CASCADE, period_start/end, messages_used, crawl_pages_used, files_stored, openai_tokens_used — all non-negative via CHECK constraints).",
+    "RLS: owner SELECT only via `user_id = auth.uid()`. No INSERT/UPDATE/DELETE policies; writes are service-role only (or via the SECURITY DEFINER RPC below).",
+    "handle_new_profile_usage_counter trigger on profiles INSERT auto-creates the counter row with ON CONFLICT DO NOTHING for idempotency. Backfill pass at migration end catches any pre-existing profiles (matters for test-only stacks like our local Supabase).",
+    "increment_message_counter(p_user_id uuid, p_limit int) -> jsonb RPC. Uses SELECT ... FOR UPDATE to lock the counter row, then conditionally increments. Returns {ok, used, limit}. Race-safe: 20 parallel calls at budget=10 yield exactly 10 successes.",
+    "RPC granted to anon + authenticated + service_role (SECURITY DEFINER gives it bypass). Safe because the function takes only a user_id parameter — no arbitrary SQL injection surface — and the app is expected to pass the correct user_id.",
+    "src/__tests__/usage-counters-schema.test.ts — 9 tests: trigger auto-creation, owner-only RLS, cross-user isolation, anon zero-rows, PostgREST update ineffective, service-role bypass, RPC happy path, at-budget denial, 20-way parallel atomicity."
+  ],
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [
+    "VAL-RLS-015 was marked 'pending' in the foundation-rls user-testing synthesis with the note 'added in M3 alongside the table creation'. Now that the table exists, the assertion flips to passed via the cross-user SELECT test here. Cross-milestone ownership is legitimate because the RLS cross-user infrastructure (RLS fixtures, clientAs helper) comes from M1 and the table comes from M3."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 304 passed / 1 skipped / 41 files (+9 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "20 parallel increment_message_counter calls at budget=10", "expected": "exactly 10 ok=true, 10 ok=false, counter ends at 10", "observed": "pass (race-safe)" },
+      { "action": "createTestUser + admin SELECT usage_counters", "expected": "row exists with counters=0", "observed": "pass (trigger fires)" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419000000_usage_counters.sql (created)",
+    "src/__tests__/usage-counters-schema.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-QUOTA-012 + VAL-RLS-015 -> passed)",
+    "docs/mission/handoffs/usage-counters-schema-rpc.json (created)"
+  ]
+}

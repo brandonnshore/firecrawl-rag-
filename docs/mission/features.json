@@ -271,7 +271,7 @@
         "pnpm vitest run src/__tests__/usage-counters-schema.test.ts"
       ],
       "fulfills": ["VAL-QUOTA-012", "VAL-RLS-015"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "message-quota-enforcement",
