@@ -1,0 +1,59 @@
+{
+  "milestone": "knowledge-uploads",
+  "sealedAt": "2026-04-18",
+  "automatedValidators": {
+    "vitest": "432 passed / 1 skipped / 58 files",
+    "typecheck": "0 errors",
+    "lint": "clean"
+  },
+  "featuresReviewed": [
+    {
+      "id": "supplementary-files-schema-storage",
+      "correctness": "Table + RLS + cascade + UNIQUE dedupe verified via 10 tests; Storage bucket policies gate per-user folder.",
+      "security": "Owner-only SELECT/DELETE on table; writes service-role. Storage.objects policies scope by (storage.foldername(name))[1] = auth.uid()::text.",
+      "quality": "Forward-extension added embeddings.source_type + file_id in the same migration so later features drop in cleanly."
+    },
+    {
+      "id": "file-upload-api-limits",
+      "correctness": "9-stage pipeline (auth, size, parse, ext, magic, hash, quota, dedupe, storage+counter) covered by 11 tests + 31 validate-helper tests.",
+      "security": "25MB cap, magic-byte defeat of MIME spoof, path traversal sanitization, UNIQUE constraint + 23505 race handling, rollback on storage failure.",
+      "quality": "Duck-typed File detection works across jsdom/node/edge runtimes."
+    },
+    {
+      "id": "file-parsers-pipeline",
+      "correctness": "Dispatcher routes 7 formats; MAX_EXTRACTED_BYTES cap defends zip/PDF bomb; decodeText fallback handles non-UTF8; encrypted PDF detector ahead of parser.",
+      "security": "Service-role-only processing; mammoth strips VBA macros by design.",
+      "quality": "processFile single-shot orchestrator with status transitions observable via Realtime; errors route to status=failed with readable error_message.",
+      "issues": ["Real adversarial fixtures (zip/PDF bomb, encrypted PDF, VBA-laden DOCX, multi-format fixtures) deferred to adversarial-fixture pass."]
+    },
+    {
+      "id": "file-delete-cascade",
+      "correctness": "RLS-filtered lookup + service-role cascade verified by 5 tests.",
+      "security": "Cross-user id yields 404 without leaking existence.",
+      "quality": "Storage.remove non-blocking so orphaned objects don't block row cleanup."
+    },
+    {
+      "id": "file-rag-integration",
+      "correctness": "match_chunks dropped + recreated to return source_type; file chunks bypass crawl-batch gate.",
+      "quality": "system-prompt renders (File: name) for file-sourced citations distinct from (Source: url).",
+      "issues": ["End-to-end upload->ask->cite flow pending Playwright."]
+    },
+    {
+      "id": "knowledge-ui",
+      "correctness": "Dropzone + file list + chip + retry + delete all wired; Realtime subscription on supplementary_files reflects status transitions live.",
+      "quality": "Pure ui-status helpers unit-tested; component logic composes from the API surface.",
+      "issues": ["Playwright visual confirmation pending for VAL-FILE-001/002/015/025."]
+    }
+  ],
+  "sharedStateUpdates": {
+    "AGENTS.md": "No change.",
+    "servicesYaml": "No change.",
+    "libraryFiles": "Worth adding a src/lib/files overview to .factory/library/architecture.md during M8 hardening; deferred to keep M5 scope contained."
+  },
+  "assertionSummary": {
+    "totalInMilestone": 25,
+    "passed": 15,
+    "pendingFixturesOrPlaywright": 10
+  },
+  "result": "PASS — all automated validators green. 10 assertions deferred (real adversarial fixtures + Playwright visual confirmation), all with documented follow-up paths."
+}
