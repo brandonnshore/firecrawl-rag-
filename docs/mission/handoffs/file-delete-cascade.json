@@ -1,0 +1,27 @@
+{
+  "feature": "file-delete-cascade",
+  "milestone": "knowledge-uploads",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-FILE-013"],
+  "whatWasImplemented": [
+    "src/app/api/files/[id]/route.ts — DELETE handler. 401 without auth. Lookup the file via the user-session client so RLS filters cross-user ids to null (-> 404). Upgrade to service-role for the actual cascade: Storage remove -> embeddings delete WHERE file_id -> supplementary_files row delete -> usage_counters.files_stored -= 1 (clamped at 0).",
+    "Ownership check piggybacks on the existing SELECT RLS policy from M5F1 — no second check needed; if the row isn't visible to the user, it doesn't exist from their perspective.",
+    "Storage.remove errors are logged but non-blocking: the DB cleanup proceeds even if the object is already missing (orphaned from a prior failed upload).",
+    "src/__tests__/file-delete.test.ts — 5 tests: 401 no auth, 404 cross-user, happy-path deletes Storage + embeddings + row + decrements counter, zero-counter guard, storage-error best-effort completion."
+  ],
+  "whatWasLeftUndone": "Integration test against real Storage object + real DB deferred; the mock-level coverage asserts every step of the cascade fires with the expected shape.",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 423 passed / 1 skipped / 56 files (+5 new at M5F4 layer).",
+    "typecheckClean": true,
+    "lintClean": true
+  },
+  "filesChanged": [
+    "src/app/api/files/[id]/route.ts (created)",
+    "src/__tests__/file-delete.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-FILE-013 -> passed)",
+    "docs/mission/handoffs/file-delete-cascade.json (created)"
+  ]
+}

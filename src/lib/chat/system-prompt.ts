@@ -1,16 +1,33 @@
+interface SystemPromptChunk {
+  chunk_text: string
+  source_url: string
+  /** 'file' for uploaded knowledge, 'crawl' (or undefined for legacy rows) for crawled pages. */
+  source_type?: string | null
+}
+
 interface SystemPromptParams {
   siteName: string
   siteUrl: string
   calendlyUrl: string | null
   googleMapsUrl: string | null
-  chunks: Array<{ chunk_text: string; source_url: string }>
+  chunks: Array<SystemPromptChunk>
 }
 
 export function buildSystemPrompt(params: SystemPromptParams): string {
   const { siteName, siteUrl, calendlyUrl, googleMapsUrl, chunks } = params
 
   const numberedChunks = chunks
-    .map((c, i) => `[${i + 1}] (Source: ${c.source_url})\n${c.chunk_text}`)
+    .map((c, i) => {
+      // Distinguish file-sourced citations for the LLM so it can
+      // reference them naturally ("according to the product manual PDF…"
+      // rather than just an opaque URL).
+      const isFile =
+        c.source_type === 'file' || c.source_url.startsWith('file://')
+      const label = isFile
+        ? `(File: ${c.source_url.replace(/^file:\/\//, '')})`
+        : `(Source: ${c.source_url})`
+      return `[${i + 1}] ${label}\n${c.chunk_text}`
+    })
     .join('\n\n')
 
   const calendlyInstruction = calendlyUrl

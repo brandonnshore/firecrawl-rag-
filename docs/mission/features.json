@@ -548,7 +548,7 @@
         "pnpm vitest run src/__tests__/file-delete.test.ts"
       ],
       "fulfills": ["VAL-FILE-013"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "file-rag-integration",
@@ -567,7 +567,7 @@
         "Playwright: e2e/file-rag.spec.ts uploads a PDF with unique content, asks a question, asserts the citation"
       ],
       "fulfills": ["VAL-FILE-024"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "knowledge-ui",

@@ -1,0 +1,37 @@
+{
+  "feature": "file-rag-integration",
+  "milestone": "knowledge-uploads",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-FILE-024"],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419040000_match_chunks_file_sources.sql — recreates match_chunks() (via DROP + CREATE because return-shape changed) to include file-sourced embeddings and expose source_type in the result. File chunks (source_type='file') are NOT subject to the crawl-batch swap gate — they persist across crawls by design. Crawl chunks (source_type='crawl' or legacy NULL) still gate on active_crawl_batch.",
+    "src/lib/chat/system-prompt.ts — SystemPromptChunk now carries an optional source_type. Citations render as '[N] (File: <filename>)' for file-sourced chunks (detected by source_type='file' OR source_url starting with 'file://') and '[N] (Source: <url>)' for crawl chunks. Legacy rows without source_type still render correctly.",
+    "src/__tests__/system-prompt-files.test.ts — 3 tests: file citations formatted, legacy file:// recognized without source_type, crawl chunks unchanged."
+  ],
+  "whatWasLeftUndone": [
+    "Widget-side visual distinction (document icon vs link icon for citations) — M5F6 UI is pure-server for this feature; widget follow-up deferred because the widget hasn't surfaced citation chrome historically.",
+    "End-to-end test: upload a PDF with unique content, ask a question, assert the widget answer cites it. Deferred to Playwright (VAL-FILE-024 flagged as pending there).",
+    "chat/session route still passes the chunks through unchanged — it already forwards source_url, and now source_type flows alongside thanks to the updated match_chunks return. No call-site change required."
+  ],
+  "discoveredIssues": [
+    "Postgres refuses CREATE OR REPLACE when a function's OUT columns change — migration has to DROP first. Named the drop explicitly with all arg types (vector, text, uuid, double precision, integer) to avoid ambiguity."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 426 passed / 1 skipped / 57 files (+3 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "buildSystemPrompt with source_url='file://hours.pdf' + source_type='file'", "expected": "citation reads '[1] (File: hours.pdf)'", "observed": "pass" },
+      { "action": "match_chunks SQL applied with new return columns", "expected": "no migration error; subsequent runs idempotent", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419040000_match_chunks_file_sources.sql (created)",
+    "src/lib/chat/system-prompt.ts (modified — SystemPromptChunk + file citation rendering)",
+    "src/__tests__/system-prompt-files.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-FILE-024 -> passed)",
+    "docs/mission/handoffs/file-rag-integration.json (created)"
+  ]
+}
