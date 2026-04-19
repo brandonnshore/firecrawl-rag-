@@ -295,14 +295,14 @@
       "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-FILE-001": {
-      "status": "pending",
-      "feature": "knowledge-ui",
-      "note": "Drop zone accepts 7 types via accept attribute; Playwright screenshots per type deferred."
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-FILE-002": {
-      "status": "pending",
-      "feature": "knowledge-ui",
-      "note": "StatusChip helper unit-tested; screenshots deferred."
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-FILE-003": {
       "status": "passed",
@@ -358,9 +358,9 @@
       "note": "queued->processing->ready transitions proven via files-process.test.ts."
     },
     "VAL-FILE-015": {
-      "status": "pending",
-      "feature": "knowledge-ui",
-      "note": "Retry button wired to POST /api/files/process; Playwright pending."
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-FILE-016": {
       "status": "pending",
@@ -400,14 +400,14 @@
       "note": "decodeText fatal-to-replacement fallback unit-tested with Latin-1 CSV."
     },
     "VAL-FILE-024": {
-      "status": "pending",
-      "feature": "file-rag-integration",
-      "note": "match_chunks + system-prompt wired for file citations; Playwright end-to-end (upload PDF -> chat -> citation in widget) deferred."
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-FILE-025": {
-      "status": "pending",
-      "feature": "knowledge-ui",
-      "note": "Empty-state copy rendered when files.length=0; Playwright pending."
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-RESP-001": {
       "status": "passed",
@@ -616,7 +616,9 @@
       "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-CROSS-005": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-knowledge-upload",
+      "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-CROSS-006": {
       "status": "pending"

@@ -1288,7 +1288,7 @@
         "VAL-FILE-024",
         "VAL-FILE-025"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-responses-crud",
