@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import SiteClient from './site-client'
+import { DeleteAccountSection } from './delete-account-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,9 +29,15 @@ export default async function SiteSettingsPage() {
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--ink-primary)]">
           Set up your chatbot first.
         </h1>
+        <DeleteAccountSection userEmail={user.email ?? ''} />
       </div>
     )
   }
 
-  return <SiteClient site={site} />
+  return (
+    <>
+      <SiteClient site={site} />
+      <DeleteAccountSection userEmail={user.email ?? ''} />
+    </>
+  )
 }

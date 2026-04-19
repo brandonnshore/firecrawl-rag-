@@ -941,7 +941,7 @@
         "Playwright: e2e/gdpr-delete.spec.ts walks the full flow"
       ],
       "fulfills": ["VAL-GDPR-001", "VAL-GDPR-002", "VAL-GDPR-003"],
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }

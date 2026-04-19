@@ -166,8 +166,8 @@
     "VAL-DEGRADE-002": { "status": "pending" },
     "VAL-DEGRADE-003": { "status": "pending" },
 
-    "VAL-GDPR-001": { "status": "pending" },
-    "VAL-GDPR-002": { "status": "pending" },
-    "VAL-GDPR-003": { "status": "pending" }
+    "VAL-GDPR-001": { "status": "pending", "feature": "gdpr-account-deletion", "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site with red panel + button. Playwright screenshot pending per M5-M7 deferral pattern." },
+    "VAL-GDPR-002": { "status": "pending", "feature": "gdpr-account-deletion", "note": "Modal requires exact email (case-insensitive, trimmed) to enable Delete; Cancel closes with zero side-effects. Route-level tests cover match + mismatch; Playwright visual pending." },
+    "VAL-GDPR-003": { "status": "passed", "feature": "gdpr-account-deletion", "note": "Integration test vs real local Supabase proves cascade wipes profiles/sites/usage_counters/sent_emails/leads/conversations/custom_responses/escalation_rules; counterpart user untouched. Stripe cancel callback invoked with stored sub id." }
   }
 }
