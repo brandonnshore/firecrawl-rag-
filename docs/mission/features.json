@@ -528,7 +528,7 @@
         "VAL-FILE-017", "VAL-FILE-020", "VAL-FILE-022",
         "VAL-FILE-023"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "file-delete-cascade",
