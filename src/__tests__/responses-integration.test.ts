@@ -131,6 +131,10 @@ vi.mock('@/lib/chat/rate-limit', () => ({
   checkRateLimit: vi.fn(() => ({ allowed: true })),
 }))
 
+vi.mock('@/lib/email/quota-trigger', () => ({
+  maybeSendQuotaWarning: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mockRewriteQuery = vi.fn()
 vi.mock('@/lib/chat/query-rewrite', () => ({
   rewriteQuery: (...args: unknown[]) => mockRewriteQuery(...args),

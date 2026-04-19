@@ -829,7 +829,7 @@
         "VAL-HARD-006", "VAL-HARD-007",
         "VAL-HARD-008", "VAL-HARD-009"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "ci-workflow",

@@ -1,0 +1,65 @@
+{
+  "feature": "transactional-email",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-HARD-006", "VAL-HARD-007", "VAL-HARD-008", "VAL-HARD-009"],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419090000_sent_emails.sql — ledger table (user_id, template, period) UNIQUE. RLS: service-role writes only, owners read their own. Indexed on user_id for cleanup and dashboard lookups.",
+    "src/lib/email/send.ts — Resend SDK wrapper. No-ops when RESEND_API_KEY absent (dev + CI safe), rejects on empty recipient, surfaces transport errors without blocking callers. List-Unsubscribe header included.",
+    "src/lib/email/templates.ts — renderWelcome / renderTrialEnding / renderQuotaWarning / renderPaymentFailed pure functions returning { subject, html, text }. Currency amounts formatted as N.NN USD; quota percentage rounded; all interpolate the recipient email for signal.",
+    "src/lib/email/transactional.ts — sendOnce(admin, userId, template, period, to, render) primitive: insert-first idempotency. 23505 conflicts yield 'duplicate' without a send. Four thin wrappers (sendWelcomeEmail, sendTrialEndingEmail, sendQuotaWarningEmail, sendPaymentFailedEmail) encode each trigger's period key (welcome=initial, trial_ending=YYYY-MM-DD, quota_warning=period_start ISO, payment_failed=invoice_id).",
+    "src/lib/email/quota-trigger.ts — maybeSendQuotaWarning extracted so chat/session tests can mock a small boundary. Guards the arithmetic crossing (used >= ceil(limit*0.8) && used-1 < threshold) so steady-state >80% users don't re-trigger, with the ledger as a backstop for plan-change cap jumps.",
+    "src/app/auth/callback/route.ts — on successful code exchange or OTP verify, fires maybeFireWelcomeEmail via service-role client. Gated on SUPABASE_SERVICE_ROLE_KEY and wrapped in try/catch so email failure never breaks the redirect (VAL-HARD-006).",
+    "src/app/api/chat/session/route.ts — after successful increment_message_counter, calls maybeSendQuotaWarning with the owner's user_id and post-increment used/limit so the 80% email fires once per billing period (VAL-HARD-008).",
+    "src/app/api/stripe/webhook/route.ts — handleInvoicePaymentFailed now also fires sendPaymentFailedEmail after flipping subscription_status to past_due. Uses invoice.customer_email when present, falls back to profiles.email; period = invoice.id for exact-invoice idempotency (VAL-HARD-009).",
+    "src/app/api/cron/trial-ending/route.ts — GET endpoint for Vercel Cron (Bearer CRON_SECRET auth). Queries profiles WHERE subscription_status='trialing' AND trial_ends_at IN [now+3d, now+4d), loops and fires sendTrialEndingEmail per row. Returns { candidates, sent, duplicates, errors } summary (VAL-HARD-007).",
+    "src/__tests__/email-transactional.test.ts — 15 tests: sendOnce idempotency (insert-first, 23505 dupe, non-conflict error, transport error), four wrapper period keys + payloads, template-shape assertions, RESEND_API_KEY-absent skip, empty recipient reject.",
+    "src/__tests__/email-cron-trial-ending.test.ts — 5 tests: unauthenticated vs bearer, query-window (exact 24h gap between gte+lt), per-row tally, same-day ledger dedupe.",
+    "src/__tests__/auth-callback-route.test.ts — extended with mocks for @/lib/supabase/service and @/lib/email/transactional so the welcome wiring stays silent in tests.",
+    "src/__tests__/chat-session.test.ts + message-quota.test.ts + responses-integration.test.ts — mock @/lib/email/quota-trigger as a vi.fn() no-op so the chat route's new email call stays out of those fixtures."
+  ],
+  "whatWasLeftUndone": [
+    "Live Resend dashboard evidence (VAL-HARD-006..009 hit Resend's logs). Requires RESEND_API_KEY + a Resend test audience on deploy. Code paths are unit-tested at the boundary; Brandon validates in the Resend dashboard when he plugs in the test-mode API key.",
+    "react-email components — skipped in favor of plain HTML strings. Switching is a drop-in if brand wants templated designs; render* functions are the seam.",
+    "Vercel cron schedule config (vercel.json with `crons: [{ path: '/api/cron/trial-ending', schedule: '0 12 * * *' }]`). Brandon to add during deploy — code path is ready."
+  ],
+  "discoveredIssues": [
+    "stripe-webhook test is integration-style against real Supabase. Because sent_emails table + insert succeed for real and sendEmail no-ops without RESEND_API_KEY, no mock needed — the path exercises itself end-to-end during the existing invoice.payment_failed test.",
+    "chat/session route's existing table-routed test mock throws on unknown tables; extracting maybeSendQuotaWarning into its own module and mocking it keeps the existing Supabase mock unchanged."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 607 passing / 1 skipped / 72 files (+20 email tests).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "sendOnce first call", "expected": "inserts ledger, calls sendEmail, returns { status: 'sent' }", "observed": "pass" },
+      { "action": "sendOnce second call (23505 conflict)", "expected": "returns { status: 'duplicate' }, render/send not invoked", "observed": "pass" },
+      { "action": "Cron with 3 candidates, outcomes [sent, duplicate, error]", "expected": "body { candidates:3, sent:1, duplicates:1, errors:['smtp_down'] }", "observed": "pass" },
+      { "action": "renderPaymentFailed({ amountCents:9900, currency:'usd' })", "expected": "html contains '99.00 USD'", "observed": "pass" },
+      { "action": "auth/callback without SUPABASE_SERVICE_ROLE_KEY env", "expected": "welcome email fire-and-forget skipped, redirect still happens", "observed": "pass (existing callback tests pass unchanged)" }
+    ]
+  },
+  "filesChanged": [
+    "package.json (modified — resend)",
+    "pnpm-lock.yaml (modified)",
+    "supabase/migrations/20260419090000_sent_emails.sql (created)",
+    "src/lib/email/send.ts (created)",
+    "src/lib/email/templates.ts (created)",
+    "src/lib/email/transactional.ts (created)",
+    "src/lib/email/quota-trigger.ts (created)",
+    "src/app/auth/callback/route.ts (wired maybeFireWelcomeEmail)",
+    "src/app/api/chat/session/route.ts (wired maybeSendQuotaWarning)",
+    "src/app/api/stripe/webhook/route.ts (wired sendPaymentFailedEmail + resolveProfileEmail)",
+    "src/app/api/cron/trial-ending/route.ts (created)",
+    "src/__tests__/email-transactional.test.ts (created — 15 tests)",
+    "src/__tests__/email-cron-trial-ending.test.ts (created — 5 tests)",
+    "src/__tests__/auth-callback-route.test.ts (extended mocks)",
+    "src/__tests__/chat-session.test.ts (quota-trigger mock)",
+    "src/__tests__/message-quota.test.ts (quota-trigger mock)",
+    "src/__tests__/responses-integration.test.ts (quota-trigger mock)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-HARD-006/007/008/009 passed)",
+    "docs/mission/handoffs/transactional-email.json (created)"
+  ]
+}

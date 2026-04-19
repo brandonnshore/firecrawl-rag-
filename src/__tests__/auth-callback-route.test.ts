@@ -2,14 +2,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockExchangeCodeForSession = vi.fn()
 const mockVerifyOtp = vi.fn()
+const mockGetUser = vi.fn().mockResolvedValue({ data: { user: null } })
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn().mockImplementation(async () => ({
     auth: {
       exchangeCodeForSession: mockExchangeCodeForSession,
       verifyOtp: mockVerifyOtp,
+      getUser: mockGetUser,
     },
   })),
+}))
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: vi.fn(() => ({
+    from: () => ({
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    }),
+  })),
+}))
+
+vi.mock('@/lib/email/transactional', () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue({ status: 'sent' }),
 }))
 
 import { GET } from '@/app/auth/callback/route'

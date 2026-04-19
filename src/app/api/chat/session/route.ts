@@ -13,6 +13,7 @@ import {
 } from '@/lib/chat/response-matcher'
 import type { EscalationRuleLite } from '@/lib/chat/session-store'
 import { captureApiError, resolveRequestId } from '@/lib/sentry/capture'
+import { maybeSendQuotaWarning } from '@/lib/email/quota-trigger'
 import { openai } from '@ai-sdk/openai'
 import { embed } from 'ai'
 import crypto from 'crypto'
@@ -144,6 +145,16 @@ export async function POST(request: NextRequest) {
         { status: 402, headers: corsHeaders }
       )
     }
+
+    // M8F4: warn the site owner the first time they cross 80% of their
+    // monthly cap. maybeSendQuotaWarning no-ops unless this message is the
+    // exact crossing and the sent_emails ledger is clear for the period.
+    await maybeSendQuotaWarning({
+      admin: supabase,
+      userId: site.user_id,
+      used: quota.used ?? 0,
+      limit: quota.limit ?? messageLimit,
+    })
 
     const typedHistory = (history || []).filter(
       (m): m is { role: 'user' | 'assistant'; content: string } =>

@@ -82,6 +82,10 @@ vi.mock('@/lib/chat/rate-limit', () => ({
   checkRateLimit: vi.fn(() => ({ allowed: true })),
 }))
 
+vi.mock('@/lib/email/quota-trigger', () => ({
+  maybeSendQuotaWarning: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mockStoreSession = vi.fn()
 vi.mock('@/lib/chat/session-store', () => ({
   storeSession: (...args: unknown[]) => mockStoreSession(...args),

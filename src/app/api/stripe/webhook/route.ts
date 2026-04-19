@@ -2,6 +2,7 @@ import type Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { stripeClient } from '@/lib/stripe/client'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendPaymentFailedEmail } from '@/lib/email/transactional'
 
 /**
  * POST /api/stripe/webhook — verifies, idempotency-gates, and dispatches
@@ -237,6 +238,9 @@ interface InvoiceLike {
   subscription: string | Stripe.Subscription | null
   period_start: number
   period_end: number
+  amount_due?: number
+  currency?: string
+  customer_email?: string | null
 }
 
 async function handleInvoicePaid(
@@ -290,4 +294,34 @@ async function handleInvoicePaymentFailed(
     .from('profiles')
     .update({ subscription_status: 'past_due' })
     .eq('id', userId)
+
+  // Payment-failed email (M8F4). Idempotent on invoice.id so a retried
+  // webhook delivery never re-sends. Best-effort — transport errors are
+  // swallowed so the webhook always returns 200.
+  try {
+    const email =
+      invoice.customer_email ??
+      (await resolveProfileEmail(admin, userId))
+    if (email) {
+      await sendPaymentFailedEmail(admin, userId, invoice.id, {
+        email,
+        amountCents: invoice.amount_due,
+        currency: invoice.currency,
+      })
+    }
+  } catch (err) {
+    console.error('[stripe-webhook] payment-failed email skipped:', err)
+  }
+}
+
+async function resolveProfileEmail(
+  admin: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data } = await admin
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .maybeSingle<{ email: string | null }>()
+  return data?.email ?? null
 }
