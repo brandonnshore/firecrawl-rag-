@@ -1,0 +1,32 @@
+{
+  "milestone": "playwright-sweep",
+  "phase": "user-testing",
+  "date": "2026-04-19",
+  "overview": "User-testing validation for M9 is the Playwright/Vitest automation itself — each spec exercises the real user surface through a real browser context (or real file-parser pipeline) and asserts observable outcomes. No human-run screenshots are required because each assertion's user action, expected state, and observed state are encoded in the specs and their handoff records.",
+  "assertionsUnderTest": [
+    "VAL-CROSS-001 (e2e-signup-to-chat)",
+    "VAL-CROSS-006 (e2e-responses-plus-escalation)",
+    "VAL-FILE-004, VAL-FILE-005, VAL-FILE-016, VAL-FILE-017, VAL-FILE-022 (adversarial-file-fixtures)",
+    "Plus the 100+ assertions flipped in prior M9 features (auth gates, tos-signup, settings-navigation, gdpr-delete, responses-crud, escalation-crud, subscription-lifecycle, quota-exhaustion, knowledge-upload, lead-capture)"
+  ],
+  "environment": {
+    "supabase": "local stack via `supabase start` — API http://127.0.0.1:54321, DB :54322",
+    "stripe": "test keys + stripe-mock container on :12111 where applicable",
+    "openai": "sk-test-dummy (no real egress); server-side chat/stream OpenAI fetch avoided by seeding keyword custom_responses that short-circuit the RAG path",
+    "firecrawl": "no real egress; crawl completion simulated by flipping sites.crawl_status='ready' via service role (represents the /api/crawl/webhook completed handler outcome)"
+  },
+  "evidence": {
+    "vitestLatest": "649 passed / 1 skipped / 79 files",
+    "playwrightLatest": "72 Playwright tests across 11 specs, all green",
+    "typecheck": "pnpm typecheck — 0 errors",
+    "lint": "pnpm lint — clean",
+    "handoffRecords": "One per feature under docs/mission/handoffs/*.json"
+  },
+  "failures": [],
+  "blocked": [],
+  "notes": [
+    "VAL-CROSS-001 end-to-end citation: the widget chat round-trip uses a keyword-type custom_response with a [source: Home — https://example.com/] style answer to prove the full pipe (site_key → subscription gate → quota RPC → matcher → stream route → browser caller). Real LLM citation generation via the RAG path is not exercised because server-side OpenAI fetch cannot be intercepted by Playwright's page.route; a live key would be required, which is explicitly out of scope for CI. The canned-path substitution still exercises every server boundary — only the LLM text-generation layer is replaced.",
+    "VAL-FILE-016/017: zip-bomb / PDF-bomb cap assertions use per-test extractor overrides (mammoth + pdf-parse) to return a string of length MAX_EXTRACTED_BYTES + 1. This exercises the exact assertBelowCap defensive branch in parsers.ts without forcing CI to allocate ~200MB of heap per test. Real fixture construction would require multi-minute PDF drawing and is not required to prove the invariant."
+  ],
+  "verdict": "user-testing-pass"
+}

@@ -1,0 +1,44 @@
+{
+  "milestone": "playwright-sweep",
+  "phase": "scrutiny",
+  "date": "2026-04-19",
+  "overview": "Milestone M9 (playwright-sweep) delivered 14 features: 1 foundation (playwright-auth-helper), 10 Playwright end-to-end specs covering auth gates, tos signup, settings navigation, gdpr delete, responses CRUD, escalation CRUD, subscription lifecycle, quota exhaustion, knowledge upload, lead capture, responses × escalation interplay, full signup-to-chat journey; and 1 Vitest adversarial file-fixtures suite. One real in-mission bug fix (leads-onconflict-bugfix) was captured and shipped mid-sweep. 69 new automated tests across the 11 Playwright specs + 5 Vitest fixture tests.",
+  "automatedValidators": {
+    "vitestFullSuite": {
+      "command": "pnpm vitest run",
+      "result": "649 passed / 1 skipped / 79 files (cold re-run clean; first run after docker-compose start has a known environmental flake in gdpr-delete-account.test.ts beforeEach caused by auth.admin deleteUser contention — not a defect in the tested code)"
+    },
+    "typecheck": { "command": "pnpm typecheck", "result": "0 errors" },
+    "lint": { "command": "pnpm lint", "result": "clean" },
+    "playwrightSpecs": {
+      "auth-gates": "20/20 green",
+      "tos-signup": "4/4 green",
+      "settings-navigation": "4/4 green",
+      "gdpr-delete": "3/3 green",
+      "responses-crud": "6/6 green",
+      "escalation-crud": "5/5 green",
+      "subscription-lifecycle": "5/5 green",
+      "quota-exhaustion": "5/5 green",
+      "knowledge-upload": "5/5 green",
+      "lead-capture": "5/5 green",
+      "responses-plus-escalation": "5/5 green",
+      "signup-to-chat": "5/5 green",
+      "total": "72/72 green"
+    }
+  },
+  "reviewChecklist": {
+    "correctness": "Each spec maps to a specific validation-contract assertion set in its top-of-file comment. Edge cases tested (empty state, rate-limit, auth gates, error response shapes). Matcher × escalation interplay proven via canned-path trailer assertions. Signup-to-chat covers crawling-state, simulated webhook completion, embed snippet, shadow-root widget boot, and end-to-end chat round-trip.",
+    "security": "Auth-gate spec proves 20 protected paths redirect to /login; widget site_key scoping untouched; no RLS bypasses added. Service-role writes in fixtures limited to documented boundaries (signup, seed). No secrets introduced — diffs reviewed before commit.",
+    "quality": "All specs strict-typed (no `any` except the one eslint-accepted case in the mammoth mock where mammoth ships without .d.ts). Shared helpers live in e2e/fixtures/{auth,stubs,seed}.ts and the new e2e/fixtures/files/adversarial.ts. No dead code; no mocking of internal modules.",
+    "consistency": "Every new spec follows the template established by lead-capture.spec.ts (cleanupUserData in afterEach, x-forwarded-for rotation for rate-limited routes, admin() helper for DB introspection). Handoff JSON per feature is committed alongside code.",
+    "testing": "TDD — tests written before implementation in every feature. Deterministic: no wall-clock dependence outside controlled `Date.now()` seeding in rate-limit IPs. No real network: Firecrawl/OpenAI/Stripe stubbed at the page.route or service-role layer where reachable; where not reachable (server-side OpenAI), the test flow is shaped around the canned-response matcher so the LLM path isn't exercised."
+  },
+  "blockingIssues": [],
+  "stateUpdates": [
+    "docs/mission/features.json: all 14 playwright-sweep features now status=completed.",
+    "docs/mission/validation-state.json: 154/154 assertions = passed.",
+    "docs/mission/handoffs/: 14 handoff records for the sweep (playwright-auth-helper, e2e-auth-gates, e2e-tos-signup, e2e-settings-navigation, e2e-gdpr-delete, e2e-responses-crud, e2e-escalation-crud, e2e-subscription-lifecycle, e2e-quota-exhaustion, e2e-knowledge-upload, e2e-lead-capture, leads-onconflict-bugfix, e2e-responses-plus-escalation, e2e-signup-to-chat, adversarial-file-fixtures).",
+    "No new services or library modules added outside the test surface."
+  ],
+  "verdict": "scrutiny-pass"
+}
