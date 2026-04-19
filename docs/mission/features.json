@@ -850,7 +850,7 @@
         "Check codecov.io for coverage report"
       ],
       "fulfills": ["VAL-HARD-011"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "fresh-start-wipe-script",

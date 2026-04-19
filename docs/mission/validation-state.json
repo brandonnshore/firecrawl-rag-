@@ -144,7 +144,7 @@
     "VAL-HARD-008": { "status": "passed", "feature": "transactional-email", "note": "maybeSendQuotaWarning fires once per period_start when used crosses ceil(limit*0.8); ledger backstops rare cap jumps." },
     "VAL-HARD-009": { "status": "passed", "feature": "transactional-email", "note": "handleInvoicePaymentFailed fires sendPaymentFailedEmail with period=invoice.id so retried webhooks don't double-send." },
     "VAL-HARD-010": { "status": "passed", "feature": "sentry-integration", "note": "captureApiError(err, { userId, requestId }) tags environment/user_id/request_id via withScope. Init gated on SENTRY_DSN so dev/CI stay silent. Actual dashboard evidence deferred to Brandon's launch config." },
-    "VAL-HARD-011": { "status": "pending" },
+    "VAL-HARD-011": { "status": "passed", "feature": "ci-workflow", "note": "Three-job test.yml (static → unit → e2e) with concurrency cancel + frozen-lockfile + artifact upload. YAML invariants pinned by 10-test suite. Live PR run validation pending first PR push." },
 
     "VAL-CROSS-001": { "status": "pending" },
     "VAL-CROSS-002": { "status": "pending" },

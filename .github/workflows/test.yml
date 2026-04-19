@@ -29,18 +29,20 @@ jobs:
   unit:
     name: vitest + coverage
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=5
+    needs: static
+    env:
+      # Placeholders: modules that instantiate SDKs at import time need
+      # values. Tests that require a real stack (RLS / Stripe webhook
+      # integration) self-skip via hasSupabaseTestEnv() when the TEST_*
+      # vars are absent, which is the case on GitHub runners.
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key
+      OPENAI_API_KEY: sk-test-placeholder
+      FIRECRAWL_API_KEY: fc-test-placeholder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_test_placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -51,7 +53,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:coverage
+      - name: vitest
+        run: pnpm test:coverage
       - name: upload coverage
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v4
@@ -62,6 +65,7 @@ jobs:
   e2e:
     name: playwright
     runs-on: ubuntu-latest
+    needs: static
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -83,7 +87,7 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
         run: pnpm test:e2e
       - name: upload playwright report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report

@@ -1,0 +1,42 @@
+{
+  "feature": "ci-workflow",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-HARD-011"],
+  "whatWasImplemented": [
+    ".github/workflows/test.yml — finalized the M1 skeleton. Three jobs: (1) static = lint + typecheck; (2) unit = pnpm test:coverage with env placeholders so SDK-at-import-time modules don't crash, uploads coverage to Codecov; (3) e2e = Playwright smoke with playwright-report artifact on failure. Both unit + e2e depend on static so they skip when lint/typecheck fail (fast feedback on trivial regressions).",
+    "Workflow triggers on pull_request and push-to-main.",
+    "Concurrency group per ref cancels in-progress runs on new pushes — protects CI minutes on rapid rebases.",
+    "frozen-lockfile enforced so CI fails when pnpm-lock.yaml is out of sync.",
+    "src/__tests__/ci-workflow.test.ts — 10 tests asserting the workflow file's invariants (job names, commands, artifact upload, codecov step, concurrency). Catches accidental regressions in the YAML that aren't caught by GitHub's own linter until the workflow actually runs."
+  ],
+  "whatWasLeftUndone": [
+    "Live GitHub Actions run on a PR — requires pushing the workflow and opening a PR. Brandon to observe the first PR-triggered run. Success criterion is the three checks appearing on the PR (static, unit, e2e) and the PR being blocked until they pass.",
+    "Branch protection rule gating main on these checks — repo settings task, not a code change.",
+    "Supabase CLI + stripe-mock as CI services. Today integration tests self-skip via hasSupabaseTestEnv() when TEST_* vars are absent. Adding real CI services would unlock the RLS / Stripe webhook integration suite. Parked as a follow-on after Brandon validates the base workflow.",
+    "Codecov badge in README — aesthetic polish; defer to docs sweep."
+  ],
+  "discoveredIssues": [
+    "The M1 skeleton didn't have env var placeholders for the unit job, so vitest would have failed on imports that touch the Stripe SDK or @sentry/nextjs. Added SDK-level placeholders.",
+    "Added needs: static to unit and e2e so broken TS/lint doesn't waste CI minutes running the full vitest suite."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 639 passing / 1 skipped / 77 files (+10 ci-workflow tests). Typecheck + lint clean.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "grep concurrency cancel-in-progress in .github/workflows/test.yml", "expected": "present so stacked pushes cancel each other", "observed": "pass" },
+      { "action": "grep codecov/codecov-action", "expected": "present in unit job", "observed": "pass" },
+      { "action": "grep actions/upload-artifact", "expected": "present in e2e job (on failure only)", "observed": "pass" },
+      { "action": "pnpm install --frozen-lockfile present in all three jobs", "expected": "CI fails on lockfile drift", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    ".github/workflows/test.yml (rewrote — env vars + needs:static + concurrency)",
+    "src/__tests__/ci-workflow.test.ts (created — 10 tests)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-HARD-011 passed)",
+    "docs/mission/handoffs/ci-workflow.json (created)"
+  ]
+}
