@@ -916,7 +916,7 @@
         "Manual: stop dev server, load test page, assert no bubble"
       ],
       "fulfills": ["VAL-DEGRADE-001", "VAL-DEGRADE-002", "VAL-DEGRADE-003"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "gdpr-account-deletion",

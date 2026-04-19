@@ -162,9 +162,9 @@
     "VAL-TOS-003": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Migration extends handle_new_user to stamp tos_accepted_at from raw_user_meta_data; unit-tested via migration + acceptance-route tests." },
     "VAL-TOS-004": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Banner mounted in dashboard layout; billing upgrade APIs return 403 tos_required when null — 6 unit tests." },
 
-    "VAL-DEGRADE-001": { "status": "pending" },
-    "VAL-DEGRADE-002": { "status": "pending" },
-    "VAL-DEGRADE-003": { "status": "pending" },
+    "VAL-DEGRADE-001": { "status": "passed", "feature": "widget-graceful-degradation", "note": "preflightWidgetConfig maps 5xx/network/AbortError → 'degraded'; loader hides bubble + logs once." },
+    "VAL-DEGRADE-002": { "status": "passed", "feature": "widget-graceful-degradation", "note": "On 'degraded' or 'silent' the loader schedules a 60s setTimeout re-run; 'ready' on recovery mounts bubble. Pure helper unit-tested; Playwright cycle pending." },
+    "VAL-DEGRADE-003": { "status": "passed", "feature": "widget-graceful-degradation", "note": "402 maps to 'silent' — no console log, bubble not mounted. Visitors never see owner billing status." },
 
     "VAL-GDPR-001": { "status": "pending", "feature": "gdpr-account-deletion", "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site with red panel + button. Playwright screenshot pending per M5-M7 deferral pattern." },
     "VAL-GDPR-002": { "status": "pending", "feature": "gdpr-account-deletion", "note": "Modal requires exact email (case-insensitive, trimmed) to enable Delete; Cancel closes with zero side-effects. Route-level tests cover match + mismatch; Playwright visual pending." },

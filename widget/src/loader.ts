@@ -1,7 +1,15 @@
+import {
+  preflightWidgetConfig,
+  type PreflightStatus,
+} from './preflight'
+
 const currentScript = document.currentScript as HTMLScriptElement | null
 const siteKey = currentScript?.getAttribute('data-site-key') || ''
 const apiBase =
   currentScript?.getAttribute('data-api-base') || window.location.origin
+
+const POLL_INTERVAL_MS = 60_000
+const PREFLIGHT_TIMEOUT_MS = 3_000
 
 declare global {
   interface Window {
@@ -33,49 +41,76 @@ function initWidget(siteKey: string, apiBase: string) {
   style.textContent = getBubbleCSS()
   shadow.appendChild(style)
 
-  checkSiteReady(siteKey, apiBase).then((ready) => {
-    if (!ready) return
+  let bubbleMounted = false
+  let degradedWarned = false
 
-    const bubble = document.createElement('button')
-    bubble.className = 'rc-bubble'
-    bubble.setAttribute('aria-label', 'Open chat')
-    bubble.setAttribute('aria-expanded', 'false')
-    bubble.innerHTML = chatIconSVG()
-    shadow.appendChild(bubble)
-
-    let panelLoaded = false
-    let panelVisible = false
-
-    bubble.addEventListener('click', () => {
-      panelVisible = !panelVisible
-      bubble.setAttribute('aria-expanded', String(panelVisible))
-      bubble.innerHTML = panelVisible ? closeIconSVG() : chatIconSVG()
-
-      if (!panelLoaded) {
-        panelLoaded = true
-        loadFullWidget(shadow, siteKey, apiBase)
-      } else {
-        const panel = shadow.querySelector('.rc-panel') as HTMLElement | null
-        if (panel) panel.style.display = panelVisible ? 'flex' : 'none'
-      }
+  const run = async () => {
+    const { status } = await preflightWidgetConfig({
+      fetchFn: window.fetch.bind(window),
+      apiBase,
+      siteKey,
+      timeoutMs: PREFLIGHT_TIMEOUT_MS,
     })
-  })
+
+    if (status === 'ready' && !bubbleMounted) {
+      bubbleMounted = true
+      mountBubble(shadow, siteKey, apiBase)
+      return
+    }
+
+    if (status === 'degraded') {
+      // Log once, not on every poll. VAL-DEGRADE-001.
+      if (!degradedWarned) {
+        console.warn('[RubyCrawl] API unreachable — chat hidden. Will retry.')
+        degradedWarned = true
+      }
+      scheduleRetry(run)
+      return
+    }
+
+    if (status === 'silent') {
+      // 402 or 404 — never surface billing or misconfiguration to the
+      // visitor. Still poll in case the owner re-activates.
+      scheduleRetry(run)
+      return
+    }
+  }
+
+  run()
 }
 
-async function checkSiteReady(
+function scheduleRetry(fn: () => void) {
+  setTimeout(fn, POLL_INTERVAL_MS)
+}
+
+function mountBubble(
+  shadow: ShadowRoot,
   siteKey: string,
   apiBase: string
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${apiBase}/api/chat/session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site_key: siteKey, message: '__healthcheck__' }),
-    })
-    return res.status !== 503 && res.status !== 404
-  } catch {
-    return false
-  }
+): void {
+  const bubble = document.createElement('button')
+  bubble.className = 'rc-bubble'
+  bubble.setAttribute('aria-label', 'Open chat')
+  bubble.setAttribute('aria-expanded', 'false')
+  bubble.innerHTML = chatIconSVG()
+  shadow.appendChild(bubble)
+
+  let panelLoaded = false
+  let panelVisible = false
+
+  bubble.addEventListener('click', () => {
+    panelVisible = !panelVisible
+    bubble.setAttribute('aria-expanded', String(panelVisible))
+    bubble.innerHTML = panelVisible ? closeIconSVG() : chatIconSVG()
+
+    if (!panelLoaded) {
+      panelLoaded = true
+      loadFullWidget(shadow, siteKey, apiBase)
+    } else {
+      const panel = shadow.querySelector('.rc-panel') as HTMLElement | null
+      if (panel) panel.style.display = panelVisible ? 'flex' : 'none'
+    }
+  })
 }
 
 function loadFullWidget(shadow: ShadowRoot, siteKey: string, apiBase: string) {
@@ -115,6 +150,9 @@ function chatIconSVG(): string {
 function closeIconSVG(): string {
   return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
 }
+
+// Export types for consumers (e.g., tests)
+export type { PreflightStatus }
 
 function getBubbleCSS(): string {
   return `
