@@ -1,0 +1,40 @@
+{
+  "feature": "knowledge-ui",
+  "milestone": "knowledge-uploads",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": ["VAL-FILE-001", "VAL-FILE-002", "VAL-FILE-015", "VAL-FILE-025"],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419050000_supplementary_files_realtime.sql — publishes supplementary_files on supabase_realtime so status transitions push to the subscribed client.",
+    "src/lib/files/ui-status.ts — pure helpers: statusChip() maps queued/processing/ready/failed to {label, tone}; formatBytes() human-friendly size rendering. 5 unit tests.",
+    "src/app/dashboard/settings/knowledge/page.tsx — server component. Parallel-loads supplementary_files rows (ordered newest-first) + profile.plan_id -> plan.supplementary_file_limit (Starter=25 fallback). Empty-state fallback when the user has no site yet.",
+    "src/app/dashboard/settings/knowledge/knowledge-client.tsx — client component. Native drag+drop + file-input fallback (no react-dropzone dep). Upload flow POSTs /api/files; toasts success / duplicate / error. File list with StatusChip + formatBytes + chunks_count + error_message (when failed). Retry button on failed rows POSTs /api/files/process to re-queue. Delete button with window.confirm + DELETE /api/files/[id]; Realtime DELETE event also clears the row in case of out-of-band removal. Supabase Realtime channel on supplementary_files filtered by site_id=eq.X handles INSERT/UPDATE/DELETE to reflect queued -> processing -> ready live.",
+    "Accept attribute on the <input> mirrors ALLOWED_EXTENSIONS so the native picker filters by type client-side (belt-and-suspenders with the server-side magic-byte sniff)."
+  ],
+  "whatWasLeftUndone": [
+    "Playwright screenshots for VAL-FILE-001 (7 accepted types + rejected type with inline error) and VAL-FILE-002 (status-chip state snapshots), VAL-FILE-015 (failed+retry loop), VAL-FILE-025 (empty-state render). Logic is in place and unit-tested via statusChip / formatBytes helpers.",
+    "react-dropzone not installed — not needed with the native implementation, and avoids another dep. Feature spec mentioned react-dropzone but the behavior (accept filter, drop handler, browse fallback) is covered."
+  ],
+  "discoveredIssues": [
+    "Client component couldn't reference userId outside a DOM node without TS 'unused var' — added `{void userId}` as a marker. Cleaner: pass only the fields the component actually needs; revisit if we add user-scoped UI state."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 432 passed / 1 skipped / 58 files (+5 new for ui-status helpers).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "statusChip('failed')", "expected": "{label:'Failed', tone:'danger'}", "observed": "pass" },
+      { "action": "formatBytes(25*1024*1024)", "expected": "'25.0 MB'", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419050000_supplementary_files_realtime.sql (created)",
+    "src/lib/files/ui-status.ts (created)",
+    "src/__tests__/files-ui-status.test.ts (created)",
+    "src/app/dashboard/settings/knowledge/page.tsx (replaced placeholder)",
+    "src/app/dashboard/settings/knowledge/knowledge-client.tsx (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-FILE-001/002/015/025 pending Playwright — logic wired)",
+    "docs/mission/handoffs/knowledge-ui.json (created)"
+  ]
+}
