@@ -1,0 +1,38 @@
+{
+  "feature": "fresh-start-wipe-script",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-CROSS-010"],
+  "whatWasImplemented": [
+    "scripts/reset-my-data.sql — psql script that takes :user_id and, transactionally: (1) aborts on NULL/empty via a DO $$ raise; (2) verifies the user actually exists in profiles (no typo silent no-op); (3) deletes sites which cascades pages/embeddings/leads/conversations/chat_sessions/supplementary_files/custom_responses/escalation_rules; (4) deletes sent_emails rows directly; (5) resets usage_counters to zero and rolls the billing window by 1 month; (6) clears billing linkage on profiles (stripe_customer_id/stripe_subscription_id/subscription_status='trialing') WITHOUT deleting the profiles row. This is distinct from GDPR delete — Brandon can still log in after.",
+    "Commented header notes the difference between 'fresh start' and 'GDPR erase' so whoever reaches for this next doesn't accidentally use it for account deletion.",
+    "src/__tests__/reset-my-data.test.ts — 3 integration tests against real local Supabase. Seeds user A + user B with parallel data across sites/leads/conversations/responses/rules/usage_counters/sent_emails. Runs the script on user A. Asserts: (a) A's counts are 0 + profile still present + billing fields cleared; (b) B's data is bitwise untouched including counters; (c) a non-existent UUID raises 'not found in profiles' — the safety gate actually fires."
+  ],
+  "whatWasLeftUndone": [
+    "DO NOT RUN against Brandon's real account without his explicit OK, per the mission AGENTS.md escalation rule. The script + tests are in place; running requires Brandon to invoke it.",
+    "Wiring into a convenience npm script (e.g., pnpm reset:me) — skipped so the psql invocation stays explicit and the UUID is never cached anywhere.",
+    "Storage-bucket purge for Brandon's user folder. Currently handled implicitly by the M8F5 account-deletion flow; the fresh-start script only touches relational rows. Brandon can drop knowledge-files/<user>/* manually via Supabase Studio if needed, or switch to /api/account for full erase."
+  ],
+  "discoveredIssues": [
+    "pg's prepared-statement path refuses multi-statement scripts. The test's runReset helper pre-substitutes :user_id in JS (after a UUID shape check) and calls pool.query with a single string. Production usage via psql or `supabase db execute` supports the :user_id bind natively and is the recommended path.",
+    "sites → * cascade covers custom_responses + escalation_rules because their FK is to sites(id) ON DELETE CASCADE. So a single DELETE FROM sites wipes the site-scoped surface area without needing per-table DELETEs. Explicit per-table DELETE would still be safer if a future migration adds a user_id-keyed table that doesn't go through sites — that's why sent_emails stays explicit here."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 642 passing / 1 skipped / 78 files (+3 reset-my-data tests). Typecheck + lint clean.",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "runReset(userA) with both users seeded", "expected": "A: 0 sites/leads/convos/responses/rules/sent_emails, counters zero'd, profile preserved, stripe_customer_id null", "observed": "pass" },
+      { "action": "countAndSnapshot(userB) after reset of A", "expected": "user B all-equal to pre-reset (1/1/1/1/1/1/counter 99)", "observed": "pass" },
+      { "action": "runReset('00000000-0000-0000-0000-000000000000')", "expected": "throw 'not found in profiles'", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "scripts/reset-my-data.sql (created)",
+    "src/__tests__/reset-my-data.test.ts (created — 3 tests)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-CROSS-010 passed)",
+    "docs/mission/handoffs/fresh-start-wipe-script.json (created)"
+  ]
+}

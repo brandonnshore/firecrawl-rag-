@@ -869,7 +869,7 @@
         "pnpm vitest run src/__tests__/reset-my-data.test.ts (seeded 2 users, run script for one, assert the other is intact)"
       ],
       "fulfills": ["VAL-CROSS-010"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "cross-area-e2e-journeys",

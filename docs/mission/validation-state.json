@@ -155,7 +155,7 @@
     "VAL-CROSS-007": { "status": "pending" },
     "VAL-CROSS-008": { "status": "pending" },
     "VAL-CROSS-009": { "status": "pending" },
-    "VAL-CROSS-010": { "status": "pending" },
+    "VAL-CROSS-010": { "status": "passed", "feature": "fresh-start-wipe-script", "note": "Integration test seeds 2 users, runs scripts/reset-my-data.sql against one, asserts all site-scoped + user-scoped rows zero for that user with profile + usage_counters row preserved; other user untouched. Safety gate on NULL + missing user_id." },
 
     "VAL-TOS-001": { "status": "pending", "feature": "tos-acceptance-signup", "note": "Checkbox disables submit; handleSubmit returns early without network if bypassed. Playwright screenshot of disabled state pending." },
     "VAL-TOS-002": { "status": "pending", "feature": "tos-acceptance-signup", "note": "<Link target='_blank' rel='noopener'> to /terms wired; Playwright click-to-new-tab test pending." },
