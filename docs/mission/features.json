@@ -787,7 +787,7 @@
         "pnpm vitest run src/__tests__/sentry-tags.test.ts"
       ],
       "fulfills": ["VAL-HARD-010"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "legal-pages",

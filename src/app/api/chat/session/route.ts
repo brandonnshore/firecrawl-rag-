@@ -12,6 +12,7 @@ import {
   type ResponseRule,
 } from '@/lib/chat/response-matcher'
 import type { EscalationRuleLite } from '@/lib/chat/session-store'
+import { captureApiError, resolveRequestId } from '@/lib/sentry/capture'
 import { openai } from '@ai-sdk/openai'
 import { embed } from 'ai'
 import crypto from 'crypto'
@@ -263,6 +264,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ sessionId }, { headers: corsHeaders })
   } catch (err) {
     console.error('Chat session error:', err)
+    captureApiError(err, { requestId: resolveRequestId(request) })
     return Response.json(
       { error: 'Internal error' },
       { status: 500, headers: corsHeaders }

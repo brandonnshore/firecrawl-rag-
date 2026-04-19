@@ -19,6 +19,7 @@
     "@ai-sdk/openai": "^3.0.52",
     "@ai-sdk/react": "^3.0.161",
     "@mendable/firecrawl-js": "^4.18.2",
+    "@sentry/nextjs": "^10.49.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
     "@upstash/ratelimit": "^2.0.8",

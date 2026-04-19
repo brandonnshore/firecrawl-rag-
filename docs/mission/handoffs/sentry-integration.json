@@ -1,0 +1,48 @@
+{
+  "feature": "sentry-integration",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-HARD-010"],
+  "whatWasImplemented": [
+    "package.json — @sentry/nextjs 10.49.0 added.",
+    "sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts — guarded init that no-ops when SENTRY_DSN is absent so dev/CI never emit events. tracesSampleRate = 0.1 in production, 0 elsewhere.",
+    "instrumentation.ts — Next.js register() dispatches to the right runtime config and re-exports captureRequestError so Next's built-in error hook forwards to Sentry.",
+    "next.config.ts — wrapped with withSentryConfig when DSN is present. tunnelRoute='/monitoring' bypasses ad-blockers; silent in non-CI builds; source-map upload gated on SENTRY_AUTH_TOKEN.",
+    "src/lib/sentry/capture.ts — captureApiError(err, { userId, requestId }) uses Sentry.withScope to tag every captured event with environment (VERCEL_ENV || NODE_ENV || 'development'), user_id (omitted when anonymous), request_id (caller-supplied or generated). resolveRequestId(request) pulls from x-request-id → x-vercel-id → req-<uuid> fallback.",
+    "src/app/api/chat/session/route.ts — demonstration callsite: catch block now calls captureApiError with the resolved request id, so a handled exception in the widget path produces a tagged Sentry event (VAL-HARD-010).",
+    "src/__tests__/sentry-tags.test.ts — 8 tests: tag defaults, VERCEL_ENV override, user_id omission for anonymous callers, request_id generation fallback, resolveRequestId header priority (x-request-id → x-vercel-id → uuid fallback)."
+  ],
+  "whatWasLeftUndone": [
+    "Actual Sentry test-project DSN exchange: the test mocks @sentry/nextjs so no network call happens. Validating the 'event lands in Sentry' end of VAL-HARD-010 requires SENTRY_DSN in .env.local + visiting the dashboard — parked with Brandon as a one-time launch task (same pattern as M8F1 Upstash env).",
+    "Other API routes (crawl/start, crawl/webhook, files, leads, stripe/webhook) still use console.error only. The helper is in place; expanding call sites is a follow-on and not required for the assertion."
+  ],
+  "discoveredIssues": [
+    "Next.js 16 instrumentation.ts is the modern path; sentry.server.config.ts at the project root is still re-exported from it, preserving Sentry's wizard-generated convention."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 576 passing / 1 skipped / 69 files (+8).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "captureApiError(err, { userId:'u', requestId:'r' })", "expected": "Sentry.withScope called with tags { environment, user_id:'u', request_id:'r' }; captureException(err) called", "observed": "pass" },
+      { "action": "captureApiError(err, { requestId:'r' })", "expected": "user_id tag NOT set (anonymous-safe)", "observed": "pass" },
+      { "action": "resolveRequestId(new Request(_, { headers:{'x-vercel-id':'iad1::abc'}}))", "expected": "'iad1::abc'", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "package.json (modified — @sentry/nextjs)",
+    "pnpm-lock.yaml (modified)",
+    "instrumentation.ts (created)",
+    "next.config.ts (modified — withSentryConfig gated on DSN)",
+    "sentry.client.config.ts (created)",
+    "sentry.server.config.ts (created)",
+    "sentry.edge.config.ts (created)",
+    "src/lib/sentry/capture.ts (created)",
+    "src/app/api/chat/session/route.ts (wired captureApiError into catch)",
+    "src/__tests__/sentry-tags.test.ts (created — 8 tests)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-HARD-010 passed)",
+    "docs/mission/handoffs/sentry-integration.json (created)"
+  ]
+}
