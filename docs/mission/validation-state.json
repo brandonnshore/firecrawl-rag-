@@ -673,14 +673,14 @@
       "note": "402 maps to 'silent' \u2014 no console log, bubble not mounted. Visitors never see owner billing status."
     },
     "VAL-GDPR-001": {
-      "status": "pending",
-      "feature": "gdpr-account-deletion",
-      "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site with red panel + button. Playwright screenshot pending per M5-M7 deferral pattern."
+      "status": "passed",
+      "feature": "e2e-gdpr-delete",
+      "note": "Playwright gdpr-delete.spec.ts 3/3 green"
     },
     "VAL-GDPR-002": {
-      "status": "pending",
-      "feature": "gdpr-account-deletion",
-      "note": "Modal requires exact email (case-insensitive, trimmed) to enable Delete; Cancel closes with zero side-effects. Route-level tests cover match + mismatch; Playwright visual pending."
+      "status": "passed",
+      "feature": "e2e-gdpr-delete",
+      "note": "Playwright gdpr-delete.spec.ts 3/3 green"
     },
     "VAL-GDPR-003": {
       "status": "passed",

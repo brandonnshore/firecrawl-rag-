@@ -1439,7 +1439,7 @@
         "VAL-GDPR-001",
         "VAL-GDPR-002"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "adversarial-file-fixtures",
