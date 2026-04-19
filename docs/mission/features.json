@@ -723,7 +723,7 @@
         "VAL-ESCAL-001", "VAL-ESCAL-002", "VAL-ESCAL-003",
         "VAL-ESCAL-004", "VAL-ESCAL-005"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "escalation-widget-actions",

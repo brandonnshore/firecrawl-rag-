@@ -1,0 +1,47 @@
+{
+  "feature": "escalation-ui-dashboard",
+  "milestone": "escalation",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-ESCAL-001", "VAL-ESCAL-002", "VAL-ESCAL-003",
+    "VAL-ESCAL-004", "VAL-ESCAL-005"
+  ],
+  "whatWasImplemented": [
+    "src/app/api/escalation-rules/route.ts — POST creates a rule. validateRuleBody() enforces rule_type enum, action enum, per-type config shape (turn_count => turns int >= 1; keyword => non-empty keywords string[]; intent => non-empty intents string[]), and per-action action_config (calendly_link => https URL; show_form => non-empty fields string[]).",
+    "src/app/api/escalation-rules/[id]/route.ts — PATCH partial update. When any structural field is touched, merges with the existing DB row before re-validating so partial edits preserve invariants (e.g. changing action to calendly_link while action_config is empty => 400). DELETE pre-lookups so RLS-hidden rows return 404 deterministically.",
+    "src/app/api/escalation-rules/reorder/route.ts — POST {rule_ids: [top, ..., bottom]}. Assigns descending priorities (length..1) so the DB ORDER BY priority DESC, created_at ASC matches the UI order after the write. RLS hides invalid ids silently, so a malformed list can't corrupt other users' rules.",
+    "src/app/dashboard/settings/escalation/page.tsx — server component. Fetches rules ordered by priority DESC, created_at ASC (matches runtime matcher) and hands off to escalation-client. Empty-site fallback mirrors the M5/M6 pattern.",
+    "src/app/dashboard/settings/escalation/escalation-client.tsx — client component. Empty state with primary CTA; rule list rendered as drag-droppable cards (HTML5 draggable + ondragover + ondrop); EditModal with conditional config fields (turn_count shows a number input; keyword/intent share a ChipInput; calendly_link shows a URL input; show_form shows a ChipInput for field names). DraftRule is a wide typed view over config + action_config so switching trigger / action types preserves UI state across toggles. Reorder fires POST /api/escalation-rules/reorder + shows a toast; UI priorities are updated locally without a refetch.",
+    "src/__tests__/escalation-api.test.ts — 18 unit tests: POST 401/400s across rule_type/action/turns/keywords/intents/calendly_url/show_form_fields, PLUS three happy-path creates (turn_count+ask_email for VAL-ESCAL-002, keyword+ask_email for VAL-ESCAL-003, intent+handoff for VAL-ESCAL-004). PATCH partial + validated-merge failure. DELETE 404/200. Reorder 401/400/happy-path (priorities: top=N, ..., bottom=1)."
+  ],
+  "whatWasLeftUndone": [
+    "Playwright evidence for VAL-ESCAL-001 (empty state visual), VAL-ESCAL-002/003/004 (create-modal → rule-appears screenshot), VAL-ESCAL-005 (drag-drop screenshot + DB priority check). Logic is wired and API-tested; defers to the Playwright sweep.",
+    "The drag handle is a plain ⋮⋮ glyph using native HTML5 drag. Not the prettiest but works without a drag-drop library. Revisit in polish if desired."
+  ],
+  "discoveredIssues": [
+    "Supabase's PostgrestFilterBuilder is thenable but not a real Promise<>; typecheck rejects Array<Promise<unknown>>. Cast as PromiseLike<{error}> for the reorder bulk-update array — Promise.all() accepts thenables just fine."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 543 passed / 1 skipped / 66 files (+18 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "POST turn_count + ask_email", "expected": "201 with rule row", "observed": "pass" },
+      { "action": "POST calendly_link with empty action_config", "expected": "400 calendly_url_required", "observed": "pass" },
+      { "action": "PATCH action→calendly_link without updating action_config", "expected": "400 calendly_url_required (merge catches the invariant)", "observed": "pass" },
+      { "action": "Reorder [a,b,c]", "expected": "a.priority=3, b.priority=2, c.priority=1", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/api/escalation-rules/route.ts (created)",
+    "src/app/api/escalation-rules/[id]/route.ts (created)",
+    "src/app/api/escalation-rules/reorder/route.ts (created)",
+    "src/app/dashboard/settings/escalation/page.tsx (replaced placeholder)",
+    "src/app/dashboard/settings/escalation/escalation-client.tsx (created)",
+    "src/__tests__/escalation-api.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-ESCAL-001..005 pending-with-note)",
+    "docs/mission/handoffs/escalation-ui-dashboard.json (created)"
+  ]
+}
