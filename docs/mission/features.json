@@ -475,7 +475,7 @@
         "pnpm vitest run src/__tests__/supplementary-files-schema.test.ts"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "file-upload-api-limits",

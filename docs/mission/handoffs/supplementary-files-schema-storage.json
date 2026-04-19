@@ -1,0 +1,35 @@
+{
+  "feature": "supplementary-files-schema-storage",
+  "milestone": "knowledge-uploads",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419030000_supplementary_files.sql — supplementary_files table with FK cascade from sites, bytes CHECK > 0, status CHECK enum, chunks_count CHECK >= 0, UNIQUE(site_id, content_hash) for DB-level dedupe.",
+    "Indexes on site_id and status for list + filter queries from the UI.",
+    "RLS: two owner-scoped policies — SELECT and DELETE — both resolve through sites.user_id. INSERT + UPDATE remain service-role-only so the upload API fully controls row lifecycle.",
+    "Forward-extension: added embeddings.source_type CHECK ('crawl','file') default 'crawl' and embeddings.file_id uuid FK with ON DELETE CASCADE. Partial index on file_id (WHERE NOT NULL) keeps the crawl-only index size tight. These columns wire up in M5F3 parser pipeline + M5F4 delete cascade.",
+    "Storage: knowledge-files bucket created (private). Three storage.objects policies — SELECT, INSERT, DELETE — all gated by `(storage.foldername(name))[1] = auth.uid()::text` so users can only touch objects under their own user_id folder. Service role bypasses as usual.",
+    "src/__tests__/supplementary-files-schema.test.ts — 10 integration tests: insert happy path, bytes/status CHECK failures, same-site dedupe conflict, cross-site hash allowed, owner RLS SELECT, cross-user SELECT blocked, anon zero rows, ON DELETE CASCADE from sites, Storage bucket presence."
+  ],
+  "whatWasLeftUndone": "Deep Storage-RLS path tests (user A attempting to upload into user B's folder via the Supabase client) defer to integration — this feature covers the policy presence + table contract; M5F2 exercises the upload path under service-role + user-session.",
+  "discoveredIssues": [
+    "Storage bucket test has a two-tier fallback: querying `.from('buckets')` surfaces nothing on the public schema (buckets lives in the storage schema). The test falls through to a direct pg SELECT via the connection pool — both paths are OK; the fallback runs in practice."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 359 passed / 1 skipped / 51 files (+10 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "INSERT duplicate (site_id, content_hash)", "expected": "error 23505 unique_violation", "observed": "pass" },
+      { "action": "DELETE parent site", "expected": "child supplementary_files rows vanish via ON DELETE CASCADE", "observed": "pass" },
+      { "action": "storage.buckets SELECT for 'knowledge-files'", "expected": "one row, public=false", "observed": "pass (via pg fallback)" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419030000_supplementary_files.sql (created)",
+    "src/__tests__/supplementary-files-schema.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/handoffs/supplementary-files-schema-storage.json (created)"
+  ]
+}
