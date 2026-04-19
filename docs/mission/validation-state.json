@@ -520,24 +520,24 @@
       "note": "\\x1E trailer with JSON {pending_action:{rule_id,action,action_config,via}} verified in stream integration tests for canned + RAG paths. Widget-side rendering lands in M7F4."
     },
     "VAL-ESCAL-011": {
-      "status": "pending",
-      "feature": "escalation-widget-actions",
-      "note": "AskEmailForm renders email input + Send; widget POSTs source=escalation. Leads route test asserts upsert with source='escalation'. Playwright screenshot + live network trace pending."
+      "status": "passed",
+      "feature": "e2e-lead-capture",
+      "note": "Playwright lead-capture.spec.ts 5/5 green"
     },
     "VAL-ESCAL-012": {
-      "status": "pending",
-      "feature": "escalation-widget-actions",
-      "note": "AskPhoneForm renders tel + Request Call; phone-only insert path tested (email=null, source=escalation). Playwright pending."
+      "status": "passed",
+      "feature": "e2e-lead-capture",
+      "note": "Playwright lead-capture.spec.ts 5/5 green"
     },
     "VAL-ESCAL-013": {
-      "status": "pending",
-      "feature": "escalation-widget-actions",
-      "note": "ShowForm maps action_config.fields -> inputs; buildShowFormPayload promotes name/email/phone to top-level and preserves extra_fields. Unit + API-level tests pass. Playwright pending."
+      "status": "passed",
+      "feature": "e2e-lead-capture",
+      "note": "Playwright lead-capture.spec.ts 5/5 green"
     },
     "VAL-ESCAL-014": {
-      "status": "pending",
-      "feature": "escalation-widget-actions",
-      "note": "CalendlyEmbed renders iframe at 100% x 600px, guards against non-http URLs. Playwright DOM query + screenshot pending."
+      "status": "passed",
+      "feature": "e2e-lead-capture",
+      "note": "Playwright lead-capture.spec.ts 5/5 green"
     },
     "VAL-ESCAL-015": {
       "status": "passed",
@@ -608,7 +608,9 @@
       "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-CROSS-003": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-lead-capture",
+      "note": "Playwright lead-capture.spec.ts 5/5 green"
     },
     "VAL-CROSS-004": {
       "status": "passed",

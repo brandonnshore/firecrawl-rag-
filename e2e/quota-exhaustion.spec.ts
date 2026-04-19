@@ -36,7 +36,7 @@ async function ensurePlans() {
       display_name: 'Pro',
       price_cents: 4999,
       monthly_message_limit: 7500,
-      monthly_crawl_page_limit: 2000,
+      monthly_crawl_page_limit: 1500,
       supplementary_file_limit: 100,
       stripe_price_id: null,
     },

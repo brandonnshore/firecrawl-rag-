@@ -1,0 +1,26 @@
+{
+  "feature": "leads-onconflict-bugfix",
+  "milestone": "playwright-sweep",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "context": "Surfaced while writing M9F11 e2e-lead-capture Playwright specs.",
+  "bug": {
+    "summary": "POST /api/leads with an email body fails with 500 Failed to save lead on every request.",
+    "rootCause": "The route upserts with onConflict:'site_id,email'. In M7F4 the leads_site_email_unique constraint was replaced with a partial unique index (leads_site_email_unique_partial WHERE email IS NOT NULL) so phone-only leads could be NULL. PostgreSQL's ON CONFLICT cannot infer a partial unique index from a column list alone — PostgREST offers no WHERE predicate in its on_conflict header — so the upsert fails with 42P10 'there is no unique or exclusion constraint matching the ON CONFLICT specification' for every email lead.",
+    "impact": "Every visitor who submitted an email through the widget's ask_email escalation action hit a 500. The dashboard never saw the lead. This broke VAL-ESCAL-011, VAL-ESCAL-013, VAL-CROSS-003 in production despite the unit tests passing (they mocked the upsert return value).",
+    "detectedBy": "e2e/lead-capture.spec.ts POST /api/leads against the real local Supabase stack."
+  },
+  "fix": [
+    "src/app/api/leads/route.ts — replaced upsert(onConflict) with insert-first + fall-back UPDATE on 23505 (partial-unique-index conflict). The email path runs INSERT; on 23505, runs UPDATE ... WHERE site_id=$1 AND email=$2. Phone-only path is still a plain INSERT (no dedupe key possible).",
+    "src/__tests__/leads-route.test.ts — extended mock chain to expose .update().eq().eq(); rewrote assertions to drive the new flow. Added tests: 23505 fallback hits UPDATE, non-conflict error returns 500, UPDATE failure returns 500. 16 tests now cover both paths."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run src/__tests__/leads-route.test.ts — 16 passed (was 14). pnpm exec playwright test e2e/lead-capture.spec.ts — 5/5 green.",
+    "typecheckClean": true,
+    "lintClean": true
+  },
+  "filesChanged": [
+    "src/app/api/leads/route.ts (upsert → insert-then-update)",
+    "src/__tests__/leads-route.test.ts (mock chain + 3 new scenarios)"
+  ]
+}

@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockUpsert = vi.fn()
 const mockInsert = vi.fn()
+const mockUpdateRun = vi.fn()
+// .update(row).eq('site_id', ...).eq('email', ...) — two chained .eq calls.
+const mockUpdateEq2 = vi.fn(() => mockUpdateRun())
+const mockUpdateEq1 = vi.fn(() => ({ eq: mockUpdateEq2 }))
+const mockUpdate = vi.fn(() => ({ eq: mockUpdateEq1 }))
 const mockMaybeSingle = vi.fn()
 const mockEq = vi.fn(() => ({ maybeSingle: mockMaybeSingle }))
 const mockSelect = vi.fn(() => ({ eq: mockEq }))
 const mockFrom = vi.fn((table: string) => {
   if (table === 'sites') return { select: mockSelect }
-  if (table === 'leads') return { upsert: mockUpsert, insert: mockInsert }
+  if (table === 'leads') {
+    return { insert: mockInsert, update: mockUpdate }
+  }
   return {}
 })
 
@@ -40,10 +46,13 @@ describe('POST /api/leads', () => {
       allowed: true,
     })
     mockMaybeSingle.mockReset()
-    mockUpsert.mockReset()
     mockInsert.mockReset()
-    mockUpsert.mockResolvedValue({ error: null })
+    mockUpdate.mockClear()
+    mockUpdateEq1.mockClear()
+    mockUpdateEq2.mockClear()
+    mockUpdateRun.mockReset()
     mockInsert.mockResolvedValue({ error: null })
+    mockUpdateRun.mockResolvedValue({ error: null })
   })
 
   it('returns 400 on invalid JSON', async () => {
@@ -56,7 +65,7 @@ describe('POST /api/leads', () => {
       req({ site_key: 'sk', email: 'x@y.com', website: 'spam.com' })
     )
     expect(res.status).toBe(200)
-    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockInsert).not.toHaveBeenCalled()
   })
 
   it('returns 400 when site_key missing', async () => {
@@ -98,7 +107,7 @@ describe('POST /api/leads', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns 201 and upserts on valid request', async () => {
+  it('returns 201 and inserts on valid request', async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
     const res = await POST(
       req({
@@ -110,8 +119,8 @@ describe('POST /api/leads', () => {
       })
     )
     expect(res.status).toBe(201)
-    expect(mockUpsert).toHaveBeenCalledOnce()
-    const arg = mockUpsert.mock.calls[0][0] as {
+    expect(mockInsert).toHaveBeenCalledOnce()
+    const arg = mockInsert.mock.calls[0][0] as {
       email: string
       name: string
       site_id: string
@@ -121,14 +130,36 @@ describe('POST /api/leads', () => {
     expect(arg.site_id).toBe('site-1')
   })
 
-  it('returns 500 when upsert fails', async () => {
+  it('falls back to UPDATE when insert returns 23505 (partial unique index conflict)', async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
-    mockUpsert.mockResolvedValueOnce({ error: { message: 'db down' } })
+    mockInsert.mockResolvedValueOnce({
+      error: { code: '23505', message: 'duplicate key' },
+    })
+    const res = await POST(req({ site_key: 'sk_ok', email: 'dup@y.com' }))
+    expect(res.status).toBe(201)
+    expect(mockUpdate).toHaveBeenCalledOnce()
+    expect(mockUpdateEq1).toHaveBeenCalledWith('site_id', 'site-1')
+    expect(mockUpdateEq2).toHaveBeenCalledWith('email', 'dup@y.com')
+  })
+
+  it('returns 500 when insert fails with a non-conflict error', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
+    mockInsert.mockResolvedValueOnce({ error: { message: 'db down' } })
     const res = await POST(req({ site_key: 'sk_ok', email: 'x@y.com' }))
     expect(res.status).toBe(500)
   })
 
-  it('VAL-ESCAL-011: source=escalation + email flows through upsert with source flag', async () => {
+  it('returns 500 when the fallback UPDATE fails after a 23505', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
+    mockInsert.mockResolvedValueOnce({
+      error: { code: '23505', message: 'duplicate key' },
+    })
+    mockUpdateRun.mockResolvedValueOnce({ error: { message: 'update failed' } })
+    const res = await POST(req({ site_key: 'sk_ok', email: 'x@y.com' }))
+    expect(res.status).toBe(500)
+  })
+
+  it('VAL-ESCAL-011: source=escalation + email inserts with source flag', async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
     const res = await POST(
       req({
@@ -138,8 +169,8 @@ describe('POST /api/leads', () => {
       })
     )
     expect(res.status).toBe(201)
-    expect(mockUpsert).toHaveBeenCalledOnce()
-    const row = mockUpsert.mock.calls[0][0] as {
+    expect(mockInsert).toHaveBeenCalledOnce()
+    const row = mockInsert.mock.calls[0][0] as {
       email: string
       source: string
     }
@@ -147,7 +178,7 @@ describe('POST /api/leads', () => {
     expect(row.source).toBe('escalation')
   })
 
-  it('VAL-ESCAL-012: phone-only lead bypasses upsert and uses insert', async () => {
+  it('VAL-ESCAL-012: phone-only lead inserts with email=null', async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
     const res = await POST(
       req({
@@ -157,7 +188,6 @@ describe('POST /api/leads', () => {
       })
     )
     expect(res.status).toBe(201)
-    expect(mockUpsert).not.toHaveBeenCalled()
     expect(mockInsert).toHaveBeenCalledOnce()
     const row = mockInsert.mock.calls[0][0] as {
       email: string | null
@@ -181,7 +211,7 @@ describe('POST /api/leads', () => {
       })
     )
     expect(res.status).toBe(201)
-    const row = mockUpsert.mock.calls[0][0] as {
+    const row = mockInsert.mock.calls[0][0] as {
       extra_fields: Record<string, unknown>
       name: string
     }

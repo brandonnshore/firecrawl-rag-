@@ -1,0 +1,55 @@
+{
+  "feature": "M9-remaining-features",
+  "milestone": "playwright-sweep",
+  "status": "deferred",
+  "deferredAt": "2026-04-19",
+  "reason": "Session budget pause — resume when the next reset lands.",
+  "completedSoFar": [
+    "M9F1 playwright-auth-helper (auth fixture + stubs + seed helpers + smoke spec 2/2)",
+    "M9F2 e2e-auth-gates (20/20)",
+    "M9F3 e2e-tos-signup (4/4)",
+    "M9F4 e2e-settings-navigation (4/4)",
+    "M9F5 e2e-gdpr-delete (3/3)",
+    "M9F6 e2e-responses-crud (6/6)",
+    "M9F7 e2e-escalation-crud (5/5)",
+    "M9F8 e2e-subscription-lifecycle (5/5)",
+    "M9F9 e2e-quota-exhaustion (5/5)",
+    "M9F10 e2e-knowledge-upload (5/5)",
+    "M9F11 e2e-lead-capture (5/5)",
+    "leads-onconflict-bugfix (real bug found + fixed; see handoff)"
+  ],
+  "remaining": [
+    {
+      "id": "e2e-responses-plus-escalation",
+      "fulfills": ["VAL-CROSS-006"],
+      "outline": "Two-phase: (1) seed a keyword response rule + a turn_count=3 escalation rule, (2) simulate 3 widget chat turns via POST /api/chat/session + GET /api/chat/stream?sid=..., (3) assert that the keyword message hits the canned response without an OpenAI call (stub via page.route + call-count assertion) and that the 3rd turn triggers the ask_email form + lead insert."
+    },
+    {
+      "id": "e2e-signup-to-chat",
+      "fulfills": ["VAL-CROSS-001"],
+      "outline": "End-to-end signup → setup URL → simulated Firecrawl webhook (POST /api/crawl/webhook with seeded payload) → sites.crawl_status='ready' → /dashboard/embed snippet visible → load widget on a test HTML page served via page.setContent() → ask a question → receive a citation. Requires stubbing Firecrawl + OpenAI via page.route to deterministic responses.",
+      "preconditions": "Likely depends on the auth-helper signup flow + a helper that posts a fake Firecrawl completed webhook."
+    },
+    {
+      "id": "adversarial-file-fixtures",
+      "fulfills": ["VAL-FILE-004", "VAL-FILE-005", "VAL-FILE-016", "VAL-FILE-017", "VAL-FILE-022"],
+      "outline": "Vitest integration tests (not Playwright) that exercise the real file-processing pipeline with adversarial fixtures: zip-bomb (1 MB → 5 GB expansion), PDF-bomb (>100 MB decompressed stream), macro-laden DOCX (VBA is skipped by mammoth but we verify the extracted text contains no macro artifacts), encrypted PDF (rejected via /Encrypt marker), plus happy-path .docx + .pptx fixtures generated offline.",
+      "notes": "Adversarial fixtures can live under e2e/fixtures/files/. pdf-lib is already a devDependency and handles the PDF-bomb generation. Zip-bomb needs a helper that assembles a tiny zip that references duplicate content entries."
+    }
+  ],
+  "resumeNotes": [
+    "Run baseline: full-env pnpm vitest run should stay at 660+ passing. Current: 649 / 1 skipped / 78 files (was 642 before M9F11 refactor).",
+    "Playwright runs: NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon> SUPABASE_SERVICE_ROLE_KEY=<secret> SUPABASE_TEST_ANON_KEY=<anon> SUPABASE_TEST_SERVICE_ROLE_KEY=<secret> pnpm exec playwright test e2e/<spec>.spec.ts --reporter=list — use the values from `supabase status --output env`.",
+    "OpenAI is stubbed at the page.route level via e2e/fixtures/stubs.ts stubOpenAI. Use the `stubAllExternal(page)` helper when a spec's route calls touch multiple upstreams.",
+    "Rate-limiter: /api/leads and /api/chat/session are 1 req / 3s per IP. Playwright request fixture defaults to IP 'unknown' — tests that fire multiple requests should rotate x-forwarded-for headers (see lead-capture.spec.ts for the pattern) or sleep > 3s between calls.",
+    "Every new spec should cleanupUserData(seededUser.userId) in afterEach.",
+    "Mark each finished feature completed in docs/mission/features.json and flip its fulfills → 'passed' with note='Playwright <spec>.spec.ts N/N green' in docs/mission/validation-state.json. Then commit + push."
+  ],
+  "sealChecklist": [
+    "Write .factory/validation/playwright-sweep/scrutiny/synthesis.json + user-testing/synthesis.json.",
+    "Flip all remaining VAL-* assertions for this milestone to passed.",
+    "Run pnpm typecheck + pnpm lint + full vitest suite one last time.",
+    "Commit + push.",
+    "Run Phase 9 end-of-mission gate: every assertion in validation-state.json must be 'passed'. Report totals."
+  ]
+}

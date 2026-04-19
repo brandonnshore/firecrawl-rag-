@@ -123,16 +123,36 @@ export async function POST(request: Request) {
       extra_fields:
         extra_fields && typeof extra_fields === 'object' ? extra_fields : {},
     }
-    const { error: upsertError } = emailProvided
-      ? await supabase.from('leads').upsert(row, { onConflict: 'site_id,email' })
-      : await supabase.from('leads').insert(row)
+    // Dedupe path (M7F4): leads_site_email_unique_partial is a partial
+    // UNIQUE index (WHERE email IS NOT NULL). Postgres ON CONFLICT
+    // inference can't target a partial index through supabase-js's
+    // onConflict column-list shape (PostgREST has no WHERE predicate).
+    // So we insert first and fall back to UPDATE on 23505 for the
+    // email path. Phone-only rows have no stable dedupe key — always
+    // insert.
+    const { error: insertError } = await supabase.from('leads').insert(row)
 
-    if (upsertError) {
-      console.error('Lead upsert error:', upsertError)
-      return Response.json(
-        { error: 'Failed to save lead' },
-        { status: 500, headers: corsHeaders }
-      )
+    if (insertError) {
+      if (emailProvided && insertError.code === '23505') {
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update(row)
+          .eq('site_id', row.site_id)
+          .eq('email', row.email!)
+        if (updateError) {
+          console.error('Lead update error:', updateError)
+          return Response.json(
+            { error: 'Failed to save lead' },
+            { status: 500, headers: corsHeaders }
+          )
+        }
+      } else {
+        console.error('Lead insert error:', insertError)
+        return Response.json(
+          { error: 'Failed to save lead' },
+          { status: 500, headers: corsHeaders }
+        )
+      }
     }
 
     return Response.json(
