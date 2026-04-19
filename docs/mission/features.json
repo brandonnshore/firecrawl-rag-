@@ -1207,7 +1207,7 @@
         "VAL-SET-008",
         "VAL-CROSS-007"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-subscription-lifecycle",

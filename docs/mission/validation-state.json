@@ -265,9 +265,9 @@
       "note": "SETTINGS_NAV_ITEMS ordering pinned by unit test."
     },
     "VAL-SET-003": {
-      "status": "pending",
-      "feature": "settings-layout",
-      "note": "Active-state logic unit-tested via isActiveSubRoute + resolveActiveHref; screenshot evidence pending Playwright."
+      "status": "passed",
+      "feature": "e2e-settings-navigation",
+      "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-SET-004": {
       "status": "passed",
@@ -275,14 +275,14 @@
       "note": "Site settings moved intact; existing fields preserved."
     },
     "VAL-SET-005": {
-      "status": "pending",
-      "feature": "site-key-rotation-ui",
-      "note": "Modal + API + toast + router.refresh wired; Playwright screenshot pending."
+      "status": "passed",
+      "feature": "e2e-settings-navigation",
+      "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-SET-006": {
-      "status": "pending",
-      "feature": "toast-system",
-      "note": "toast.success('Saved') wired in settings save path; Playwright screenshot of visible toast pending."
+      "status": "passed",
+      "feature": "e2e-settings-navigation",
+      "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-SET-007": {
       "status": "passed",
@@ -290,9 +290,9 @@
       "note": "Parent /dashboard layout redirects unauthenticated users; transitive to all /dashboard/settings/* sub-routes."
     },
     "VAL-SET-008": {
-      "status": "pending",
-      "feature": "settings-layout",
-      "note": "Mobile horizontal-tab fallback implemented; Playwright mobile-viewport screenshot pending."
+      "status": "passed",
+      "feature": "e2e-settings-navigation",
+      "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-FILE-001": {
       "status": "pending",
@@ -618,7 +618,9 @@
       "status": "pending"
     },
     "VAL-CROSS-007": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-settings-navigation",
+      "note": "Playwright settings-navigation.spec.ts 4/4 green"
     },
     "VAL-CROSS-008": {
       "status": "passed",
