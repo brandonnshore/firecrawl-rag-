@@ -49,6 +49,8 @@ SENTRY_DSN=https://...       # M8: observability — absent ⇒ Sentry disabled
 RESEND_API_KEY=re_...        # M8: transactional email — absent ⇒ no-op
 ```
 
+### Secrets
+
 Never commit `.env.local`. The pre-commit hook at `.githooks/pre-commit` scans staged diffs for `sk_live_`, `whsec_`, private-key markers, etc. Production secrets live only in Vercel → Settings → Environment Variables; rotate a key there and redeploy.
 
 ## Running it
