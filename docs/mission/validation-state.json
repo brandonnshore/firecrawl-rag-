@@ -410,34 +410,34 @@
       "note": "Empty-state copy rendered when files.length=0; Playwright pending."
     },
     "VAL-RESP-001": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "Empty-state card with 'No custom responses yet' + Add CTA rendered when rules.length=0; Playwright screenshot pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-002": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "EditModal validates triggers (>=1) and response (non-empty) client-side with inline error messages; server mirrors via validateRuleBody(); 6 API unit tests cover each branch. Playwright visual pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-003": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "POST /api/responses unit-tested with keyword trigger_type + triggers array; UI handleSave wired. Playwright CRUD flow pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-004": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "Same path as VAL-RESP-003 with trigger_type='intent'; M6F1 schema test confirms intent acceptance. Playwright pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-005": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "TriggerChip component renders each element of triggers[] as a rounded pill; list rendering unit-tested indirectly via rule rendering. Playwright screenshot pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-006": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "POST /api/responses/test returns {matched, rule_id, response, via} \u2014 2 unit tests cover match + no-match branches. TestDrawer UI wired. Playwright screenshot of drawer result pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-RESP-007": {
       "status": "passed",
@@ -465,9 +465,9 @@
       "note": "matchResponse short-circuits to null when zero intent-type rules; generateObject mock called 0 times."
     },
     "VAL-RESP-012": {
-      "status": "pending",
-      "feature": "responses-ui",
-      "note": "DELETE /api/responses/[id] unit-tested (401/404/200); UI handleDelete updates local state on success. Playwright confirm-and-remove pending."
+      "status": "passed",
+      "feature": "e2e-responses-crud",
+      "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-ESCAL-001": {
       "status": "pending",

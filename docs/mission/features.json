@@ -1319,7 +1319,7 @@
         "VAL-RESP-006",
         "VAL-RESP-012"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-escalation-crud",
