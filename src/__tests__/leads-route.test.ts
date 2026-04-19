@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockUpsert = vi.fn()
+const mockInsert = vi.fn()
 const mockMaybeSingle = vi.fn()
 const mockEq = vi.fn(() => ({ maybeSingle: mockMaybeSingle }))
 const mockSelect = vi.fn(() => ({ eq: mockEq }))
 const mockFrom = vi.fn((table: string) => {
   if (table === 'sites') return { select: mockSelect }
-  if (table === 'leads') return { upsert: mockUpsert }
+  if (table === 'leads') return { upsert: mockUpsert, insert: mockInsert }
   return {}
 })
 
@@ -40,7 +41,9 @@ describe('POST /api/leads', () => {
     })
     mockMaybeSingle.mockReset()
     mockUpsert.mockReset()
+    mockInsert.mockReset()
     mockUpsert.mockResolvedValue({ error: null })
+    mockInsert.mockResolvedValue({ error: null })
   })
 
   it('returns 400 on invalid JSON', async () => {
@@ -61,14 +64,23 @@ describe('POST /api/leads', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when email missing', async () => {
+  it('returns 400 when neither email nor phone is provided', async () => {
     const res = await POST(req({ site_key: 'sk' }))
     expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe('email_or_phone_required')
   })
 
   it('returns 400 on invalid email format', async () => {
     const res = await POST(req({ site_key: 'sk', email: 'notanemail' }))
     expect(res.status).toBe(400)
+  })
+
+  it('400 on invalid source value', async () => {
+    const res = await POST(
+      req({ site_key: 'sk', email: 'x@y.com', source: 'bogus' })
+    )
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe('invalid_source')
   })
 
   it('returns 429 when rate limited', async () => {
@@ -114,6 +126,67 @@ describe('POST /api/leads', () => {
     mockUpsert.mockResolvedValueOnce({ error: { message: 'db down' } })
     const res = await POST(req({ site_key: 'sk_ok', email: 'x@y.com' }))
     expect(res.status).toBe(500)
+  })
+
+  it('VAL-ESCAL-011: source=escalation + email flows through upsert with source flag', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
+    const res = await POST(
+      req({
+        site_key: 'sk_ok',
+        email: 'v@acme.test',
+        source: 'escalation',
+      })
+    )
+    expect(res.status).toBe(201)
+    expect(mockUpsert).toHaveBeenCalledOnce()
+    const row = mockUpsert.mock.calls[0][0] as {
+      email: string
+      source: string
+    }
+    expect(row.email).toBe('v@acme.test')
+    expect(row.source).toBe('escalation')
+  })
+
+  it('VAL-ESCAL-012: phone-only lead bypasses upsert and uses insert', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
+    const res = await POST(
+      req({
+        site_key: 'sk_ok',
+        phone: '+15550123',
+        source: 'escalation',
+      })
+    )
+    expect(res.status).toBe(201)
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockInsert).toHaveBeenCalledOnce()
+    const row = mockInsert.mock.calls[0][0] as {
+      email: string | null
+      phone: string
+      source: string
+    }
+    expect(row.email).toBeNull()
+    expect(row.phone).toBe('+15550123')
+    expect(row.source).toBe('escalation')
+  })
+
+  it('VAL-ESCAL-013: show_form payload preserves extra_fields + promoted name', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: 'site-1' } })
+    const res = await POST(
+      req({
+        site_key: 'sk_ok',
+        email: 'v@acme.test',
+        name: 'Alice',
+        extra_fields: { message: 'Interested in Pro' },
+        source: 'escalation',
+      })
+    )
+    expect(res.status).toBe(201)
+    const row = mockUpsert.mock.calls[0][0] as {
+      extra_fields: Record<string, unknown>
+      name: string
+    }
+    expect(row.name).toBe('Alice')
+    expect(row.extra_fields).toEqual({ message: 'Interested in Pro' })
   })
 })
 

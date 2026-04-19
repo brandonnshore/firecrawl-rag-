@@ -747,7 +747,7 @@
         "VAL-ESCAL-011", "VAL-ESCAL-012", "VAL-ESCAL-013",
         "VAL-ESCAL-014", "VAL-ESCAL-015"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "upstash-rate-limiter",

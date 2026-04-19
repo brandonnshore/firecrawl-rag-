@@ -18,16 +18,29 @@ export async function POST(request: Request) {
       )
     }
 
-    const { site_key, email, name, message, source_page, conversation_id, website } =
-      body as {
-        site_key?: string
-        email?: string
-        name?: string
-        message?: string
-        source_page?: string
-        conversation_id?: string
-        website?: string
-      }
+    const {
+      site_key,
+      email,
+      name,
+      message,
+      source_page,
+      conversation_id,
+      website,
+      phone,
+      source,
+      extra_fields,
+    } = body as {
+      site_key?: string
+      email?: string
+      name?: string
+      message?: string
+      source_page?: string
+      conversation_id?: string
+      website?: string
+      phone?: string
+      source?: string
+      extra_fields?: Record<string, unknown>
+    }
 
     if (website && typeof website === 'string' && website.trim().length > 0) {
       return Response.json({ success: true }, { headers: corsHeaders })
@@ -40,16 +53,26 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!email || typeof email !== 'string') {
+    const emailProvided = typeof email === 'string' && email.trim().length > 0
+    const phoneProvided = typeof phone === 'string' && phone.trim().length > 0
+    if (!emailProvided && !phoneProvided) {
       return Response.json(
-        { error: 'email is required' },
+        { error: 'email_or_phone_required' },
         { status: 400, headers: corsHeaders }
       )
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (emailProvided) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email!)) {
+        return Response.json(
+          { error: 'Invalid email format' },
+          { status: 400, headers: corsHeaders }
+        )
+      }
+    }
+    if (source !== undefined && source !== 'widget' && source !== 'escalation') {
       return Response.json(
-        { error: 'Invalid email format' },
+        { error: 'invalid_source' },
         { status: 400, headers: corsHeaders }
       )
     }
@@ -78,19 +101,23 @@ export async function POST(request: Request) {
       )
     }
 
-    const { error: upsertError } = await supabase
-      .from('leads')
-      .upsert(
-        {
-          site_id: site.id,
-          email: email.trim().toLowerCase(),
-          name: name?.trim() || null,
-          message: message?.trim() || null,
-          source_page: source_page || null,
-          conversation_id: conversation_id || null,
-        },
-        { onConflict: 'site_id,email' }
-      )
+    // Dedupe on (site_id, email) only when email is provided; phone-only
+    // leads are always inserted as distinct rows (no stable dedupe key).
+    const row = {
+      site_id: site.id,
+      email: emailProvided ? email!.trim().toLowerCase() : null,
+      name: name?.trim() || null,
+      message: message?.trim() || null,
+      source_page: source_page || null,
+      conversation_id: conversation_id || null,
+      phone: phoneProvided ? phone!.trim() : null,
+      source: source ?? 'widget',
+      extra_fields:
+        extra_fields && typeof extra_fields === 'object' ? extra_fields : {},
+    }
+    const { error: upsertError } = emailProvided
+      ? await supabase.from('leads').upsert(row, { onConflict: 'site_id,email' })
+      : await supabase.from('leads').insert(row)
 
     if (upsertError) {
       console.error('Lead upsert error:', upsertError)

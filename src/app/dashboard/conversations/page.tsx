@@ -31,7 +31,9 @@ export default async function ConversationsPage() {
 
   const { data: conversations } = await supabase
     .from('conversations')
-    .select('id, visitor_id, message_count, last_message_at, created_at')
+    .select(
+      'id, visitor_id, message_count, last_message_at, created_at, needs_human'
+    )
     .eq('site_id', site.id)
     .order('last_message_at', { ascending: false })
 
@@ -78,8 +80,17 @@ export default async function ConversationsPage() {
               className="btn-press focus-ring group flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-[color:var(--bg-subtle)]"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-[12px] text-[color:var(--ink-primary)]">
-                  {c.visitor_id}
+                <p className="flex items-center gap-2 truncate font-mono text-[12px] text-[color:var(--ink-primary)]">
+                  {c.needs_human && (
+                    <span
+                      title="Flagged for human handoff"
+                      aria-label="Flagged for human handoff"
+                      className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+                    >
+                      ⚑ handoff
+                    </span>
+                  )}
+                  <span className="truncate">{c.visitor_id}</span>
                 </p>
                 <p className="text-xs text-[color:var(--ink-tertiary)]">
                   {c.message_count}{' '}

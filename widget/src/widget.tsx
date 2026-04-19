@@ -1,5 +1,11 @@
 import { render } from 'preact'
 import { useState, useRef, useEffect } from 'preact/hooks'
+import {
+  parseStream,
+  buildShowFormPayload,
+  PENDING_ACTION_SENTINEL,
+  type PendingAction,
+} from './escalation-protocol'
 
 interface WidgetConfig {
   siteKey: string
@@ -38,12 +44,11 @@ function ChatPanel({
   ])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [showEmailCapture, setShowEmailCapture] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [actionComplete, setActionComplete] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const messageCount = useRef(0)
 
   useEffect(() => {
     dialogRef.current?.showModal()
@@ -52,14 +57,13 @@ function ChatPanel({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, pendingAction])
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return
 
     const userMessage = input.trim()
     setInput('')
-    messageCount.current++
 
     const updatedMessages: Message[] = [
       ...messages,
@@ -67,6 +71,10 @@ function ChatPanel({
     ]
     setMessages(updatedMessages)
     setIsStreaming(true)
+    // Dismiss any lingering action when the user keeps typing — a fresh
+    // escalation comes with the next server response.
+    setPendingAction(null)
+    setActionComplete(false)
 
     try {
       const sessionRes = await fetch(`${config.apiBase}/api/chat/session`, {
@@ -97,27 +105,33 @@ function ChatPanel({
 
       const reader = streamRes.body.getReader()
       const decoder = new TextDecoder()
-      let fullText = ''
+      let buffer = ''
 
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        fullText += decoder.decode(value, { stream: true })
+        buffer += decoder.decode(value, { stream: true })
+        // As long as no sentinel has arrived, everything so far is
+        // chat text. Once the sentinel appears, split and stop updating
+        // the visible text (the trailer is invisible metadata).
+        const sentinelIdx = buffer.indexOf(PENDING_ACTION_SENTINEL)
+        const visible =
+          sentinelIdx >= 0 ? buffer.slice(0, sentinelIdx) : buffer
         setMessages((prev) => {
           const updated = [...prev]
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: fullText,
+            content: visible,
           }
           return updated
         })
       }
+      buffer += decoder.decode()
 
-      if (messageCount.current >= 3 && !emailSent) {
-        setShowEmailCapture(true)
-      }
+      const { pendingAction: parsed } = parseStream(buffer)
+      if (parsed) setPendingAction(parsed)
     } catch (err) {
       console.error('[RubyCrawl] Chat error:', err)
       setMessages((prev) => [
@@ -132,31 +146,39 @@ function ChatPanel({
     }
   }
 
-  const handleEmailSubmit = async (email: string, name: string) => {
+  const postLead = async (payload: Record<string, unknown>) => {
     try {
-      await fetch(`${config.apiBase}/api/leads`, {
+      const res = await fetch(`${config.apiBase}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           site_key: config.siteKey,
-          email,
-          name,
-          message: messages[messages.length - 1]?.content || '',
+          source: 'escalation',
           source_page: window.location.href,
+          ...payload,
         }),
       })
-      setEmailSent(true)
-      setShowEmailCapture(false)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `Thanks ${name || ''}! We'll be in touch at ${email}.`,
-        },
-      ])
+      return res.ok
     } catch {
-      // Silent fail — don't disrupt chat
+      return false
     }
+  }
+
+  const handleActionSubmit = async (
+    confirmation: string,
+    payload: Record<string, unknown>
+  ) => {
+    const ok = await postLead(payload)
+    setActionComplete(true)
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: ok
+          ? confirmation
+          : 'Thanks — we caught that.',
+      },
+    ])
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -185,8 +207,11 @@ function ChatPanel({
               (isStreaming && i === messages.length - 1 ? '...' : '')}
           </div>
         ))}
-        {showEmailCapture && !emailSent && (
-          <EmailCapture onSubmit={handleEmailSubmit} />
+        {pendingAction && !actionComplete && (
+          <EscalationView
+            action={pendingAction}
+            onSubmit={handleActionSubmit}
+          />
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -223,23 +248,50 @@ function ChatPanel({
   )
 }
 
-function EmailCapture({
+export function EscalationView({
+  action,
   onSubmit,
 }: {
-  onSubmit: (email: string, name: string) => void
+  action: PendingAction
+  onSubmit: (
+    confirmation: string,
+    payload: Record<string, unknown>
+  ) => void | Promise<void>
+}) {
+  if (action.action === 'ask_email') {
+    return <AskEmailForm onSubmit={onSubmit} />
+  }
+  if (action.action === 'ask_phone') {
+    return <AskPhoneForm onSubmit={onSubmit} />
+  }
+  if (action.action === 'show_form') {
+    const fields = Array.isArray(action.action_config.fields)
+      ? (action.action_config.fields as string[])
+      : []
+    return <ShowForm fields={fields} onSubmit={onSubmit} />
+  }
+  if (action.action === 'calendly_link') {
+    const url = String(action.action_config.url ?? '')
+    return <CalendlyEmbed url={url} />
+  }
+  if (action.action === 'handoff') {
+    return <HandoffIndicator />
+  }
+  return null
+}
+
+function AskEmailForm({
+  onSubmit,
+}: {
+  onSubmit: (
+    confirmation: string,
+    payload: Record<string, unknown>
+  ) => void | Promise<void>
 }) {
   const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
-
   return (
-    <div class="rc-email-capture">
+    <div class="rc-escalation rc-escalation-email" data-testid="rc-ask-email">
       <p>Want us to follow up? Leave your email:</p>
-      <input
-        type="text"
-        placeholder="Your name"
-        value={name}
-        onInput={(e) => setName((e.target as HTMLInputElement).value)}
-      />
       <input
         type="email"
         placeholder="your@email.com"
@@ -247,14 +299,119 @@ function EmailCapture({
         onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
         required
       />
+      <button
+        type="button"
+        onClick={() =>
+          email && onSubmit(`Thanks! We'll be in touch at ${email}.`, { email })
+        }
+      >
+        Send
+      </button>
+    </div>
+  )
+}
+
+function AskPhoneForm({
+  onSubmit,
+}: {
+  onSubmit: (
+    confirmation: string,
+    payload: Record<string, unknown>
+  ) => void | Promise<void>
+}) {
+  const [phone, setPhone] = useState('')
+  return (
+    <div class="rc-escalation rc-escalation-phone" data-testid="rc-ask-phone">
+      <p>Prefer a call? Leave your number:</p>
       <input
-        type="text"
-        name="website"
-        style={{ display: 'none' }}
-        tabIndex={-1}
-        autoComplete="off"
+        type="tel"
+        placeholder="+1 (555) 012-3456"
+        value={phone}
+        onInput={(e) => setPhone((e.target as HTMLInputElement).value)}
       />
-      <button onClick={() => email && onSubmit(email, name)}>Send</button>
+      <button
+        type="button"
+        onClick={() =>
+          phone &&
+          onSubmit(`Got it — we'll call you at ${phone}.`, { phone })
+        }
+      >
+        Request Call
+      </button>
+    </div>
+  )
+}
+
+function ShowForm({
+  fields,
+  onSubmit,
+}: {
+  fields: string[]
+  onSubmit: (
+    confirmation: string,
+    payload: Record<string, unknown>
+  ) => void | Promise<void>
+}) {
+  const [values, setValues] = useState<Record<string, string>>({})
+  if (fields.length === 0) return null
+  return (
+    <div class="rc-escalation rc-escalation-form" data-testid="rc-show-form">
+      <p>A few quick questions:</p>
+      {fields.map((f) => (
+        <input
+          key={f}
+          type={f.toLowerCase() === 'email' ? 'email' : 'text'}
+          placeholder={f}
+          value={values[f] ?? ''}
+          onInput={(e) =>
+            setValues((prev) => ({
+              ...prev,
+              [f]: (e.target as HTMLInputElement).value,
+            }))
+          }
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          onSubmit('Thanks — we have your info.', buildShowFormPayload(values))
+        }
+      >
+        Submit
+      </button>
+    </div>
+  )
+}
+
+function CalendlyEmbed({ url }: { url: string }) {
+  if (!url || !/^https?:\/\//.test(url)) return null
+  return (
+    <div
+      class="rc-escalation rc-escalation-calendly"
+      data-testid="rc-calendly"
+    >
+      <iframe
+        src={url}
+        title="Book a time"
+        style={{ width: '100%', height: '600px', border: 0 }}
+      />
+    </div>
+  )
+}
+
+function HandoffIndicator() {
+  return (
+    <div
+      class="rc-escalation rc-escalation-handoff"
+      role="status"
+      data-testid="rc-handoff"
+    >
+      <span class="rc-handoff-dots" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
+      <span>A team member will be with you shortly.</span>
     </div>
   )
 }
@@ -299,16 +456,44 @@ function getStyles(): string {
     .rc-footer { padding: 8px; text-align: center; border-top: 1px solid #f3f4f6; }
     .rc-footer a { color: #9ca3af; font-size: 11px; text-decoration: none; }
     .rc-footer a:hover { text-decoration: underline; }
-    .rc-email-capture { background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
-    .rc-email-capture p { font-size: 13px; margin-bottom: 8px; color: #4b5563; }
-    .rc-email-capture input { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
-    .rc-email-capture button { width: 100%; padding: 8px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .rc-escalation {
+      background: #f9fafb; padding: 12px; border-radius: 8px;
+      margin-bottom: 12px; border: 1px solid #e5e7eb;
+    }
+    .rc-escalation p { font-size: 13px; margin: 0 0 8px; color: #4b5563; }
+    .rc-escalation input {
+      width: 100%; padding: 8px 10px; border: 1px solid #d1d5db;
+      border-radius: 6px; margin-bottom: 6px; font-size: 13px;
+      font-family: inherit; box-sizing: border-box;
+    }
+    .rc-escalation button {
+      width: 100%; padding: 8px; background: #6366f1; color: white;
+      border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+      font-weight: 500;
+    }
+    .rc-escalation button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .rc-escalation-calendly { padding: 0; overflow: hidden; }
+    .rc-escalation-handoff {
+      display: flex; align-items: center; gap: 10px;
+      background: #eef2ff; border-color: #c7d2fe; color: #4338ca;
+    }
+    .rc-handoff-dots { display: inline-flex; gap: 4px; }
+    .rc-handoff-dots span {
+      width: 6px; height: 6px; border-radius: 50%; background: #6366f1;
+      animation: rc-handoff-pulse 1.2s infinite ease-in-out;
+    }
+    .rc-handoff-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .rc-handoff-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes rc-handoff-pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
     @media (max-width: 480px) {
       .rc-panel { bottom: 0; right: 0; left: 0; top: 0; width: 100%; height: 100%; border-radius: 0;
         padding-bottom: env(safe-area-inset-bottom); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .rc-panel, .rc-bubble { transition: none !important; animation: none !important; }
+      .rc-panel, .rc-bubble, .rc-handoff-dots span { transition: none !important; animation: none !important; }
     }
   `
 }
