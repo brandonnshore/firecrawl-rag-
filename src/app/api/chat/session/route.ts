@@ -11,6 +11,7 @@ import {
   matchResponse,
   type ResponseRule,
 } from '@/lib/chat/response-matcher'
+import type { EscalationRuleLite } from '@/lib/chat/session-store'
 import { openai } from '@ai-sdk/openai'
 import { embed } from 'ai'
 import crypto from 'crypto'
@@ -149,18 +150,38 @@ export async function POST(request: NextRequest) {
         typeof m.content === 'string'
     )
 
-    // M6F2: custom-response short-circuit. Runs BEFORE any OpenAI call so
-    // a keyword hit skips embedding + chat completion entirely. Rules are
-    // pre-ordered by the DB (priority DESC, created_at ASC), which the
-    // matcher honors as tiebreaker.
+    // Count of user-authored messages in THIS conversation, current
+    // message inclusive. Used by M7 turn_count escalation rules.
+    const userMessageCount =
+      typedHistory.filter((m) => m.role === 'user').length + 1
+
+    // M6F2 + M7F2: parallel load of response-rules + escalation-rules.
+    // Response matcher runs first (BEFORE any OpenAI call) so a keyword
+    // hit skips the whole RAG path. Escalation runs post-response in
+    // /api/chat/stream regardless of which path emitted the text.
     const siteName = site.name || new URL(site.url).hostname
-    const { data: rules } = await supabase
-      .from('custom_responses')
-      .select('id, trigger_type, triggers, response, priority, created_at')
-      .eq('site_id', site.id)
-      .eq('is_active', true)
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true })
+    const [rulesRes, escalationRulesRes] = await Promise.all([
+      supabase
+        .from('custom_responses')
+        .select('id, trigger_type, triggers, response, priority, created_at')
+        .eq('site_id', site.id)
+        .eq('is_active', true)
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('escalation_rules')
+        .select(
+          'id, rule_type, config, action, action_config, priority, created_at'
+        )
+        .eq('site_id', site.id)
+        .eq('is_active', true)
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true }),
+    ])
+
+    const rules = rulesRes.data
+    const escalationRules = (escalationRulesRes.data ??
+      []) as EscalationRuleLite[]
 
     const match = await matchResponse(
       message.trim(),
@@ -179,6 +200,9 @@ export async function POST(request: NextRequest) {
         visitorIp: ip,
         createdAt: Date.now(),
         cannedResponse: match.rule.response,
+        escalationRules,
+        userMessageCount,
+        preClassifiedIntent: match.intent ?? null,
       })
       return Response.json({ sessionId }, { headers: corsHeaders })
     }
@@ -232,6 +256,8 @@ export async function POST(request: NextRequest) {
       messages: [...typedHistory, { role: 'user', content: message.trim() }],
       visitorIp: ip,
       createdAt: Date.now(),
+      escalationRules,
+      userMessageCount,
     })
 
     return Response.json({ sessionId }, { headers: corsHeaders })

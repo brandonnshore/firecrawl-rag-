@@ -17,6 +17,32 @@ export interface ChatSession {
    * without calling gpt-4o-mini. Absent means the normal RAG path runs.
    */
   cannedResponse?: string
+  /**
+   * M7F2: active escalation rules for the site. /api/chat/stream
+   * evaluates these AFTER the main response and emits a pending_action
+   * trailer so the widget can render the escalation UI inline.
+   */
+  escalationRules?: EscalationRuleLite[]
+  /**
+   * M7F2: count of user-authored messages in this conversation INCLUDING
+   * the current one. turn_count rules compare against this.
+   */
+  userMessageCount?: number
+  /**
+   * M7F2: intent label classified during response matching, if any.
+   * Passed to the escalation evaluator so intent rules don't re-classify.
+   */
+  preClassifiedIntent?: string | null
+}
+
+export interface EscalationRuleLite {
+  id: string
+  rule_type: 'turn_count' | 'keyword' | 'intent'
+  config: Record<string, unknown>
+  action: 'ask_email' | 'ask_phone' | 'show_form' | 'calendly_link' | 'handoff'
+  action_config: Record<string, unknown>
+  priority: number
+  created_at: string
 }
 
 /**

@@ -104,10 +104,10 @@ function seedSiteAndPlan(opts: {
         }),
       }
     }
-    if (table === 'custom_responses') {
-      // M6F2: session route fetches active rules before RAG. Empty set
-      // here means the match short-circuit is skipped and the test
-      // proceeds into the normal quota/embed/RPC path.
+    if (table === 'custom_responses' || table === 'escalation_rules') {
+      // M6F2 + M7F2: session route fetches both in parallel before RAG.
+      // Empty sets here mean the match + escalation paths are both
+      // inert so the test can focus on the quota gate.
       return {
         select: () => ({
           eq: () => ({

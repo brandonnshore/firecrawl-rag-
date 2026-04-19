@@ -32,7 +32,10 @@ function fromBuilder(table: string) {
       })),
     }
   }
-  if (table === 'custom_responses') {
+  if (table === 'custom_responses' || table === 'escalation_rules') {
+    // M6F2 + M7F2: both are empty-by-default in the generic happy-path
+    // tests; canned-response / escalation behavior lives in dedicated
+    // integration suites.
     return {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({

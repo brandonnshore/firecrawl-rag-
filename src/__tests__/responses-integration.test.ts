@@ -54,6 +54,22 @@ function fromBuilder(table: string) {
       })),
     }
   }
+  if (table === 'escalation_rules') {
+    // M7F2: the session route fetches escalation rules in parallel
+    // with custom_responses. These integration tests are scoped to the
+    // response-matcher behavior; escalation stays empty.
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          })),
+        })),
+      })),
+    }
+  }
   if (table === 'conversations') {
     // Not exercised from the session route — only the stream route.
     return {

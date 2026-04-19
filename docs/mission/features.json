@@ -699,7 +699,7 @@
         "VAL-ESCAL-006", "VAL-ESCAL-007", "VAL-ESCAL-008",
         "VAL-ESCAL-009", "VAL-ESCAL-010"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "escalation-ui-dashboard",

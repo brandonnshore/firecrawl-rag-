@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockStreamText = vi.fn()
 vi.mock('ai', () => ({
   streamText: (...args: unknown[]) => mockStreamText(...args),
+  generateObject: vi.fn(),
+  jsonSchema: <T>(s: unknown) => s as T,
 }))
 
 vi.mock('@ai-sdk/openai', () => ({

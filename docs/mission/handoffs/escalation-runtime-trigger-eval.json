@@ -1,0 +1,55 @@
+{
+  "feature": "escalation-runtime-trigger-eval",
+  "milestone": "escalation",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-ESCAL-006", "VAL-ESCAL-007", "VAL-ESCAL-008",
+    "VAL-ESCAL-009", "VAL-ESCAL-010"
+  ],
+  "whatWasImplemented": [
+    "src/lib/chat/escalation.ts — pure evaluator module. evaluateEscalation() iterates rules sorted by priority DESC, created_at ASC and returns the first match. turn_count checks userMessageCount >= config.turns; keyword reuses M6F2 triggerMatches() for diacritic/case/word-boundary parity with response rules; intent classifies ONCE per evaluation across all intent rules (labels are the union of each rule's config.intents) with an optional preClassifiedIntent override so the stream can feed back an intent the response matcher already computed.",
+    "src/lib/chat/session-store.ts — ChatSession gains escalationRules + userMessageCount + preClassifiedIntent optional fields. EscalationRuleLite interface exported for the session route / stream to type-check the cached rule list.",
+    "src/app/api/chat/session/route.ts — parallel fetch of custom_responses + escalation_rules via Promise.all. Computes userMessageCount from history. Passes the match's intent down to escalation for intent-rule reuse. Canned-response path attaches escalationRules + userMessageCount + preClassifiedIntent. RAG path attaches the same context minus the canned text.",
+    "src/app/api/chat/stream/route.ts — refactored for both paths to share a resolveEscalation() helper. Canned path emits text + (optional) PENDING_ACTION_SENTINEL (\\x1E = ASCII RS) + JSON trailer. RAG path wraps streamText's upstream ReadableStream in a tee that accumulates text, flushes, then appends the same trailer. persistConversation() gained an optional needsHuman flag — handoff actions set conversations.needs_human=true on both INSERT and UPDATE paths (VAL-ESCAL-015).",
+    "Protocol: the trailer is a single \\x1E delimiter followed by JSON. The widget parses by splitting on the last \\x1E. Chosen over SSE because (a) no breaking protocol change, (b) \\x1E is legal in plain text but absent from natural chat, (c) curl-friendly.",
+    "src/__tests__/escalation-runtime.test.ts — 14 unit tests (turn_count firing / before threshold / non-numeric config; keyword firing / word boundary / diacritic + case insensitive / non-array config skip; intent hit / preClassified bypass / null classifier / multiple intent rules classifier-once-with-correct-args; priority winner / created_at tiebreak / empty rules).",
+    "src/__tests__/escalation-integration.test.ts — 5 stream-integration tests: canned + escalation hit emits \\x1E JSON trailer with rule_id/action/via; no match => no trailer; handoff action triggers needs_human=true on the inserted conversation; RAG path appends trailer AFTER the LLM text with action_config preserved (show_form fields[]); RAG path without rules streams text unchanged.",
+    "Test-suite fan-out: chat-stream.test.ts / chat-session.test.ts / message-quota.test.ts / responses-integration.test.ts gained escalation_rules mocks (empty arrays) because the session route now fetches both tables in parallel."
+  ],
+  "whatWasLeftUndone": [
+    "VAL-ESCAL-010 widget-side rendering of pending_action is the M7F4 scope. The stream-side plumbing is proven here; widget receiving + rendering is next.",
+    "VAL-ESCAL-015 dashboard-side flag icon on conversations with needs_human=true lands in M7F4 (conversations view update)."
+  ],
+  "discoveredIssues": [
+    "streamText's toTextStreamResponse() returns a Response whose body is a live ReadableStream — appending a trailer requires teeing the stream into a new ReadableStream controller that forwards chunks then enqueues the trailer on close. The naive 'Response.body + trailer bytes' concatenation would require buffering, defeating the streaming benefit.",
+    "classifyIntent() in response-matcher takes (message, labels). The escalation evaluator originally tried to pass (labels) only; tightened the classifier override type to match. Tests also assert the classifier receives both args in order."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 525 passed / 1 skipped / 65 files (+19 new: 14 runtime + 5 stream-integration).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "turn_count rule with turns=3, userMessageCount=3", "expected": "fires", "observed": "pass" },
+      { "action": "two matching rules, priority 0 vs 5", "expected": "priority 5 wins", "observed": "pass" },
+      { "action": "handoff action on keyword match", "expected": "needs_human=true in inserted conversations row", "observed": "pass" },
+      { "action": "canned + no match", "expected": "no \\x1E trailer in response body", "observed": "pass" },
+      { "action": "RAG + match", "expected": "text body followed by \\x1E + JSON pending_action", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/chat/escalation.ts (created)",
+    "src/lib/chat/session-store.ts (modified — escalation context fields)",
+    "src/app/api/chat/session/route.ts (modified — parallel rules fetch + escalation context)",
+    "src/app/api/chat/stream/route.ts (rewrote — teed RAG stream + pending_action trailer + handoff flag)",
+    "src/__tests__/escalation-runtime.test.ts (created — 14 tests)",
+    "src/__tests__/escalation-integration.test.ts (created — 5 tests)",
+    "src/__tests__/chat-session.test.ts (modified — escalation_rules mock case)",
+    "src/__tests__/chat-stream.test.ts (modified — ai mock adds jsonSchema + generateObject)",
+    "src/__tests__/message-quota.test.ts (modified — escalation_rules mock case)",
+    "src/__tests__/responses-integration.test.ts (modified — escalation_rules mock case)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-ESCAL-006/007/008/009 passed; 010/015 partial)",
+    "docs/mission/handoffs/escalation-runtime-trigger-eval.json (created)"
+  ]
+}
