@@ -590,7 +590,7 @@
       "fulfills": [
         "VAL-FILE-001", "VAL-FILE-002", "VAL-FILE-015", "VAL-FILE-025"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "custom-responses-schema",
