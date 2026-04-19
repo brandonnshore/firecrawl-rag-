@@ -1234,7 +1234,7 @@
         "VAL-BILLING-024",
         "VAL-BILLING-025"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-quota-exhaustion",

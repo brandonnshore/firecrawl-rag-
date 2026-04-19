@@ -85,14 +85,14 @@
       "note": "Covered by dashboard/layout.tsx auth redirect \u2014 deterministic without browser."
     },
     "VAL-BILLING-002": {
-      "status": "pending",
-      "feature": "billing-page-refactor",
-      "note": "UI logic complete and unit-tested via page-model; browser-automation evidence deferred to Playwright user-testing pass."
+      "status": "passed",
+      "feature": "e2e-subscription-lifecycle",
+      "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-BILLING-003": {
-      "status": "pending",
-      "feature": "billing-page-refactor",
-      "note": "Trial banner rendered when trialCountdownDays is set; Playwright confirmation pending."
+      "status": "passed",
+      "feature": "e2e-subscription-lifecycle",
+      "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-BILLING-004": {
       "status": "passed",
@@ -176,14 +176,14 @@
       "feature": "billing-page-refactor"
     },
     "VAL-BILLING-024": {
-      "status": "pending",
-      "feature": "billing-page-refactor",
-      "note": "Invoice list capped at 12 in page-model; Playwright confirmation pending."
+      "status": "passed",
+      "feature": "e2e-subscription-lifecycle",
+      "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-BILLING-025": {
-      "status": "pending",
-      "feature": "billing-page-refactor",
-      "note": "Next-invoice date rendered from current_period_end; Playwright confirmation pending."
+      "status": "passed",
+      "feature": "e2e-subscription-lifecycle",
+      "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-QUOTA-001": {
       "status": "passed",
@@ -603,7 +603,9 @@
       "status": "pending"
     },
     "VAL-CROSS-002": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-subscription-lifecycle",
+      "note": "Playwright subscription-lifecycle.spec.ts 5/5 green"
     },
     "VAL-CROSS-003": {
       "status": "pending"

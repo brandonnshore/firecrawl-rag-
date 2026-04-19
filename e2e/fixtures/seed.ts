@@ -98,7 +98,15 @@ export async function setSubscriptionStatus(
     update.stripe_customer_id = extras.stripe_customer_id
   if (extras.stripe_subscription_id !== undefined)
     update.stripe_subscription_id = extras.stripe_subscription_id
-  await admin.from('profiles').update(update).eq('id', userId)
+  const { error } = await admin
+    .from('profiles')
+    .update(update)
+    .eq('id', userId)
+  if (error) {
+    throw new Error(
+      `setSubscriptionStatus failed for ${userId}: ${error.message}`
+    )
+  }
 }
 
 export async function cleanupUserData(userId: string): Promise<void> {
