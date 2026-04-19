@@ -1,0 +1,35 @@
+{
+  "feature": "custom-responses-schema",
+  "milestone": "custom-responses",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419060000_custom_responses.sql — custom_responses table with FK cascade from sites, trigger_type CHECK ('keyword'|'intent'), triggers text[] NOT EMPTY (cardinality CHECK, not array_length — the latter returns NULL for empty arrays and evaluates a CHECK to permissive), response NOT EMPTY, priority int default 0, is_active boolean default true, created_at + updated_at.",
+    "Compound index (site_id, is_active, priority DESC, created_at ASC) matches the hot-path query: /api/chat/session fetches active rules for a site in matching order.",
+    "RLS: four owner-scoped policies (SELECT / INSERT / UPDATE / DELETE) all resolving through sites.user_id = auth.uid(). Widget path uses the service-role client and never hits these policies; owners CRUD via the dashboard.",
+    "src/__tests__/custom-responses-schema.test.ts — 14 integration tests: insert defaults, trigger_type CHECK, empty triggers CHECK, empty response CHECK, intent trigger_type accepted, owner SELECT, cross-user SELECT blocked, anon SELECT zero, owner INSERT, cross-user INSERT blocked, owner UPDATE, cross-user UPDATE silently no-op, owner DELETE, ON DELETE CASCADE from sites."
+  ],
+  "whatWasLeftUndone": [
+    "No assertions fulfilled directly by this feature — it's the foundation for M6F2 matcher + M6F3 UI which fulfill VAL-RESP-001..012."
+  ],
+  "discoveredIssues": [
+    "Initial CHECK used `array_length(triggers, 1) > 0` which evaluates to NULL for '{}' and lets empty arrays through. Replaced with `cardinality(triggers) > 0` which returns 0 for empty arrays so the CHECK fails as intended."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 446 passed / 1 skipped / 59 files (+14 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "INSERT with triggers = '{}'", "expected": "CHECK violation", "observed": "pass after cardinality fix" },
+      { "action": "User A UPDATE of user B's rule", "expected": "0 rows affected, B's row unchanged", "observed": "pass" },
+      { "action": "DELETE parent site", "expected": "child custom_responses rows vanish via ON DELETE CASCADE", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419060000_custom_responses.sql (created)",
+    "src/__tests__/custom-responses-schema.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/handoffs/custom-responses-schema.json (created)"
+  ]
+}

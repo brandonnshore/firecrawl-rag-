@@ -607,7 +607,7 @@
         "supabase db reset; pnpm vitest run src/__tests__/custom-responses-schema.test.ts"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "responses-matcher-runtime",
