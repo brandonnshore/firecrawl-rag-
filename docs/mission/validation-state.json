@@ -470,29 +470,29 @@
       "note": "Playwright responses-crud.spec.ts 6/6 green"
     },
     "VAL-ESCAL-001": {
-      "status": "pending",
-      "feature": "escalation-ui-dashboard",
-      "note": "Empty-state card renders when rules.length=0; Playwright screenshot pending."
+      "status": "passed",
+      "feature": "e2e-escalation-crud",
+      "note": "Playwright escalation-crud.spec.ts 5/5 green"
     },
     "VAL-ESCAL-002": {
-      "status": "pending",
-      "feature": "escalation-ui-dashboard",
-      "note": "POST /api/escalation-rules unit-tested for turn_count+ask_email happy path (201 with persisted row). Playwright CRUD screenshot pending."
+      "status": "passed",
+      "feature": "e2e-escalation-crud",
+      "note": "Playwright escalation-crud.spec.ts 5/5 green"
     },
     "VAL-ESCAL-003": {
-      "status": "pending",
-      "feature": "escalation-ui-dashboard",
-      "note": "Keyword + ask_email CRUD unit-tested. Playwright pending."
+      "status": "passed",
+      "feature": "e2e-escalation-crud",
+      "note": "Playwright escalation-crud.spec.ts 5/5 green"
     },
     "VAL-ESCAL-004": {
-      "status": "pending",
-      "feature": "escalation-ui-dashboard",
-      "note": "Intent + handoff CRUD unit-tested. Playwright pending."
+      "status": "passed",
+      "feature": "e2e-escalation-crud",
+      "note": "Playwright escalation-crud.spec.ts 5/5 green"
     },
     "VAL-ESCAL-005": {
-      "status": "pending",
-      "feature": "escalation-ui-dashboard",
-      "note": "Reorder endpoint assigns descending priorities (top=N, bottom=1); unit-tested. UI fires POST /reorder on drop. Playwright drag-drop screenshot + DB assertion pending."
+      "status": "passed",
+      "feature": "e2e-escalation-crud",
+      "note": "Playwright escalation-crud.spec.ts 5/5 green"
     },
     "VAL-ESCAL-006": {
       "status": "passed",
