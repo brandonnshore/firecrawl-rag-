@@ -1,0 +1,47 @@
+{
+  "feature": "file-upload-api-limits",
+  "milestone": "knowledge-uploads",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-FILE-010", "VAL-FILE-011", "VAL-FILE-012",
+    "VAL-FILE-018", "VAL-FILE-019", "VAL-FILE-021"
+  ],
+  "whatWasImplemented": [
+    "src/lib/files/validate.ts — pure helpers: ALLOWED_EXTENSIONS, MAX_FILE_BYTES=25MB, inferExtension, verifyMagicBytes (PDF %PDF-, ZIP for docx/pptx/xlsx, NUL-byte heuristic for csv/txt/md), sanitizeFilename, sanitizeTraversalFilename.",
+    "src/app/api/files/route.ts — POST handler. Pipeline (VAL-FILE order): (a) auth 401; (b) Content-Length early 413; (c) formData parse; (d) post-parse size 413 / 0-byte 400; (e) extension allow-list 400; (f) magic-byte sniff 400; (g) SHA-256 hash; (h) site + plan lookup (Starter=25 fallback); (i) plan cap count -> 403 with upgrade_url; (j) dedupe pre-check + race-handle 23505 -> 200 {duplicate:true, existing_id}; (k) Storage upload to `${user_id}/${file_id}.${ext}`; (l) increment usage_counters.files_stored; (m) 200 {file_id, filename, status:'queued'}.",
+    "Filename sanitization via sanitizeTraversalFilename — joins path segments with '_' (so '../../etc/passwd.pdf' -> 'etc_passwd.pdf' rather than just 'passwd.pdf' which basename-only would produce).",
+    "Storage-upload failure rolls back the DB row so the UI doesn't show phantoms.",
+    "Duck-typed File detection — jsdom/edge/node runtimes disagree on `instanceof File`, so we check for `arrayBuffer` method + `size` number shape instead.",
+    "src/__tests__/files-validate.test.ts — 31 unit tests for the pure helpers including VAL-FILE-018 MIME spoof and VAL-FILE-019 traversal normalization.",
+    "src/__tests__/file-upload.test.ts — 11 route-level tests: 401 auth, 413 oversize (26MB buf), 400 0-byte, 400 bad extension, 400 MIME spoof, 403 plan cap, 200 duplicate + race, 200 traversal path sanitized, 200 happy path, Starter fallback when plan_id null."
+  ],
+  "whatWasLeftUndone": [
+    "Integration-test uploading a real file against the real Storage bucket (end-to-end) — deferred; mock-level coverage of the DB + Storage call shapes is sufficient for this feature, and the parser pipeline in M5F3 exercises real Storage reads.",
+    "Streaming size-limit enforcement for chunked-transfer uploads with no Content-Length — Next.js consumes the full body before returning from formData(). Acceptable for M5; M8 hardening can add a streaming middleware if abuse shows up."
+  ],
+  "discoveredIssues": [
+    "jsdom's Request + FormData round-trip loses filename + truncates bytes (keeps 9 bytes, filename becomes 'blob'). Worked around by constructing the Request-shape mock directly in tests — the production path still uses native Request.formData() correctly.",
+    "The File() constructor strips path separators from its name argument (by spec), so the traversal-attack scenario (raw multipart with '../../etc/passwd.pdf' in Content-Disposition) can't be simulated via new File(). Test uses a File-like plain object in its mocked formData to prove the sanitizer still fires."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 401 passed / 1 skipped / 53 files (+42 new: 31 validate unit + 11 route).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "Upload 26MB buffer", "expected": "413 file_too_large", "observed": "pass" },
+      { "action": "Upload text with .pdf extension", "expected": "400 mime_mismatch", "observed": "pass" },
+      { "action": "At Starter cap (25 existing files)", "expected": "403 file_limit_exceeded", "observed": "pass" },
+      { "action": "Duplicate content_hash", "expected": "200 {duplicate:true, existing_id}", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/files/validate.ts (created)",
+    "src/app/api/files/route.ts (created)",
+    "src/__tests__/files-validate.test.ts (created)",
+    "src/__tests__/file-upload.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-FILE-010/011/012/018/019/021 -> passed)",
+    "docs/mission/handoffs/file-upload-api-limits.json (created)"
+  ]
+}

@@ -500,7 +500,7 @@
         "VAL-FILE-010", "VAL-FILE-011", "VAL-FILE-012",
         "VAL-FILE-018", "VAL-FILE-019", "VAL-FILE-021"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "file-parsers-pipeline",
