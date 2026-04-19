@@ -32,6 +32,8 @@ vi.mock('@/lib/subscription', () => ({
 
 vi.mock('ai', () => ({
   embed: vi.fn(async () => ({ embedding: new Array(1536).fill(0.1) })),
+  generateObject: vi.fn(),
+  jsonSchema: <T>(s: unknown) => s as T,
 }))
 vi.mock('@ai-sdk/openai', () => ({
   openai: Object.assign(() => ({}), { embedding: () => ({}) }),
@@ -97,6 +99,22 @@ function seedSiteAndPlan(opts: {
                 ? { id: planId, monthly_message_limit: messageLimit }
                 : null,
               error: null,
+            }),
+          }),
+        }),
+      }
+    }
+    if (table === 'custom_responses') {
+      // M6F2: session route fetches active rules before RAG. Empty set
+      // here means the match short-circuit is skipped and the test
+      // proceeds into the normal quota/embed/RPC path.
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              order: () => ({
+                order: () => Promise.resolve({ data: [], error: null }),
+              }),
             }),
           }),
         }),

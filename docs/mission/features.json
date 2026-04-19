@@ -632,7 +632,7 @@
         "VAL-RESP-007", "VAL-RESP-008", "VAL-RESP-009",
         "VAL-RESP-010", "VAL-RESP-011"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "responses-ui",

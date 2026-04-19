@@ -41,6 +41,8 @@ vi.mock('@/lib/supabase/service', () => ({
 // Avoid calling OpenAI in tests.
 vi.mock('ai', () => ({
   embed: vi.fn().mockResolvedValue({ embedding: new Array(1536).fill(0) }),
+  generateObject: vi.fn(),
+  jsonSchema: <T>(s: unknown) => s as T,
 }))
 vi.mock('@ai-sdk/openai', () => ({
   openai: { embedding: vi.fn().mockReturnValue('embedding-model') },

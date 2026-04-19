@@ -7,6 +7,10 @@ import { checkRateLimit } from '@/lib/chat/rate-limit'
 import { storeSession } from '@/lib/chat/session-store'
 import { corsHeaders, handleCorsPreFlight } from '@/lib/chat/cors'
 import { checkSubscription } from '@/lib/subscription'
+import {
+  matchResponse,
+  type ResponseRule,
+} from '@/lib/chat/response-matcher'
 import { openai } from '@ai-sdk/openai'
 import { embed } from 'ai'
 import crypto from 'crypto'
@@ -145,6 +149,40 @@ export async function POST(request: NextRequest) {
         typeof m.content === 'string'
     )
 
+    // M6F2: custom-response short-circuit. Runs BEFORE any OpenAI call so
+    // a keyword hit skips embedding + chat completion entirely. Rules are
+    // pre-ordered by the DB (priority DESC, created_at ASC), which the
+    // matcher honors as tiebreaker.
+    const siteName = site.name || new URL(site.url).hostname
+    const { data: rules } = await supabase
+      .from('custom_responses')
+      .select('id, trigger_type, triggers, response, priority, created_at')
+      .eq('site_id', site.id)
+      .eq('is_active', true)
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: true })
+
+    const match = await matchResponse(
+      message.trim(),
+      ((rules ?? []) as ResponseRule[])
+    )
+    if (match) {
+      const sessionId = crypto.randomUUID()
+      await storeSession(sessionId, {
+        siteId: site.id,
+        siteName,
+        siteUrl: site.url,
+        calendlyUrl: site.calendly_url,
+        googleMapsUrl: site.google_maps_url,
+        systemPrompt: '',
+        messages: [...typedHistory, { role: 'user', content: message.trim() }],
+        visitorIp: ip,
+        createdAt: Date.now(),
+        cannedResponse: match.rule.response,
+      })
+      return Response.json({ sessionId }, { headers: corsHeaders })
+    }
+
     const rewrittenQuery = await rewriteQuery(message.trim(), typedHistory)
 
     const { embedding } = await embed({
@@ -174,7 +212,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const siteName = site.name || new URL(site.url).hostname
     const systemPrompt = buildSystemPrompt({
       siteName,
       siteUrl: site.url,

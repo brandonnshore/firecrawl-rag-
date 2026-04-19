@@ -11,6 +11,12 @@ export interface ChatSession {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
   visitorIp: string
   createdAt: number
+  /**
+   * M6F2: when /api/chat/session matched a custom-response rule, the
+   * canned text is stored here and /api/chat/stream streams it verbatim
+   * without calling gpt-4o-mini. Absent means the normal RAG path runs.
+   */
+  cannedResponse?: string
 }
 
 /**

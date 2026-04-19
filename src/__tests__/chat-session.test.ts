@@ -1,23 +1,64 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockRpc = vi.fn()
-const mockMaybeSingle = vi.fn()
-const mockSelect = vi.fn(() => ({
-  eq: vi.fn(() => ({ maybeSingle: mockMaybeSingle })),
-}))
+const mockSiteMaybeSingle = vi.fn()
+const mockProfileMaybeSingle = vi.fn()
+
+// Table-routed mock: different Supabase chains per table name. The route
+// queries sites (select+eq+maybeSingle), profiles (select+eq+maybeSingle
+// via the quota limit lookup), and custom_responses (select+eq+eq+order+
+// order). We return empty rules by default so the canned-response path
+// is skipped in happy-path tests; the LLM-bypass case lives in
+// responses-integration.test.ts.
+function thenable<T>(value: T) {
+  // PostgREST builders are thenables; awaiting returns { data, error }.
+  return {
+    then: (resolve: (v: T) => unknown) => Promise.resolve(resolve(value)),
+  }
+}
+
+function fromBuilder(table: string) {
+  if (table === 'sites') {
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ maybeSingle: mockSiteMaybeSingle })),
+      })),
+    }
+  }
+  if (table === 'profiles') {
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ maybeSingle: mockProfileMaybeSingle })),
+      })),
+    }
+  }
+  if (table === 'custom_responses') {
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              order: vi.fn(() => thenable({ data: [], error: null })),
+            })),
+          })),
+        })),
+      })),
+    }
+  }
+  throw new Error(`Unexpected table: ${table}`)
+}
 
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => ({
-    from: vi.fn(() => ({ select: mockSelect })),
+    from: (table: string) => fromBuilder(table),
     rpc: mockRpc,
   }),
 }))
 
-// Subscription gate is its own feature with its own tests; here we assert
-// the caller pre-requisite and let an always-active stub keep the route
-// under test focused on chat-session behavior.
 vi.mock('@/lib/subscription', () => ({
-  checkSubscription: vi.fn().mockResolvedValue({ active: true, status: 'active' }),
+  checkSubscription: vi
+    .fn()
+    .mockResolvedValue({ active: true, status: 'active' }),
 }))
 
 vi.mock('@/lib/chat/query-rewrite', () => ({
@@ -26,12 +67,12 @@ vi.mock('@/lib/chat/query-rewrite', () => ({
 
 vi.mock('ai', () => ({
   embed: vi.fn(async () => ({ embedding: new Array(1536).fill(0.1) })),
+  generateObject: vi.fn(),
+  jsonSchema: <T>(s: unknown) => s as T,
 }))
 
 vi.mock('@ai-sdk/openai', () => ({
-  openai: Object.assign(() => ({}), {
-    embedding: () => ({}),
-  }),
+  openai: Object.assign(() => ({}), { embedding: () => ({}) }),
 }))
 
 vi.mock('@/lib/chat/rate-limit', () => ({
@@ -60,7 +101,8 @@ function makeRequest(body: unknown, ip = '1.2.3.4') {
 describe('POST /api/chat/session', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockMaybeSingle.mockReset()
+    mockSiteMaybeSingle.mockReset()
+    mockProfileMaybeSingle.mockReset()
     mockRpc.mockReset()
     ;(checkRateLimit as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       allowed: true,
@@ -94,7 +136,7 @@ describe('POST /api/chat/session', () => {
   })
 
   it('returns 404 on invalid site_key', async () => {
-    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null })
+    mockSiteMaybeSingle.mockResolvedValueOnce({ data: null, error: null })
     const res = await POST(
       makeRequest({ message: 'hi', site_key: 'sk_invalid' })
     )
@@ -102,7 +144,7 @@ describe('POST /api/chat/session', () => {
   })
 
   it('returns 503 when site not ready', async () => {
-    mockMaybeSingle.mockResolvedValueOnce({
+    mockSiteMaybeSingle.mockResolvedValueOnce({
       data: {
         id: 'site-1',
         url: 'https://acme.test',
@@ -119,7 +161,7 @@ describe('POST /api/chat/session', () => {
   })
 
   it('returns 429 when rate limited', async () => {
-    mockMaybeSingle.mockResolvedValueOnce({
+    mockSiteMaybeSingle.mockResolvedValueOnce({
       data: {
         id: 'site-1',
         url: 'https://acme.test',
@@ -140,8 +182,7 @@ describe('POST /api/chat/session', () => {
   })
 
   it('returns 200 with sessionId on success', async () => {
-    // sites lookup
-    mockMaybeSingle.mockResolvedValueOnce({
+    mockSiteMaybeSingle.mockResolvedValueOnce({
       data: {
         id: 'site-1',
         url: 'https://acme.test',
@@ -153,21 +194,17 @@ describe('POST /api/chat/session', () => {
       },
       error: null,
     })
-    // owner profile lookup (for quota limit resolution)
-    mockMaybeSingle.mockResolvedValueOnce({
+    mockProfileMaybeSingle.mockResolvedValueOnce({
       data: { plan_id: null },
       error: null,
     })
-    // RPC call order: increment_message_counter, then match_chunks
     mockRpc
       .mockResolvedValueOnce({
         data: { ok: true, used: 1, limit: 2000 },
         error: null,
       })
       .mockResolvedValueOnce({
-        data: [
-          { chunk_text: 'test', source_url: 'https://acme.test/x' },
-        ],
+        data: [{ chunk_text: 'test', source_url: 'https://acme.test/x' }],
         error: null,
       })
 
@@ -177,6 +214,12 @@ describe('POST /api/chat/session', () => {
     expect(typeof json.sessionId).toBe('string')
     expect(json.sessionId.length).toBeGreaterThan(0)
     expect(mockStoreSession).toHaveBeenCalledOnce()
+    // Canned-response path NOT taken: session stored without cannedResponse.
+    const [, storedSession] = mockStoreSession.mock.calls[0] as [
+      string,
+      { cannedResponse?: string },
+    ]
+    expect(storedSession.cannedResponse).toBeUndefined()
   })
 })
 

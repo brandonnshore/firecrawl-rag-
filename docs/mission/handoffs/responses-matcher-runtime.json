@@ -1,0 +1,53 @@
+{
+  "feature": "responses-matcher-runtime",
+  "milestone": "custom-responses",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-RESP-007", "VAL-RESP-008", "VAL-RESP-009",
+    "VAL-RESP-010", "VAL-RESP-011"
+  ],
+  "whatWasImplemented": [
+    "src/lib/chat/response-matcher.ts — pure matcher module. normalize() NFD-decomposes + strips combining marks + lowercases + collapses whitespace so diacritics ('café'->'cafe') and case ('HELP') match reliably. triggerMatches() uses an escaped, \\W-anchored regex so word boundaries are enforced (VAL-RESP-009: 'help' no longer matches 'helper' / 'alphelp'). Multi-word triggers match as phrases ('business hours' vs 'businesshours'). matchKeywordRule() sorts by priority DESC, created_at ASC so higher-priority wins and ties go to older rules (VAL-RESP-010). classifyIntent() calls gpt-4o-mini with a jsonSchema-bound {intent: string} output and returns null on 'other' / empty. matchResponse() orchestrates keyword-first, then intent-only-if-site-has-intent-rules (VAL-RESP-011 gate).",
+    "Switched from zod to the AI SDK's built-in jsonSchema helper — zod isn't a project dep and the AI SDK's shape worked directly. The helper is a pass-through annotation, so tests stub it as identity.",
+    "src/app/api/chat/session/route.ts — wired matcher BEFORE query-rewrite + embed + RAG. Fetches rules with supabase.from('custom_responses').select(...).eq('site_id', X).eq('is_active', true).order(priority DESC).order(created_at ASC) — the DB index from M6F1 serves this directly. On a match, stores session with new cannedResponse field and returns sessionId; no OpenAI call (VAL-RESP-007: zero embed + zero generateObject).",
+    "src/lib/chat/session-store.ts — ChatSession gains optional cannedResponse. Present means the matcher fired and the stream route should emit it verbatim.",
+    "src/app/api/chat/stream/route.ts — early branch when session.cannedResponse is set: emits a plain text/plain stream of the canned text and persists the conversation via a shared helper (persistConversation) extracted from the existing onFinish. Normal RAG path unchanged.",
+    "src/__tests__/responses-matcher.test.ts — 26 unit tests covering normalize (lowercase, diacritics, whitespace), triggerMatches (case + word boundary + diacritic + multi-word + regex metachar escape), matchKeywordRule (empty rules, no match, single, priority winner, created_at tiebreak, intent-type ignored), matchIntentRule (exact label, miss, priority), classifyIntent (empty short-circuit, hit, 'other' null, empty label null), matchResponse (VAL-RESP-011 no classifier when no intent rules, keyword hit skips classifier, classifier only when no keyword hit).",
+    "src/__tests__/responses-integration.test.ts — 3 integration tests against /api/chat/session: (1) keyword match stores cannedResponse and never calls embed/generateObject/rewriteQuery (VAL-RESP-007); (2) keyword-only ruleset with no match NEVER invokes classifier and falls through to RAG (VAL-RESP-011 negative); (3) intent-rule present + keyword miss invokes classifier once and returns cannedResponse from intent match.",
+    "Test-suite fan-out: chat-session.test.ts / message-quota.test.ts / subscription-gate-routes.test.ts updated. The chat-session mock was rewritten with a table-routed fromBuilder so sites/profiles/custom_responses/... each have the right chain. The other two gained a custom_responses short-circuit case that returns empty, plus jsonSchema in their ai mocks (since response-matcher.ts imports it and the session route pulls matcher transitively)."
+  ],
+  "whatWasLeftUndone": [
+    "No per-session caching of classifier results across multiple messages in the same conversation — each POST to /api/chat/session is stateless and classifies once per call. Caching would benefit multi-turn conversations that repeatedly miss keyword rules, but it's not required by VAL-RESP-011 and adds storage complexity. Revisit if user-testing shows latency pain.",
+    "The matcher does not yet support exact phrase triggers with leading/trailing punctuation edge cases beyond \\W boundaries (e.g. emoji-only messages). For Latin-script chat this is fine; internationalization would need locale-aware tokenization."
+  ],
+  "discoveredIssues": [
+    "Three adjacent test files (chat-session, message-quota, subscription-gate-routes) all mock the 'ai' module minimally. Adding jsonSchema as a matcher import required extending each mock. Noted — any future 'ai' export added by a new matcher feature will hit the same spots. Option: a shared test helper that builds a permissive ai mock.",
+    "The session route's direct .from('custom_responses') chain length (select+eq+eq+order+order) is longer than prior Supabase mocks in the repo expected. The table-routed builder pattern in chat-session.test.ts is the cleanest fix; older tests use ad-hoc shape matching. Reusable helper would pay off but isn't urgent."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 475 passed / 1 skipped / 61 files (+29 new: 26 matcher + 3 integration).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "triggerMatches('helper available', 'help')", "expected": "false (word boundary)", "observed": "pass" },
+      { "action": "triggerMatches('where is your cafe', 'café')", "expected": "true (diacritic-insensitive)", "observed": "pass" },
+      { "action": "matchResponse('pricing?', [{keyword:['pricing']}, {intent:['hours']}])", "expected": "keyword hit, generateObject not called", "observed": "pass" },
+      { "action": "matchResponse('hello', [{keyword:['pricing']}])", "expected": "null, generateObject not called (no intent rules)", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/lib/chat/response-matcher.ts (created)",
+    "src/lib/chat/session-store.ts (modified — optional cannedResponse)",
+    "src/app/api/chat/session/route.ts (modified — matcher wired before RAG)",
+    "src/app/api/chat/stream/route.ts (modified — canned-response early branch + persistConversation helper)",
+    "src/__tests__/responses-matcher.test.ts (created — 26 tests)",
+    "src/__tests__/responses-integration.test.ts (created — 3 tests)",
+    "src/__tests__/chat-session.test.ts (rewritten — table-routed mock)",
+    "src/__tests__/message-quota.test.ts (modified — custom_responses + jsonSchema mock)",
+    "src/__tests__/subscription-gate-routes.test.ts (modified — jsonSchema mock)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-RESP-007..011 -> passed)",
+    "docs/mission/handoffs/responses-matcher-runtime.json (created)"
+  ]
+}
