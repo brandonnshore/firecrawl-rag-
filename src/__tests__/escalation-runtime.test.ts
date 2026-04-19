@@ -202,10 +202,9 @@ describe('evaluateEscalation — intent', () => {
       classifier,
     })
     expect(classifier).toHaveBeenCalledOnce()
-    expect(classifier.mock.calls[0][0]).toBe('card declined')
-    expect(classifier.mock.calls[0][1]).toEqual(
-      expect.arrayContaining(['hours', 'billing'])
-    )
+    const call = classifier.mock.calls[0] as unknown as [string, string[]]
+    expect(call[0]).toBe('card declined')
+    expect(call[1]).toEqual(expect.arrayContaining(['hours', 'billing']))
     expect(match?.rule_id).toBe(r2.id)
   })
 })

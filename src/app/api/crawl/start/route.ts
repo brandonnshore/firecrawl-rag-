@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
+import { checkCrawlRateLimit } from '@/lib/chat/rate-limit'
 import { validateCrawlUrl } from '@/lib/crawl/validate-url'
 import Firecrawl from '@mendable/firecrawl-js'
 import crypto from 'crypto'
@@ -51,6 +52,22 @@ export async function POST(request: Request) {
 
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // 1b. Per-user rate limit (M8F1): 5 crawls / hour.
+  const rate = await checkCrawlRateLimit(user.id)
+  if (!rate.allowed) {
+    return Response.json(
+      { error: 'rate_limited' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(
+            Math.ceil((rate.retryAfterMs ?? 3600_000) / 1000)
+          ),
+        },
+      }
+    )
   }
 
   // 2. Parse and validate URL

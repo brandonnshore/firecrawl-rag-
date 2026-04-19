@@ -25,6 +25,14 @@ vi.mock('@/lib/subscription', () => ({
   checkSubscription: vi.fn().mockResolvedValue({ active: true, status: 'active' }),
 }))
 
+vi.mock('@/lib/chat/rate-limit', () => ({
+  checkCrawlRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkChatRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkFileUploadRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  _resetRateLimit: vi.fn(),
+}))
+
 // Import handler after mocks are set up
 import { POST } from '@/app/api/crawl/start/route'
 

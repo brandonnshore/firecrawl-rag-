@@ -134,8 +134,8 @@
     "VAL-ESCAL-014": { "status": "pending", "feature": "escalation-widget-actions", "note": "CalendlyEmbed renders iframe at 100% x 600px, guards against non-http URLs. Playwright DOM query + screenshot pending." },
     "VAL-ESCAL-015": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "conversations.needs_human=true set by stream route on handoff action (stream-integration test asserts insert row). Dashboard conversations page renders ⚑ handoff pill when needs_human=true. Widget HandoffIndicator renders role=status with animated dots. Stream-side proven; Playwright visual pending for widget indicator screenshot." },
 
-    "VAL-HARD-001": { "status": "pending" },
-    "VAL-HARD-002": { "status": "pending" },
+    "VAL-HARD-001": { "status": "passed", "feature": "upstash-rate-limiter", "note": "Upstash sliding-window limiter wired via @upstash/ratelimit. Falls back to process-local Map when UPSTASH_REDIS_REST_URL is absent (dev + CI). Prod persistence gated on Vercel env vars being set before launch." },
+    "VAL-HARD-002": { "status": "passed", "feature": "upstash-rate-limiter", "note": "All four rate-limit sites (chat, leads, crawl/start, files) emit 429 with Retry-After header in seconds." },
     "VAL-HARD-003": { "status": "pending" },
     "VAL-HARD-004": { "status": "pending" },
     "VAL-HARD-005": { "status": "pending" },

@@ -1,0 +1,56 @@
+{
+  "feature": "upstash-rate-limiter",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-HARD-001", "VAL-HARD-002"],
+  "whatWasImplemented": [
+    "src/lib/chat/rate-limit.ts — rewritten. Three named async limiters: checkChatRateLimit (1 req / 3s per key), checkCrawlRateLimit (5 / hr per user), checkFileUploadRateLimit (60 / hr per user). Backed by @upstash/ratelimit sliding-window when UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set; falls back to a process-local Map when not (dev + CI). checkRateLimit kept as async alias of checkChatRateLimit for existing callers. _resetRateLimit clears memory + caches for tests.",
+    "src/app/api/chat/session/route.ts — awaits checkRateLimit. Widget 429 already carried Retry-After, unchanged.",
+    "src/app/api/leads/route.ts — awaits checkRateLimit and now includes Retry-After on 429.",
+    "src/app/api/crawl/start/route.ts — new pre-auth rate-limit step using checkCrawlRateLimit(user.id); 429 + Retry-After on throttle.",
+    "src/app/api/files/route.ts — new pre-upload rate-limit step using checkFileUploadRateLimit(user.id); 429 + Retry-After on throttle.",
+    "package.json — added @upstash/ratelimit + @upstash/redis, removed unused ioredis.",
+    "src/__tests__/rate-limit-upstash.test.ts — 14 tests covering chat (1/3s), crawl (5/hr), files (60/hr), key isolation, window rollover, back-compat alias, and fallback state persistence within a process.",
+    "src/__tests__/rate-limit.test.ts — migrated to await the now-async checkRateLimit.",
+    "src/__tests__/crawl-start.test.ts + src/__tests__/file-upload.test.ts + src/__tests__/subscription-gate-routes.test.ts — extended vi.mock('@/lib/chat/rate-limit') to cover all named exports.",
+    "src/__tests__/escalation-runtime.test.ts — incidental classifier type-cast tightened from the M7 seal pass."
+  ],
+  "whatWasLeftUndone": [
+    "Production Upstash credentials need to be set in Vercel env (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN). Until then, prod runs on the in-memory fallback — same behavior as the pre-M8F1 limiter. Brandon to add the env vars before launch.",
+    "No end-to-end test proves limit persistence across a real serverless cold-start — that would need the Vercel preview environment. VAL-HARD-001's Upstash code path is exercised in the module boundary; the fallback path gives process-local guarantees that cover tests."
+  ],
+  "discoveredIssues": [
+    "Existing callers (chat/session, leads) expected a sync checkRateLimit. Converting to async works because plain-value mocks (vi.fn(() => ({allowed:true}))) also satisfy await — but the vi.mock factories for three test files still had to be widened to list all new named exports so they don't blow up when the route imports checkCrawlRateLimit / checkFileUploadRateLimit.",
+    "ioredis was dead code. Removing shrinks node_modules and eliminates a noisy transitive dep tree (peer of Redis pubsub, etc.)."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 568 passing / 1 skipped / 68 files (+13 new: 14 upstash-rate-limit tests net after dropping 1 redundant).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "checkChatRateLimit('1.2.3.4:site_abc') twice rapidly", "expected": "first allowed; second { allowed:false, retryAfterMs>0 }", "observed": "pass" },
+      { "action": "checkCrawlRateLimit('u') called 6 times in the same fake-timers window", "expected": "6th { allowed:false, retryAfterMs<=3.6e6 }", "observed": "pass" },
+      { "action": "checkFileUploadRateLimit('u') called 61 times", "expected": "61st { allowed:false }", "observed": "pass" },
+      { "action": "Fallback state persistence — two sequential chat-rate checks on same key across module re-imports", "expected": "second blocked (shared Map state)", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "package.json (modified — deps)",
+    "pnpm-lock.yaml (modified)",
+    "src/lib/chat/rate-limit.ts (rewrote)",
+    "src/app/api/chat/session/route.ts (await)",
+    "src/app/api/leads/route.ts (await + Retry-After)",
+    "src/app/api/crawl/start/route.ts (added checkCrawlRateLimit)",
+    "src/app/api/files/route.ts (added checkFileUploadRateLimit)",
+    "src/__tests__/rate-limit-upstash.test.ts (created)",
+    "src/__tests__/rate-limit.test.ts (migrated to await)",
+    "src/__tests__/crawl-start.test.ts (extended mock)",
+    "src/__tests__/file-upload.test.ts (extended mock)",
+    "src/__tests__/subscription-gate-routes.test.ts (extended mock)",
+    "src/__tests__/escalation-runtime.test.ts (tightened type cast from M7 seal)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-HARD-001 + VAL-HARD-002 passed)",
+    "docs/mission/handoffs/upstash-rate-limiter.json (created)"
+  ]
+}

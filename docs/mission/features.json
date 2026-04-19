@@ -768,7 +768,7 @@
         "Manual: hammer endpoint, verify 429 with Retry-After"
       ],
       "fulfills": ["VAL-HARD-001", "VAL-HARD-002"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "sentry-integration",

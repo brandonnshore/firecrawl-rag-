@@ -9,6 +9,7 @@ import {
   sanitizeTraversalFilename,
 } from '@/lib/files/validate'
 import { processFile } from '@/lib/files/process'
+import { checkFileUploadRateLimit } from '@/lib/chat/rate-limit'
 
 const STARTER_FILE_LIMIT_FALLBACK = 25
 
@@ -29,6 +30,22 @@ export async function POST(request: Request): Promise<Response> {
   } = await supabase.auth.getUser()
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // 1b. Per-user rate limit (M8F1): 60 uploads / hour.
+  const rate = await checkFileUploadRateLimit(user.id)
+  if (!rate.allowed) {
+    return Response.json(
+      { error: 'rate_limited' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(
+            Math.ceil((rate.retryAfterMs ?? 3600_000) / 1000)
+          ),
+        },
+      }
+    )
   }
 
   // 2. Early size-cap check via Content-Length

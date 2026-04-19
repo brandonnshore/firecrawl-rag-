@@ -45,6 +45,14 @@ vi.mock('@/lib/files/process', () => ({
   processFile: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('@/lib/chat/rate-limit', () => ({
+  checkFileUploadRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkChatRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkCrawlRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  _resetRateLimit: vi.fn(),
+}))
+
 import { POST } from '@/app/api/files/route'
 
 interface SetupOpts {

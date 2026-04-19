@@ -51,7 +51,11 @@ vi.mock('@/lib/chat/query-rewrite', () => ({
   rewriteQuery: vi.fn().mockImplementation(async (m: string) => m),
 }))
 vi.mock('@/lib/chat/rate-limit', () => ({
-  checkRateLimit: vi.fn().mockReturnValue({ allowed: true }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkChatRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkCrawlRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkFileUploadRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  _resetRateLimit: vi.fn(),
 }))
 vi.mock('@/lib/chat/session-store', () => ({
   storeSession: vi.fn().mockResolvedValue(undefined),

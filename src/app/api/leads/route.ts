@@ -79,11 +79,19 @@ export async function POST(request: Request) {
 
     const ip =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-    const rateCheck = checkRateLimit(`lead:${ip}`)
+    const rateCheck = await checkRateLimit(`lead:${ip}`)
     if (!rateCheck.allowed) {
       return Response.json(
         { error: 'Too many requests' },
-        { status: 429, headers: corsHeaders }
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Retry-After': String(
+              Math.ceil((rateCheck.retryAfterMs ?? 3000) / 1000)
+            ),
+          },
+        }
       )
     }
 

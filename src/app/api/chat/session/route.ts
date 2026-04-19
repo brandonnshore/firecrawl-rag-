@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     const ip =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const rateLimitKey = `${ip}:${site_key}`
-    const rateCheck = checkRateLimit(rateLimitKey)
+    const rateCheck = await checkRateLimit(rateLimitKey)
     if (!rateCheck.allowed) {
       return Response.json(
         { error: 'Rate limit exceeded. Please wait a moment.' },
