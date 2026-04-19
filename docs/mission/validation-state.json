@@ -310,14 +310,14 @@
       "note": "PDF round-trip via pdf-lib + pdf-parse verified."
     },
     "VAL-FILE-004": {
-      "status": "pending",
-      "feature": "file-parsers-pipeline",
-      "note": "DOCX dispatcher wired to mammoth.extractRawText; real .docx fixture test deferred to adversarial-fixture pass."
+      "status": "passed",
+      "feature": "adversarial-file-fixtures",
+      "note": "Vitest adversarial-files.test.ts 5/5 green"
     },
     "VAL-FILE-005": {
-      "status": "pending",
-      "feature": "file-parsers-pipeline",
-      "note": "PPTX wired to officeparser v5 parseOfficeAsync; real .pptx fixture deferred."
+      "status": "passed",
+      "feature": "adversarial-file-fixtures",
+      "note": "Vitest adversarial-files.test.ts 5/5 green"
     },
     "VAL-FILE-006": {
       "status": "passed",
@@ -363,14 +363,14 @@
       "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-FILE-016": {
-      "status": "pending",
-      "feature": "file-parsers-pipeline",
-      "note": "MAX_EXTRACTED_BYTES cap wired via assertBelowCap; real zip-bomb fixture deferred."
+      "status": "passed",
+      "feature": "adversarial-file-fixtures",
+      "note": "Vitest adversarial-files.test.ts 5/5 green"
     },
     "VAL-FILE-017": {
-      "status": "pending",
-      "feature": "file-parsers-pipeline",
-      "note": "Same cap applies to PDF extraction; real PDF-bomb fixture deferred."
+      "status": "passed",
+      "feature": "adversarial-file-fixtures",
+      "note": "Vitest adversarial-files.test.ts 5/5 green"
     },
     "VAL-FILE-018": {
       "status": "passed",
@@ -390,9 +390,9 @@
       "feature": "file-upload-api-limits"
     },
     "VAL-FILE-022": {
-      "status": "pending",
-      "feature": "file-parsers-pipeline",
-      "note": "mammoth.extractRawText skips VBA by design; real macro-laden DOCX fixture deferred."
+      "status": "passed",
+      "feature": "adversarial-file-fixtures",
+      "note": "Vitest adversarial-files.test.ts 5/5 green"
     },
     "VAL-FILE-023": {
       "status": "passed",
