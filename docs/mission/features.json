@@ -658,7 +658,7 @@
         "VAL-RESP-004", "VAL-RESP-005", "VAL-RESP-006",
         "VAL-RESP-012"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "escalation-rules-schema",

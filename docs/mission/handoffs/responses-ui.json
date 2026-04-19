@@ -1,0 +1,49 @@
+{
+  "feature": "responses-ui",
+  "milestone": "custom-responses",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [
+    "VAL-RESP-001", "VAL-RESP-002", "VAL-RESP-003",
+    "VAL-RESP-004", "VAL-RESP-005", "VAL-RESP-006",
+    "VAL-RESP-012"
+  ],
+  "whatWasImplemented": [
+    "src/app/api/responses/route.ts — POST creates a rule. Auth via user-session client, which hits M6F1 RLS (INSERT policy resolves through sites.user_id). validateRuleBody() checks trigger_type enum, non-empty triggers array with all-non-empty strings, non-empty response <= 2000 chars, optional integer priority.",
+    "src/app/api/responses/[id]/route.ts — PATCH partial updates a rule. When trigger_type/triggers/response touched, merges with the current DB row before re-validating to preserve invariants. DELETE wraps a pre-lookup so RLS-hidden rows return 404 instead of 200-with-0-rows.",
+    "src/app/api/responses/test/route.ts — POST runs matchResponse() against the caller's active rules with a sample message. Returns {matched, rule_id, response, via, intent} so the dashboard test drawer shows the exact row that would trigger. Uses the same matcher wiring as /api/chat/session (VAL-RESP-006 parity).",
+    "src/app/dashboard/settings/responses/page.tsx — server component. Loads user's site + rules (ordered by priority DESC, created_at ASC to match runtime order) and hands off to responses-client. Empty-site fallback mirrors knowledge-page.tsx.",
+    "src/app/dashboard/settings/responses/responses-client.tsx — client component owning the CRUD surface. Empty-state card with primary CTA; rule list with type chip + trigger chips + response preview + priority badge + edit/delete; EditModal dialog with chips-input for triggers (Enter/comma commits; click X removes), trigger_type select (keyword|intent), response textarea (2000-char cap), priority number input (0-100), active toggle; TestDrawer side sheet posting to /api/responses/test. All saves and deletes surface toast.success / toast.error.",
+    "src/__tests__/responses-api.test.ts — 17 tests: POST 401/400s (5 validation branches + happy path), DELETE 401/404/200, PATCH 401/partial-update/validation-on-patched-fields, POST /test 401/400/matched/not-matched. Table-routed Supabase mock."
+  ],
+  "whatWasLeftUndone": [
+    "Playwright evidence for VAL-RESP-001 (empty state), VAL-RESP-002 (modal validation visuals), VAL-RESP-003 (keyword CRUD flow), VAL-RESP-004 (intent CRUD), VAL-RESP-005 (trigger chips render), VAL-RESP-006 (test drawer result visual), VAL-RESP-012 (delete removes UI + DB). The underlying logic is wired and unit-tested — the Playwright pass mirrors the M5 pattern of pending-with-note.",
+    "No zod + react-hook-form: neither is a project dep, and the vanilla-React form with manual validateRuleBody() shares the same contract between client and server (form surfaces the same error messages server returns). Revisit if the form grows to 10+ fields."
+  ],
+  "discoveredIssues": [
+    "PATCH on partial updates (e.g. only is_active) originally bypassed validation and failed on invariant errors at the DB layer (trigger_type swap without compatible triggers). Fixed by merging the patch with the current DB row before running validateRuleBody — keeps the validator honest without requiring callers to send every field.",
+    "The UI modal accepts triggers via chips; empty input on blur would add an empty string. Guarded by triggerInput.trim() check before push. Also deduped so pressing Enter twice doesn't create two chips for the same text."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 492 passed / 1 skipped / 62 files (+17 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "POST /api/responses {trigger_type:'keyword', triggers:['pricing'], response:'x'}", "expected": "201 with rule row", "observed": "pass" },
+      { "action": "POST /api/responses {response:''}", "expected": "400 response_required", "observed": "pass" },
+      { "action": "DELETE /api/responses/{unknown_id}", "expected": "404 not_found (RLS hides row)", "observed": "pass" },
+      { "action": "POST /api/responses/test {message:'what about pricing?'} against a keyword rule on pricing", "expected": "200 {matched:true, via:'keyword', response}", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/app/api/responses/route.ts (created)",
+    "src/app/api/responses/[id]/route.ts (created)",
+    "src/app/api/responses/test/route.ts (created)",
+    "src/app/dashboard/settings/responses/page.tsx (replaced placeholder)",
+    "src/app/dashboard/settings/responses/responses-client.tsx (created)",
+    "src/__tests__/responses-api.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-RESP-001..006 + VAL-RESP-012 pending-with-note)",
+    "docs/mission/handoffs/responses-ui.json (created)"
+  ]
+}
