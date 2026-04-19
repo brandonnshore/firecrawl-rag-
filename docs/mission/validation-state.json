@@ -3,171 +3,687 @@
   "missionId": "prod-saas",
   "contractVersion": "1.0 (2026-04-18)",
   "assertions": {
-    "VAL-AUTH-002": { "status": "passed" },
-    "VAL-AUTH-003": { "status": "passed" },
-    "VAL-AUTH-005": { "status": "passed" },
-    "VAL-AUTH-007": { "status": "pending" },
-    "VAL-AUTH-008": { "status": "pending" },
-    "VAL-AUTH-009": { "status": "passed" },
-    "VAL-AUTH-010": { "status": "pending" },
-    "VAL-AUTH-012": { "status": "passed" },
-    "VAL-AUTH-013": { "status": "passed" },
-
-    "VAL-RLS-001":  { "status": "passed" },
-    "VAL-RLS-002":  { "status": "passed" },
-    "VAL-RLS-003":  { "status": "passed" },
-    "VAL-RLS-004":  { "status": "passed" },
-    "VAL-RLS-005":  { "status": "passed" },
-    "VAL-RLS-006":  { "status": "passed" },
-    "VAL-RLS-007":  { "status": "passed" },
-    "VAL-RLS-008":  { "status": "passed" },
-    "VAL-RLS-009":  { "status": "passed" },
-    "VAL-RLS-010":  { "status": "passed" },
-    "VAL-RLS-011":  { "status": "passed" },
-    "VAL-RLS-012":  { "status": "passed" },
-    "VAL-RLS-014":  { "status": "passed" },
-    "VAL-RLS-015":  { "status": "passed", "feature": "usage-counters-schema-rpc" },
-
-    "VAL-BILLING-001": { "status": "passed", "feature": "billing-page-refactor", "note": "Covered by dashboard/layout.tsx auth redirect — deterministic without browser." },
-    "VAL-BILLING-002": { "status": "pending", "feature": "billing-page-refactor", "note": "UI logic complete and unit-tested via page-model; browser-automation evidence deferred to Playwright user-testing pass." },
-    "VAL-BILLING-003": { "status": "pending", "feature": "billing-page-refactor", "note": "Trial banner rendered when trialCountdownDays is set; Playwright confirmation pending." },
-    "VAL-BILLING-004": { "status": "passed", "feature": "stripe-checkout-api" },
-    "VAL-BILLING-005": { "status": "passed", "feature": "stripe-checkout-api" },
-    "VAL-BILLING-006": { "status": "passed", "feature": "stripe-checkout-api" },
-    "VAL-BILLING-007": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-008": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-009": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-010": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-011": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-012": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-013": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-014": { "status": "passed", "feature": "stripe-webhook-api", "note": "Profile-side rollover landed in M2; usage_counters reset re-confirmed in M3F4 quota-reset-on-invoice-paid." },
-    "VAL-BILLING-015": { "status": "passed", "feature": "stripe-webhook-api" },
-    "VAL-BILLING-016": { "status": "passed", "feature": "subscription-gate" },
-    "VAL-BILLING-017": { "status": "passed", "feature": "subscription-gate" },
-    "VAL-BILLING-018": { "status": "passed", "feature": "subscription-gate" },
-    "VAL-BILLING-019": { "status": "passed", "feature": "subscription-gate" },
-    "VAL-BILLING-020": { "status": "passed", "feature": "subscription-gate" },
-    "VAL-BILLING-021": { "status": "passed", "feature": "stripe-portal-api" },
-    "VAL-BILLING-022": { "status": "passed", "feature": "billing-page-refactor" },
-    "VAL-BILLING-023": { "status": "passed", "feature": "billing-page-refactor" },
-    "VAL-BILLING-024": { "status": "pending", "feature": "billing-page-refactor", "note": "Invoice list capped at 12 in page-model; Playwright confirmation pending." },
-    "VAL-BILLING-025": { "status": "pending", "feature": "billing-page-refactor", "note": "Next-invoice date rendered from current_period_end; Playwright confirmation pending." },
-
-    "VAL-QUOTA-001": { "status": "passed", "feature": "message-quota-enforcement" },
-    "VAL-QUOTA-002": { "status": "passed", "feature": "message-quota-enforcement" },
-    "VAL-QUOTA-003": { "status": "passed", "feature": "message-quota-enforcement", "note": "RPC atomicity proven by M3F1 20-parallel test; route is a thin wrapper." },
-    "VAL-QUOTA-004": { "status": "passed", "feature": "crawl-quota-enforcement" },
-    "VAL-QUOTA-005": { "status": "passed", "feature": "crawl-quota-enforcement" },
-    "VAL-QUOTA-006": { "status": "passed", "feature": "quota-reset-on-invoice-paid" },
-    "VAL-QUOTA-007": { "status": "passed", "feature": "usage-meter-ui", "note": "3-bar UsageMeterSet mounted on /dashboard and /dashboard/billing; logic unit-tested; browser screenshot pending Playwright." },
-    "VAL-QUOTA-008": { "status": "pending", "feature": "usage-meter-ui", "note": "Realtime subscription wired via Supabase channel; cross-tab live update needs Playwright to confirm the <3s SLA in a browser context." },
-    "VAL-QUOTA-009": { "status": "pending", "feature": "usage-meter-ui", "note": "Limits refresh via Realtime UPDATE on usage_counters today; full plan-change-without-reload scenario needs Playwright verification." },
-    "VAL-QUOTA-010": { "status": "passed", "feature": "message-quota-enforcement", "note": "Inherits idempotency from M2F3 processed_stripe_events gate; full usage_counters reset test lands with M3F4." },
-    "VAL-QUOTA-011": { "status": "pending", "feature": "message-quota-enforcement", "note": "API contract (402 + upgrade_url) complete; widget UI rendering of the generic message deferred." },
-    "VAL-QUOTA-012": { "status": "passed", "feature": "usage-counters-schema-rpc" },
-    "VAL-QUOTA-013": { "status": "passed", "feature": "usage-meter-ui", "note": "UsageMeterSet mounted on /dashboard/billing inside the plan card." },
-    "VAL-QUOTA-014": { "status": "pending", "feature": "usage-meter-ui", "note": "Empty-state logic unit-tested (0 / cap); Playwright pending for screenshot." },
-    "VAL-QUOTA-015": { "status": "passed", "feature": "usage-meter-ui", "note": "Overshoot clamp to 100% unit-tested in usage-meter-model.test.ts." },
-
-    "VAL-SET-001": { "status": "passed", "feature": "settings-layout", "note": "/dashboard/settings redirects via server component." },
-    "VAL-SET-002": { "status": "passed", "feature": "settings-layout", "note": "SETTINGS_NAV_ITEMS ordering pinned by unit test." },
-    "VAL-SET-003": { "status": "pending", "feature": "settings-layout", "note": "Active-state logic unit-tested via isActiveSubRoute + resolveActiveHref; screenshot evidence pending Playwright." },
-    "VAL-SET-004": { "status": "passed", "feature": "settings-site-move", "note": "Site settings moved intact; existing fields preserved." },
-    "VAL-SET-005": { "status": "pending", "feature": "site-key-rotation-ui", "note": "Modal + API + toast + router.refresh wired; Playwright screenshot pending." },
-    "VAL-SET-006": { "status": "pending", "feature": "toast-system", "note": "toast.success('Saved') wired in settings save path; Playwright screenshot of visible toast pending." },
-    "VAL-SET-007": { "status": "passed", "feature": "settings-layout", "note": "Parent /dashboard layout redirects unauthenticated users; transitive to all /dashboard/settings/* sub-routes." },
-    "VAL-SET-008": { "status": "pending", "feature": "settings-layout", "note": "Mobile horizontal-tab fallback implemented; Playwright mobile-viewport screenshot pending." },
-
-    "VAL-FILE-001": { "status": "pending", "feature": "knowledge-ui", "note": "Drop zone accepts 7 types via accept attribute; Playwright screenshots per type deferred." },
-    "VAL-FILE-002": { "status": "pending", "feature": "knowledge-ui", "note": "StatusChip helper unit-tested; screenshots deferred." },
-    "VAL-FILE-003": { "status": "passed", "feature": "file-parsers-pipeline", "note": "PDF round-trip via pdf-lib + pdf-parse verified." },
-    "VAL-FILE-004": { "status": "pending", "feature": "file-parsers-pipeline", "note": "DOCX dispatcher wired to mammoth.extractRawText; real .docx fixture test deferred to adversarial-fixture pass." },
-    "VAL-FILE-005": { "status": "pending", "feature": "file-parsers-pipeline", "note": "PPTX wired to officeparser v5 parseOfficeAsync; real .pptx fixture deferred." },
-    "VAL-FILE-006": { "status": "passed", "feature": "file-parsers-pipeline", "note": "XLSX multi-sheet extraction verified via xlsx.aoa_to_sheet roundtrip." },
-    "VAL-FILE-007": { "status": "passed", "feature": "file-parsers-pipeline" },
-    "VAL-FILE-008": { "status": "passed", "feature": "file-parsers-pipeline" },
-    "VAL-FILE-009": { "status": "passed", "feature": "file-parsers-pipeline" },
-    "VAL-FILE-010": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-011": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-012": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-013": { "status": "passed", "feature": "file-delete-cascade" },
-    "VAL-FILE-014": { "status": "passed", "feature": "file-parsers-pipeline", "note": "queued->processing->ready transitions proven via files-process.test.ts." },
-    "VAL-FILE-015": { "status": "pending", "feature": "knowledge-ui", "note": "Retry button wired to POST /api/files/process; Playwright pending." },
-    "VAL-FILE-016": { "status": "pending", "feature": "file-parsers-pipeline", "note": "MAX_EXTRACTED_BYTES cap wired via assertBelowCap; real zip-bomb fixture deferred." },
-    "VAL-FILE-017": { "status": "pending", "feature": "file-parsers-pipeline", "note": "Same cap applies to PDF extraction; real PDF-bomb fixture deferred." },
-    "VAL-FILE-018": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-019": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-020": { "status": "passed", "feature": "file-parsers-pipeline", "note": "/Encrypt marker detector + FileParseError('pdf_encrypted') routed to status=failed with readable message." },
-    "VAL-FILE-021": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-022": { "status": "pending", "feature": "file-parsers-pipeline", "note": "mammoth.extractRawText skips VBA by design; real macro-laden DOCX fixture deferred." },
-    "VAL-FILE-023": { "status": "passed", "feature": "file-parsers-pipeline", "note": "decodeText fatal-to-replacement fallback unit-tested with Latin-1 CSV." },
-    "VAL-FILE-024": { "status": "pending", "feature": "file-rag-integration", "note": "match_chunks + system-prompt wired for file citations; Playwright end-to-end (upload PDF -> chat -> citation in widget) deferred." },
-    "VAL-FILE-025": { "status": "pending", "feature": "knowledge-ui", "note": "Empty-state copy rendered when files.length=0; Playwright pending." },
-
-    "VAL-RESP-001": { "status": "pending", "feature": "responses-ui", "note": "Empty-state card with 'No custom responses yet' + Add CTA rendered when rules.length=0; Playwright screenshot pending." },
-    "VAL-RESP-002": { "status": "pending", "feature": "responses-ui", "note": "EditModal validates triggers (>=1) and response (non-empty) client-side with inline error messages; server mirrors via validateRuleBody(); 6 API unit tests cover each branch. Playwright visual pending." },
-    "VAL-RESP-003": { "status": "pending", "feature": "responses-ui", "note": "POST /api/responses unit-tested with keyword trigger_type + triggers array; UI handleSave wired. Playwright CRUD flow pending." },
-    "VAL-RESP-004": { "status": "pending", "feature": "responses-ui", "note": "Same path as VAL-RESP-003 with trigger_type='intent'; M6F1 schema test confirms intent acceptance. Playwright pending." },
-    "VAL-RESP-005": { "status": "pending", "feature": "responses-ui", "note": "TriggerChip component renders each element of triggers[] as a rounded pill; list rendering unit-tested indirectly via rule rendering. Playwright screenshot pending." },
-    "VAL-RESP-006": { "status": "pending", "feature": "responses-ui", "note": "POST /api/responses/test returns {matched, rule_id, response, via} — 2 unit tests cover match + no-match branches. TestDrawer UI wired. Playwright screenshot of drawer result pending." },
-    "VAL-RESP-007": { "status": "passed", "feature": "responses-matcher-runtime", "note": "Integration test proves embed + generateObject + rewriteQuery all uncalled on keyword hit." },
-    "VAL-RESP-008": { "status": "passed", "feature": "responses-matcher-runtime", "note": "normalize() lowercases + NFD; triggerMatches word-bound regex. 'Help' matches 'help me', 'HELP', 'Help?'." },
-    "VAL-RESP-009": { "status": "passed", "feature": "responses-matcher-runtime", "note": "\\W-anchored regex; 'help' does not match 'helper' or 'alphelp'." },
-    "VAL-RESP-010": { "status": "passed", "feature": "responses-matcher-runtime", "note": "Priority DESC with created_at ASC tiebreak; two unit cases cover both." },
-    "VAL-RESP-011": { "status": "passed", "feature": "responses-matcher-runtime", "note": "matchResponse short-circuits to null when zero intent-type rules; generateObject mock called 0 times." },
-    "VAL-RESP-012": { "status": "pending", "feature": "responses-ui", "note": "DELETE /api/responses/[id] unit-tested (401/404/200); UI handleDelete updates local state on success. Playwright confirm-and-remove pending." },
-
-    "VAL-ESCAL-001": { "status": "pending", "feature": "escalation-ui-dashboard", "note": "Empty-state card renders when rules.length=0; Playwright screenshot pending." },
-    "VAL-ESCAL-002": { "status": "pending", "feature": "escalation-ui-dashboard", "note": "POST /api/escalation-rules unit-tested for turn_count+ask_email happy path (201 with persisted row). Playwright CRUD screenshot pending." },
-    "VAL-ESCAL-003": { "status": "pending", "feature": "escalation-ui-dashboard", "note": "Keyword + ask_email CRUD unit-tested. Playwright pending." },
-    "VAL-ESCAL-004": { "status": "pending", "feature": "escalation-ui-dashboard", "note": "Intent + handoff CRUD unit-tested. Playwright pending." },
-    "VAL-ESCAL-005": { "status": "pending", "feature": "escalation-ui-dashboard", "note": "Reorder endpoint assigns descending priorities (top=N, bottom=1); unit-tested. UI fires POST /reorder on drop. Playwright drag-drop screenshot + DB assertion pending." },
-    "VAL-ESCAL-006": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "Higher priority wins across mixed rule types + created_at tiebreak proven by 2 unit tests." },
-    "VAL-ESCAL-007": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "userMessageCount >= config.turns fires; below threshold does not; non-numeric turns skipped." },
-    "VAL-ESCAL-008": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "Reuses M6F2 triggerMatches — word-boundary + diacritic/case insensitive. 3 unit tests including 'pricing' NOT matching 'price'." },
-    "VAL-ESCAL-009": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "Mocked classifier hit + null + preClassified-bypass paths. Integration: stream route passes preClassifiedIntent through from response matcher." },
-    "VAL-ESCAL-010": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "\\x1E trailer with JSON {pending_action:{rule_id,action,action_config,via}} verified in stream integration tests for canned + RAG paths. Widget-side rendering lands in M7F4." },
-    "VAL-ESCAL-011": { "status": "pending", "feature": "escalation-widget-actions", "note": "AskEmailForm renders email input + Send; widget POSTs source=escalation. Leads route test asserts upsert with source='escalation'. Playwright screenshot + live network trace pending." },
-    "VAL-ESCAL-012": { "status": "pending", "feature": "escalation-widget-actions", "note": "AskPhoneForm renders tel + Request Call; phone-only insert path tested (email=null, source=escalation). Playwright pending." },
-    "VAL-ESCAL-013": { "status": "pending", "feature": "escalation-widget-actions", "note": "ShowForm maps action_config.fields -> inputs; buildShowFormPayload promotes name/email/phone to top-level and preserves extra_fields. Unit + API-level tests pass. Playwright pending." },
-    "VAL-ESCAL-014": { "status": "pending", "feature": "escalation-widget-actions", "note": "CalendlyEmbed renders iframe at 100% x 600px, guards against non-http URLs. Playwright DOM query + screenshot pending." },
-    "VAL-ESCAL-015": { "status": "passed", "feature": "escalation-runtime-trigger-eval", "note": "conversations.needs_human=true set by stream route on handoff action (stream-integration test asserts insert row). Dashboard conversations page renders ⚑ handoff pill when needs_human=true. Widget HandoffIndicator renders role=status with animated dots. Stream-side proven; Playwright visual pending for widget indicator screenshot." },
-
-    "VAL-HARD-001": { "status": "passed", "feature": "upstash-rate-limiter", "note": "Upstash sliding-window limiter wired via @upstash/ratelimit. Falls back to process-local Map when UPSTASH_REDIS_REST_URL is absent (dev + CI). Prod persistence gated on Vercel env vars being set before launch." },
-    "VAL-HARD-002": { "status": "passed", "feature": "upstash-rate-limiter", "note": "All four rate-limit sites (chat, leads, crawl/start, files) emit 429 with Retry-After header in seconds." },
-    "VAL-HARD-003": { "status": "passed", "feature": "legal-pages", "note": "/privacy renders > 1KB via server component with footer links to /terms + /dpa." },
-    "VAL-HARD-004": { "status": "passed", "feature": "legal-pages", "note": "/terms rewritten from 400-byte stub to 7-section ToS > 1KB with legal-footer cross-links." },
-    "VAL-HARD-005": { "status": "passed", "feature": "legal-pages", "note": "/dpa GDPR Art. 28 addendum lists all 7 sub-processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry)." },
-    "VAL-HARD-006": { "status": "passed", "feature": "transactional-email", "note": "auth/callback fires sendWelcomeEmail via service-role + ledger (period='initial'). Resend dashboard evidence deferred to Brandon's launch config." },
-    "VAL-HARD-007": { "status": "passed", "feature": "transactional-email", "note": "/api/cron/trial-ending queries the +3d..+4d window; per-row sendTrialEndingEmail with period=YYYY-MM-DD. Integration test asserts window width is exactly 24h." },
-    "VAL-HARD-008": { "status": "passed", "feature": "transactional-email", "note": "maybeSendQuotaWarning fires once per period_start when used crosses ceil(limit*0.8); ledger backstops rare cap jumps." },
-    "VAL-HARD-009": { "status": "passed", "feature": "transactional-email", "note": "handleInvoicePaymentFailed fires sendPaymentFailedEmail with period=invoice.id so retried webhooks don't double-send." },
-    "VAL-HARD-010": { "status": "passed", "feature": "sentry-integration", "note": "captureApiError(err, { userId, requestId }) tags environment/user_id/request_id via withScope. Init gated on SENTRY_DSN so dev/CI stay silent. Actual dashboard evidence deferred to Brandon's launch config." },
-    "VAL-HARD-011": { "status": "passed", "feature": "ci-workflow", "note": "Three-job test.yml (static → unit → e2e) with concurrency cancel + frozen-lockfile + artifact upload. YAML invariants pinned by 10-test suite. Live PR run validation pending first PR push." },
-
-    "VAL-CROSS-001": { "status": "pending" },
-    "VAL-CROSS-002": { "status": "pending" },
-    "VAL-CROSS-003": { "status": "pending" },
-    "VAL-CROSS-004": { "status": "pending" },
-    "VAL-CROSS-005": { "status": "pending" },
-    "VAL-CROSS-006": { "status": "pending" },
-    "VAL-CROSS-007": { "status": "pending" },
-    "VAL-CROSS-008": { "status": "pending" },
-    "VAL-CROSS-009": { "status": "pending" },
-    "VAL-CROSS-010": { "status": "passed", "feature": "fresh-start-wipe-script", "note": "Integration test seeds 2 users, runs scripts/reset-my-data.sql against one, asserts all site-scoped + user-scoped rows zero for that user with profile + usage_counters row preserved; other user untouched. Safety gate on NULL + missing user_id." },
-
-    "VAL-TOS-001": { "status": "pending", "feature": "tos-acceptance-signup", "note": "Checkbox disables submit; handleSubmit returns early without network if bypassed. Playwright screenshot of disabled state pending." },
-    "VAL-TOS-002": { "status": "pending", "feature": "tos-acceptance-signup", "note": "<Link target='_blank' rel='noopener'> to /terms wired; Playwright click-to-new-tab test pending." },
-    "VAL-TOS-003": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Migration extends handle_new_user to stamp tos_accepted_at from raw_user_meta_data; unit-tested via migration + acceptance-route tests." },
-    "VAL-TOS-004": { "status": "passed", "feature": "tos-acceptance-signup", "note": "Banner mounted in dashboard layout; billing upgrade APIs return 403 tos_required when null — 6 unit tests." },
-
-    "VAL-DEGRADE-001": { "status": "passed", "feature": "widget-graceful-degradation", "note": "preflightWidgetConfig maps 5xx/network/AbortError → 'degraded'; loader hides bubble + logs once." },
-    "VAL-DEGRADE-002": { "status": "passed", "feature": "widget-graceful-degradation", "note": "On 'degraded' or 'silent' the loader schedules a 60s setTimeout re-run; 'ready' on recovery mounts bubble. Pure helper unit-tested; Playwright cycle pending." },
-    "VAL-DEGRADE-003": { "status": "passed", "feature": "widget-graceful-degradation", "note": "402 maps to 'silent' — no console log, bubble not mounted. Visitors never see owner billing status." },
-
-    "VAL-GDPR-001": { "status": "pending", "feature": "gdpr-account-deletion", "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site with red panel + button. Playwright screenshot pending per M5-M7 deferral pattern." },
-    "VAL-GDPR-002": { "status": "pending", "feature": "gdpr-account-deletion", "note": "Modal requires exact email (case-insensitive, trimmed) to enable Delete; Cancel closes with zero side-effects. Route-level tests cover match + mismatch; Playwright visual pending." },
-    "VAL-GDPR-003": { "status": "passed", "feature": "gdpr-account-deletion", "note": "Integration test vs real local Supabase proves cascade wipes profiles/sites/usage_counters/sent_emails/leads/conversations/custom_responses/escalation_rules; counterpart user untouched. Stripe cancel callback invoked with stored sub id." }
+    "VAL-AUTH-002": {
+      "status": "passed"
+    },
+    "VAL-AUTH-003": {
+      "status": "passed"
+    },
+    "VAL-AUTH-005": {
+      "status": "passed"
+    },
+    "VAL-AUTH-007": {
+      "status": "passed",
+      "feature": "e2e-auth-gates",
+      "note": "Playwright auth-gates.spec.ts 20/20 green"
+    },
+    "VAL-AUTH-008": {
+      "status": "passed",
+      "feature": "e2e-auth-gates",
+      "note": "Playwright auth-gates.spec.ts 20/20 green"
+    },
+    "VAL-AUTH-009": {
+      "status": "passed"
+    },
+    "VAL-AUTH-010": {
+      "status": "passed",
+      "feature": "e2e-auth-gates",
+      "note": "Playwright auth-gates.spec.ts 20/20 green"
+    },
+    "VAL-AUTH-012": {
+      "status": "passed"
+    },
+    "VAL-AUTH-013": {
+      "status": "passed"
+    },
+    "VAL-RLS-001": {
+      "status": "passed"
+    },
+    "VAL-RLS-002": {
+      "status": "passed"
+    },
+    "VAL-RLS-003": {
+      "status": "passed"
+    },
+    "VAL-RLS-004": {
+      "status": "passed"
+    },
+    "VAL-RLS-005": {
+      "status": "passed"
+    },
+    "VAL-RLS-006": {
+      "status": "passed"
+    },
+    "VAL-RLS-007": {
+      "status": "passed"
+    },
+    "VAL-RLS-008": {
+      "status": "passed"
+    },
+    "VAL-RLS-009": {
+      "status": "passed"
+    },
+    "VAL-RLS-010": {
+      "status": "passed"
+    },
+    "VAL-RLS-011": {
+      "status": "passed"
+    },
+    "VAL-RLS-012": {
+      "status": "passed"
+    },
+    "VAL-RLS-014": {
+      "status": "passed"
+    },
+    "VAL-RLS-015": {
+      "status": "passed",
+      "feature": "usage-counters-schema-rpc"
+    },
+    "VAL-BILLING-001": {
+      "status": "passed",
+      "feature": "billing-page-refactor",
+      "note": "Covered by dashboard/layout.tsx auth redirect \u2014 deterministic without browser."
+    },
+    "VAL-BILLING-002": {
+      "status": "pending",
+      "feature": "billing-page-refactor",
+      "note": "UI logic complete and unit-tested via page-model; browser-automation evidence deferred to Playwright user-testing pass."
+    },
+    "VAL-BILLING-003": {
+      "status": "pending",
+      "feature": "billing-page-refactor",
+      "note": "Trial banner rendered when trialCountdownDays is set; Playwright confirmation pending."
+    },
+    "VAL-BILLING-004": {
+      "status": "passed",
+      "feature": "stripe-checkout-api"
+    },
+    "VAL-BILLING-005": {
+      "status": "passed",
+      "feature": "stripe-checkout-api"
+    },
+    "VAL-BILLING-006": {
+      "status": "passed",
+      "feature": "stripe-checkout-api"
+    },
+    "VAL-BILLING-007": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-008": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-009": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-010": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-011": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-012": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-013": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-014": {
+      "status": "passed",
+      "feature": "stripe-webhook-api",
+      "note": "Profile-side rollover landed in M2; usage_counters reset re-confirmed in M3F4 quota-reset-on-invoice-paid."
+    },
+    "VAL-BILLING-015": {
+      "status": "passed",
+      "feature": "stripe-webhook-api"
+    },
+    "VAL-BILLING-016": {
+      "status": "passed",
+      "feature": "subscription-gate"
+    },
+    "VAL-BILLING-017": {
+      "status": "passed",
+      "feature": "subscription-gate"
+    },
+    "VAL-BILLING-018": {
+      "status": "passed",
+      "feature": "subscription-gate"
+    },
+    "VAL-BILLING-019": {
+      "status": "passed",
+      "feature": "subscription-gate"
+    },
+    "VAL-BILLING-020": {
+      "status": "passed",
+      "feature": "subscription-gate"
+    },
+    "VAL-BILLING-021": {
+      "status": "passed",
+      "feature": "stripe-portal-api"
+    },
+    "VAL-BILLING-022": {
+      "status": "passed",
+      "feature": "billing-page-refactor"
+    },
+    "VAL-BILLING-023": {
+      "status": "passed",
+      "feature": "billing-page-refactor"
+    },
+    "VAL-BILLING-024": {
+      "status": "pending",
+      "feature": "billing-page-refactor",
+      "note": "Invoice list capped at 12 in page-model; Playwright confirmation pending."
+    },
+    "VAL-BILLING-025": {
+      "status": "pending",
+      "feature": "billing-page-refactor",
+      "note": "Next-invoice date rendered from current_period_end; Playwright confirmation pending."
+    },
+    "VAL-QUOTA-001": {
+      "status": "passed",
+      "feature": "message-quota-enforcement"
+    },
+    "VAL-QUOTA-002": {
+      "status": "passed",
+      "feature": "message-quota-enforcement"
+    },
+    "VAL-QUOTA-003": {
+      "status": "passed",
+      "feature": "message-quota-enforcement",
+      "note": "RPC atomicity proven by M3F1 20-parallel test; route is a thin wrapper."
+    },
+    "VAL-QUOTA-004": {
+      "status": "passed",
+      "feature": "crawl-quota-enforcement"
+    },
+    "VAL-QUOTA-005": {
+      "status": "passed",
+      "feature": "crawl-quota-enforcement"
+    },
+    "VAL-QUOTA-006": {
+      "status": "passed",
+      "feature": "quota-reset-on-invoice-paid"
+    },
+    "VAL-QUOTA-007": {
+      "status": "passed",
+      "feature": "usage-meter-ui",
+      "note": "3-bar UsageMeterSet mounted on /dashboard and /dashboard/billing; logic unit-tested; browser screenshot pending Playwright."
+    },
+    "VAL-QUOTA-008": {
+      "status": "pending",
+      "feature": "usage-meter-ui",
+      "note": "Realtime subscription wired via Supabase channel; cross-tab live update needs Playwright to confirm the <3s SLA in a browser context."
+    },
+    "VAL-QUOTA-009": {
+      "status": "pending",
+      "feature": "usage-meter-ui",
+      "note": "Limits refresh via Realtime UPDATE on usage_counters today; full plan-change-without-reload scenario needs Playwright verification."
+    },
+    "VAL-QUOTA-010": {
+      "status": "passed",
+      "feature": "message-quota-enforcement",
+      "note": "Inherits idempotency from M2F3 processed_stripe_events gate; full usage_counters reset test lands with M3F4."
+    },
+    "VAL-QUOTA-011": {
+      "status": "pending",
+      "feature": "message-quota-enforcement",
+      "note": "API contract (402 + upgrade_url) complete; widget UI rendering of the generic message deferred."
+    },
+    "VAL-QUOTA-012": {
+      "status": "passed",
+      "feature": "usage-counters-schema-rpc"
+    },
+    "VAL-QUOTA-013": {
+      "status": "passed",
+      "feature": "usage-meter-ui",
+      "note": "UsageMeterSet mounted on /dashboard/billing inside the plan card."
+    },
+    "VAL-QUOTA-014": {
+      "status": "pending",
+      "feature": "usage-meter-ui",
+      "note": "Empty-state logic unit-tested (0 / cap); Playwright pending for screenshot."
+    },
+    "VAL-QUOTA-015": {
+      "status": "passed",
+      "feature": "usage-meter-ui",
+      "note": "Overshoot clamp to 100% unit-tested in usage-meter-model.test.ts."
+    },
+    "VAL-SET-001": {
+      "status": "passed",
+      "feature": "settings-layout",
+      "note": "/dashboard/settings redirects via server component."
+    },
+    "VAL-SET-002": {
+      "status": "passed",
+      "feature": "settings-layout",
+      "note": "SETTINGS_NAV_ITEMS ordering pinned by unit test."
+    },
+    "VAL-SET-003": {
+      "status": "pending",
+      "feature": "settings-layout",
+      "note": "Active-state logic unit-tested via isActiveSubRoute + resolveActiveHref; screenshot evidence pending Playwright."
+    },
+    "VAL-SET-004": {
+      "status": "passed",
+      "feature": "settings-site-move",
+      "note": "Site settings moved intact; existing fields preserved."
+    },
+    "VAL-SET-005": {
+      "status": "pending",
+      "feature": "site-key-rotation-ui",
+      "note": "Modal + API + toast + router.refresh wired; Playwright screenshot pending."
+    },
+    "VAL-SET-006": {
+      "status": "pending",
+      "feature": "toast-system",
+      "note": "toast.success('Saved') wired in settings save path; Playwright screenshot of visible toast pending."
+    },
+    "VAL-SET-007": {
+      "status": "passed",
+      "feature": "settings-layout",
+      "note": "Parent /dashboard layout redirects unauthenticated users; transitive to all /dashboard/settings/* sub-routes."
+    },
+    "VAL-SET-008": {
+      "status": "pending",
+      "feature": "settings-layout",
+      "note": "Mobile horizontal-tab fallback implemented; Playwright mobile-viewport screenshot pending."
+    },
+    "VAL-FILE-001": {
+      "status": "pending",
+      "feature": "knowledge-ui",
+      "note": "Drop zone accepts 7 types via accept attribute; Playwright screenshots per type deferred."
+    },
+    "VAL-FILE-002": {
+      "status": "pending",
+      "feature": "knowledge-ui",
+      "note": "StatusChip helper unit-tested; screenshots deferred."
+    },
+    "VAL-FILE-003": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline",
+      "note": "PDF round-trip via pdf-lib + pdf-parse verified."
+    },
+    "VAL-FILE-004": {
+      "status": "pending",
+      "feature": "file-parsers-pipeline",
+      "note": "DOCX dispatcher wired to mammoth.extractRawText; real .docx fixture test deferred to adversarial-fixture pass."
+    },
+    "VAL-FILE-005": {
+      "status": "pending",
+      "feature": "file-parsers-pipeline",
+      "note": "PPTX wired to officeparser v5 parseOfficeAsync; real .pptx fixture deferred."
+    },
+    "VAL-FILE-006": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline",
+      "note": "XLSX multi-sheet extraction verified via xlsx.aoa_to_sheet roundtrip."
+    },
+    "VAL-FILE-007": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline"
+    },
+    "VAL-FILE-008": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline"
+    },
+    "VAL-FILE-009": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline"
+    },
+    "VAL-FILE-010": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-011": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-012": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-013": {
+      "status": "passed",
+      "feature": "file-delete-cascade"
+    },
+    "VAL-FILE-014": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline",
+      "note": "queued->processing->ready transitions proven via files-process.test.ts."
+    },
+    "VAL-FILE-015": {
+      "status": "pending",
+      "feature": "knowledge-ui",
+      "note": "Retry button wired to POST /api/files/process; Playwright pending."
+    },
+    "VAL-FILE-016": {
+      "status": "pending",
+      "feature": "file-parsers-pipeline",
+      "note": "MAX_EXTRACTED_BYTES cap wired via assertBelowCap; real zip-bomb fixture deferred."
+    },
+    "VAL-FILE-017": {
+      "status": "pending",
+      "feature": "file-parsers-pipeline",
+      "note": "Same cap applies to PDF extraction; real PDF-bomb fixture deferred."
+    },
+    "VAL-FILE-018": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-019": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-020": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline",
+      "note": "/Encrypt marker detector + FileParseError('pdf_encrypted') routed to status=failed with readable message."
+    },
+    "VAL-FILE-021": {
+      "status": "passed",
+      "feature": "file-upload-api-limits"
+    },
+    "VAL-FILE-022": {
+      "status": "pending",
+      "feature": "file-parsers-pipeline",
+      "note": "mammoth.extractRawText skips VBA by design; real macro-laden DOCX fixture deferred."
+    },
+    "VAL-FILE-023": {
+      "status": "passed",
+      "feature": "file-parsers-pipeline",
+      "note": "decodeText fatal-to-replacement fallback unit-tested with Latin-1 CSV."
+    },
+    "VAL-FILE-024": {
+      "status": "pending",
+      "feature": "file-rag-integration",
+      "note": "match_chunks + system-prompt wired for file citations; Playwright end-to-end (upload PDF -> chat -> citation in widget) deferred."
+    },
+    "VAL-FILE-025": {
+      "status": "pending",
+      "feature": "knowledge-ui",
+      "note": "Empty-state copy rendered when files.length=0; Playwright pending."
+    },
+    "VAL-RESP-001": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "Empty-state card with 'No custom responses yet' + Add CTA rendered when rules.length=0; Playwright screenshot pending."
+    },
+    "VAL-RESP-002": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "EditModal validates triggers (>=1) and response (non-empty) client-side with inline error messages; server mirrors via validateRuleBody(); 6 API unit tests cover each branch. Playwright visual pending."
+    },
+    "VAL-RESP-003": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "POST /api/responses unit-tested with keyword trigger_type + triggers array; UI handleSave wired. Playwright CRUD flow pending."
+    },
+    "VAL-RESP-004": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "Same path as VAL-RESP-003 with trigger_type='intent'; M6F1 schema test confirms intent acceptance. Playwright pending."
+    },
+    "VAL-RESP-005": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "TriggerChip component renders each element of triggers[] as a rounded pill; list rendering unit-tested indirectly via rule rendering. Playwright screenshot pending."
+    },
+    "VAL-RESP-006": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "POST /api/responses/test returns {matched, rule_id, response, via} \u2014 2 unit tests cover match + no-match branches. TestDrawer UI wired. Playwright screenshot of drawer result pending."
+    },
+    "VAL-RESP-007": {
+      "status": "passed",
+      "feature": "responses-matcher-runtime",
+      "note": "Integration test proves embed + generateObject + rewriteQuery all uncalled on keyword hit."
+    },
+    "VAL-RESP-008": {
+      "status": "passed",
+      "feature": "responses-matcher-runtime",
+      "note": "normalize() lowercases + NFD; triggerMatches word-bound regex. 'Help' matches 'help me', 'HELP', 'Help?'."
+    },
+    "VAL-RESP-009": {
+      "status": "passed",
+      "feature": "responses-matcher-runtime",
+      "note": "\\W-anchored regex; 'help' does not match 'helper' or 'alphelp'."
+    },
+    "VAL-RESP-010": {
+      "status": "passed",
+      "feature": "responses-matcher-runtime",
+      "note": "Priority DESC with created_at ASC tiebreak; two unit cases cover both."
+    },
+    "VAL-RESP-011": {
+      "status": "passed",
+      "feature": "responses-matcher-runtime",
+      "note": "matchResponse short-circuits to null when zero intent-type rules; generateObject mock called 0 times."
+    },
+    "VAL-RESP-012": {
+      "status": "pending",
+      "feature": "responses-ui",
+      "note": "DELETE /api/responses/[id] unit-tested (401/404/200); UI handleDelete updates local state on success. Playwright confirm-and-remove pending."
+    },
+    "VAL-ESCAL-001": {
+      "status": "pending",
+      "feature": "escalation-ui-dashboard",
+      "note": "Empty-state card renders when rules.length=0; Playwright screenshot pending."
+    },
+    "VAL-ESCAL-002": {
+      "status": "pending",
+      "feature": "escalation-ui-dashboard",
+      "note": "POST /api/escalation-rules unit-tested for turn_count+ask_email happy path (201 with persisted row). Playwright CRUD screenshot pending."
+    },
+    "VAL-ESCAL-003": {
+      "status": "pending",
+      "feature": "escalation-ui-dashboard",
+      "note": "Keyword + ask_email CRUD unit-tested. Playwright pending."
+    },
+    "VAL-ESCAL-004": {
+      "status": "pending",
+      "feature": "escalation-ui-dashboard",
+      "note": "Intent + handoff CRUD unit-tested. Playwright pending."
+    },
+    "VAL-ESCAL-005": {
+      "status": "pending",
+      "feature": "escalation-ui-dashboard",
+      "note": "Reorder endpoint assigns descending priorities (top=N, bottom=1); unit-tested. UI fires POST /reorder on drop. Playwright drag-drop screenshot + DB assertion pending."
+    },
+    "VAL-ESCAL-006": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "Higher priority wins across mixed rule types + created_at tiebreak proven by 2 unit tests."
+    },
+    "VAL-ESCAL-007": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "userMessageCount >= config.turns fires; below threshold does not; non-numeric turns skipped."
+    },
+    "VAL-ESCAL-008": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "Reuses M6F2 triggerMatches \u2014 word-boundary + diacritic/case insensitive. 3 unit tests including 'pricing' NOT matching 'price'."
+    },
+    "VAL-ESCAL-009": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "Mocked classifier hit + null + preClassified-bypass paths. Integration: stream route passes preClassifiedIntent through from response matcher."
+    },
+    "VAL-ESCAL-010": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "\\x1E trailer with JSON {pending_action:{rule_id,action,action_config,via}} verified in stream integration tests for canned + RAG paths. Widget-side rendering lands in M7F4."
+    },
+    "VAL-ESCAL-011": {
+      "status": "pending",
+      "feature": "escalation-widget-actions",
+      "note": "AskEmailForm renders email input + Send; widget POSTs source=escalation. Leads route test asserts upsert with source='escalation'. Playwright screenshot + live network trace pending."
+    },
+    "VAL-ESCAL-012": {
+      "status": "pending",
+      "feature": "escalation-widget-actions",
+      "note": "AskPhoneForm renders tel + Request Call; phone-only insert path tested (email=null, source=escalation). Playwright pending."
+    },
+    "VAL-ESCAL-013": {
+      "status": "pending",
+      "feature": "escalation-widget-actions",
+      "note": "ShowForm maps action_config.fields -> inputs; buildShowFormPayload promotes name/email/phone to top-level and preserves extra_fields. Unit + API-level tests pass. Playwright pending."
+    },
+    "VAL-ESCAL-014": {
+      "status": "pending",
+      "feature": "escalation-widget-actions",
+      "note": "CalendlyEmbed renders iframe at 100% x 600px, guards against non-http URLs. Playwright DOM query + screenshot pending."
+    },
+    "VAL-ESCAL-015": {
+      "status": "passed",
+      "feature": "escalation-runtime-trigger-eval",
+      "note": "conversations.needs_human=true set by stream route on handoff action (stream-integration test asserts insert row). Dashboard conversations page renders \u2691 handoff pill when needs_human=true. Widget HandoffIndicator renders role=status with animated dots. Stream-side proven; Playwright visual pending for widget indicator screenshot."
+    },
+    "VAL-HARD-001": {
+      "status": "passed",
+      "feature": "upstash-rate-limiter",
+      "note": "Upstash sliding-window limiter wired via @upstash/ratelimit. Falls back to process-local Map when UPSTASH_REDIS_REST_URL is absent (dev + CI). Prod persistence gated on Vercel env vars being set before launch."
+    },
+    "VAL-HARD-002": {
+      "status": "passed",
+      "feature": "upstash-rate-limiter",
+      "note": "All four rate-limit sites (chat, leads, crawl/start, files) emit 429 with Retry-After header in seconds."
+    },
+    "VAL-HARD-003": {
+      "status": "passed",
+      "feature": "legal-pages",
+      "note": "/privacy renders > 1KB via server component with footer links to /terms + /dpa."
+    },
+    "VAL-HARD-004": {
+      "status": "passed",
+      "feature": "legal-pages",
+      "note": "/terms rewritten from 400-byte stub to 7-section ToS > 1KB with legal-footer cross-links."
+    },
+    "VAL-HARD-005": {
+      "status": "passed",
+      "feature": "legal-pages",
+      "note": "/dpa GDPR Art. 28 addendum lists all 7 sub-processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry)."
+    },
+    "VAL-HARD-006": {
+      "status": "passed",
+      "feature": "transactional-email",
+      "note": "auth/callback fires sendWelcomeEmail via service-role + ledger (period='initial'). Resend dashboard evidence deferred to Brandon's launch config."
+    },
+    "VAL-HARD-007": {
+      "status": "passed",
+      "feature": "transactional-email",
+      "note": "/api/cron/trial-ending queries the +3d..+4d window; per-row sendTrialEndingEmail with period=YYYY-MM-DD. Integration test asserts window width is exactly 24h."
+    },
+    "VAL-HARD-008": {
+      "status": "passed",
+      "feature": "transactional-email",
+      "note": "maybeSendQuotaWarning fires once per period_start when used crosses ceil(limit*0.8); ledger backstops rare cap jumps."
+    },
+    "VAL-HARD-009": {
+      "status": "passed",
+      "feature": "transactional-email",
+      "note": "handleInvoicePaymentFailed fires sendPaymentFailedEmail with period=invoice.id so retried webhooks don't double-send."
+    },
+    "VAL-HARD-010": {
+      "status": "passed",
+      "feature": "sentry-integration",
+      "note": "captureApiError(err, { userId, requestId }) tags environment/user_id/request_id via withScope. Init gated on SENTRY_DSN so dev/CI stay silent. Actual dashboard evidence deferred to Brandon's launch config."
+    },
+    "VAL-HARD-011": {
+      "status": "passed",
+      "feature": "ci-workflow",
+      "note": "Three-job test.yml (static \u2192 unit \u2192 e2e) with concurrency cancel + frozen-lockfile + artifact upload. YAML invariants pinned by 10-test suite. Live PR run validation pending first PR push."
+    },
+    "VAL-CROSS-001": {
+      "status": "pending"
+    },
+    "VAL-CROSS-002": {
+      "status": "pending"
+    },
+    "VAL-CROSS-003": {
+      "status": "pending"
+    },
+    "VAL-CROSS-004": {
+      "status": "pending"
+    },
+    "VAL-CROSS-005": {
+      "status": "pending"
+    },
+    "VAL-CROSS-006": {
+      "status": "pending"
+    },
+    "VAL-CROSS-007": {
+      "status": "pending"
+    },
+    "VAL-CROSS-008": {
+      "status": "passed",
+      "feature": "e2e-auth-gates",
+      "note": "Playwright auth-gates.spec.ts 20/20 green"
+    },
+    "VAL-CROSS-009": {
+      "status": "passed",
+      "feature": "e2e-auth-gates",
+      "note": "Playwright auth-gates.spec.ts 20/20 green"
+    },
+    "VAL-CROSS-010": {
+      "status": "passed",
+      "feature": "fresh-start-wipe-script",
+      "note": "Integration test seeds 2 users, runs scripts/reset-my-data.sql against one, asserts all site-scoped + user-scoped rows zero for that user with profile + usage_counters row preserved; other user untouched. Safety gate on NULL + missing user_id."
+    },
+    "VAL-TOS-001": {
+      "status": "pending",
+      "feature": "tos-acceptance-signup",
+      "note": "Checkbox disables submit; handleSubmit returns early without network if bypassed. Playwright screenshot of disabled state pending."
+    },
+    "VAL-TOS-002": {
+      "status": "pending",
+      "feature": "tos-acceptance-signup",
+      "note": "<Link target='_blank' rel='noopener'> to /terms wired; Playwright click-to-new-tab test pending."
+    },
+    "VAL-TOS-003": {
+      "status": "passed",
+      "feature": "tos-acceptance-signup",
+      "note": "Migration extends handle_new_user to stamp tos_accepted_at from raw_user_meta_data; unit-tested via migration + acceptance-route tests."
+    },
+    "VAL-TOS-004": {
+      "status": "passed",
+      "feature": "tos-acceptance-signup",
+      "note": "Banner mounted in dashboard layout; billing upgrade APIs return 403 tos_required when null \u2014 6 unit tests."
+    },
+    "VAL-DEGRADE-001": {
+      "status": "passed",
+      "feature": "widget-graceful-degradation",
+      "note": "preflightWidgetConfig maps 5xx/network/AbortError \u2192 'degraded'; loader hides bubble + logs once."
+    },
+    "VAL-DEGRADE-002": {
+      "status": "passed",
+      "feature": "widget-graceful-degradation",
+      "note": "On 'degraded' or 'silent' the loader schedules a 60s setTimeout re-run; 'ready' on recovery mounts bubble. Pure helper unit-tested; Playwright cycle pending."
+    },
+    "VAL-DEGRADE-003": {
+      "status": "passed",
+      "feature": "widget-graceful-degradation",
+      "note": "402 maps to 'silent' \u2014 no console log, bubble not mounted. Visitors never see owner billing status."
+    },
+    "VAL-GDPR-001": {
+      "status": "pending",
+      "feature": "gdpr-account-deletion",
+      "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site with red panel + button. Playwright screenshot pending per M5-M7 deferral pattern."
+    },
+    "VAL-GDPR-002": {
+      "status": "pending",
+      "feature": "gdpr-account-deletion",
+      "note": "Modal requires exact email (case-insensitive, trimmed) to enable Delete; Cancel closes with zero side-effects. Route-level tests cover match + mismatch; Playwright visual pending."
+    },
+    "VAL-GDPR-003": {
+      "status": "passed",
+      "feature": "gdpr-account-deletion",
+      "note": "Integration test vs real local Supabase proves cascade wipes profiles/sites/usage_counters/sent_emails/leads/conversations/custom_responses/escalation_rules; counterpart user untouched. Stripe cancel callback invoked with stored sub id."
+    }
   }
 }
