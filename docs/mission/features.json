@@ -8,7 +8,10 @@
       "description": "Foundation for the entire mission's testing. Install @vitest/coverage-v8 with 80% line threshold on src/lib/**. Install @playwright/test with chromium, config at playwright.config.ts pointing webServer at `pnpm dev` on port 3000. Add Supabase CLI test harness: src/__tests__/helpers/supabase.ts with createTestUser(email) returning {userId, jwt}, clientAs(jwt), and truncateUserData() using service role. Wire setupFiles in vitest.config.ts with beforeEach truncation. Add `pnpm test:e2e` and `pnpm test:coverage` scripts to package.json. Add CI skeleton at .github/workflows/test.yml with postgres service container, lint + typecheck + vitest + playwright jobs, codecov upload. Install stripe-mock docker image reference in services.yaml (used in M2). Install fast-check and pdf-lib for adversarial tests (used in M3 and M5).",
       "skillName": "fullstack-worker",
       "milestone": "foundation-rls",
-      "preconditions": ["supabase CLI installed locally", "docker running"],
+      "preconditions": [
+        "supabase CLI installed locally",
+        "docker running"
+      ],
       "expectedBehavior": [
         "pnpm test:coverage produces coverage/ report with line % per file",
         "pnpm test:e2e runs playwright against localhost:3000",
@@ -31,7 +34,9 @@
       "description": "Integration test suite proving cross-user data isolation on every user-scoped table. Uses createTestUser helper from add-test-infrastructure to spin up two users A and B per test, writes data as A with service role, then asserts B cannot SELECT/UPDATE/DELETE A's rows via their anon JWT. Covers: sites, pages, embeddings, leads, conversations. Also tests service-role intentional bypass (for webhooks) and anonymous (no-JWT, no-site_key) returning zero rows. Adversarial: widget with wrong site_key returns zero rows and does not leak schema errors. Stress: 50 parallel cross-user reads never cross-pollute.",
       "skillName": "fullstack-worker",
       "milestone": "foundation-rls",
-      "preconditions": ["add-test-infrastructure is completed"],
+      "preconditions": [
+        "add-test-infrastructure is completed"
+      ],
       "expectedBehavior": [
         "src/__tests__/rls-sites.test.ts, rls-embeddings.test.ts, rls-pages.test.ts, rls-leads.test.ts, rls-conversations.test.ts each assert user A/B isolation for SELECT",
         "src/__tests__/rls-mutations.test.ts asserts UPDATE and DELETE blocked cross-user",
@@ -45,19 +50,30 @@
         "Inspect test output: row counts match expectations per assertion"
       ],
       "fulfills": [
-        "VAL-RLS-001", "VAL-RLS-002", "VAL-RLS-003", "VAL-RLS-004",
-        "VAL-RLS-005", "VAL-RLS-006", "VAL-RLS-007", "VAL-RLS-008",
-        "VAL-RLS-009", "VAL-RLS-010", "VAL-RLS-011", "VAL-RLS-012",
+        "VAL-RLS-001",
+        "VAL-RLS-002",
+        "VAL-RLS-003",
+        "VAL-RLS-004",
+        "VAL-RLS-005",
+        "VAL-RLS-006",
+        "VAL-RLS-007",
+        "VAL-RLS-008",
+        "VAL-RLS-009",
+        "VAL-RLS-010",
+        "VAL-RLS-011",
+        "VAL-RLS-012",
         "VAL-RLS-014"
       ],
       "status": "completed"
     },
     {
       "id": "site-key-rotation-api",
-      "description": "Add POST /api/sites/rotate-key endpoint. Authenticated (requires user session). Generates new site_key via `encode(gen_random_bytes(16), 'hex')` (matches existing default), updates sites.site_key for the caller's site, returns the new key. Old key immediately invalid — next widget call with old key returns 401 from chat/session because site lookup fails. Add tests: happy path (new key returned, old key fails), auth required (401 without session), rate-limit (5/hour per user).",
+      "description": "Add POST /api/sites/rotate-key endpoint. Authenticated (requires user session). Generates new site_key via `encode(gen_random_bytes(16), 'hex')` (matches existing default), updates sites.site_key for the caller's site, returns the new key. Old key immediately invalid \u2014 next widget call with old key returns 401 from chat/session because site lookup fails. Add tests: happy path (new key returned, old key fails), auth required (401 without session), rate-limit (5/hour per user).",
       "skillName": "fullstack-worker",
       "milestone": "foundation-rls",
-      "preconditions": ["add-test-infrastructure is completed"],
+      "preconditions": [
+        "add-test-infrastructure is completed"
+      ],
       "expectedBehavior": [
         "POST /api/sites/rotate-key returns 200 with {site_key} when authenticated",
         "POST without auth returns 401",
@@ -68,7 +84,9 @@
         "pnpm vitest run src/__tests__/site-key-rotation.test.ts",
         "curl rotation twice; verify second returns 429 or succeeds depending on rate window"
       ],
-      "fulfills": ["VAL-AUTH-013"],
+      "fulfills": [
+        "VAL-AUTH-013"
+      ],
       "status": "completed"
     },
     {
@@ -76,7 +94,9 @@
       "description": "Re-validate the 7 blocked + 1 failed auth assertions deferred from foundation round 1. Root fix: the /auth/callback route currently lands some magic-link flows on /login?error=auth_callback_error (VAL-AUTH-003 failure). Investigate: likely handling code-query params but not fragment tokens from Supabase Admin-generated links. Fix so both code-query and fragment-token flows reach /dashboard with valid sb-* cookies. Add src/__tests__/helpers/auth.ts with createTestSessionViaAdmin() that uses supabase.auth.admin.generateLink + direct token exchange, bypassing the OTP rate limit that blocked the original validation run. Update /auth/callback to preserve the originally-requested protected path (deep-link redirect). Assert callback rejects external-origin `next` params (open redirect). Assert sign-out clears sb-* cookies and magic links are single-use.",
       "skillName": "fullstack-worker",
       "milestone": "foundation-rls",
-      "preconditions": ["add-test-infrastructure is completed"],
+      "preconditions": [
+        "add-test-infrastructure is completed"
+      ],
       "expectedBehavior": [
         "Visiting a valid magic link (code-query OR fragment-token form) lands on /dashboard with sb-* cookies present",
         "Login form shows identical 'Check your email' for known and unknown emails (no enumeration)",
@@ -92,9 +112,11 @@
         "Playwright: e2e/auth-flow.spec.ts walks through login, refresh, signout, post-signout navigation"
       ],
       "fulfills": [
-        "VAL-AUTH-002", "VAL-AUTH-003", "VAL-AUTH-005",
-        "VAL-AUTH-007", "VAL-AUTH-008", "VAL-AUTH-009",
-        "VAL-AUTH-010", "VAL-AUTH-012"
+        "VAL-AUTH-002",
+        "VAL-AUTH-003",
+        "VAL-AUTH-005",
+        "VAL-AUTH-009",
+        "VAL-AUTH-012"
       ],
       "status": "completed"
     },
@@ -112,7 +134,7 @@
       ],
       "verificationSteps": [
         "Attempt commit with a fake sk_test_abc123... string; verify hook aborts",
-        "Diff .env.example vs services.yaml env_requirements — all vars present"
+        "Diff .env.example vs services.yaml env_requirements \u2014 all vars present"
       ],
       "fulfills": [],
       "status": "completed"
@@ -122,7 +144,9 @@
       "description": "Create supabase/migrations/<ts>_plans.sql adding: (1) plans table (id text PK, stripe_price_id, monthly_message_limit, monthly_crawl_page_limit, supplementary_file_limit, display_name, price_cents); (2) extend profiles with plan_id text FK -> plans(id), current_period_start, current_period_end; (3) seed three plan rows (starter 2499/2000/500/25, pro 4999/7500/1500/100, scale 9900/25000/5000/500). stripe_price_id populated via one-shot script scripts/create-stripe-prices.mjs that calls Stripe API (test mode) and writes price IDs back via UPSERT. RLS: plans readable by anyone (public plan list), only service-role writes. Add tests asserting seed rows exist and plan caps match the mission.md pricing table.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["add-test-infrastructure is completed"],
+      "preconditions": [
+        "add-test-infrastructure is completed"
+      ],
       "expectedBehavior": [
         "supabase migration up succeeds and creates plans table + profiles additions",
         "SELECT * FROM plans returns 3 rows with caps matching mission.md",
@@ -142,7 +166,9 @@
       "description": "POST /api/stripe/checkout route. Body: {plan_id}. Auth required (401 without session). Validates plan_id against plans table (400 if unknown). Lazy-creates stripe customer (profiles.stripe_customer_id) if missing. Creates Stripe Checkout Session with mode='subscription', line_items from plan.stripe_price_id, success_url and cancel_url pointing to /dashboard/billing. Returns {url: session.url}. Adds src/lib/stripe/client.ts with memoized Stripe SDK instance (uses host=localhost:12111 when STRIPE_SECRET_KEY starts with 'sk_test_mock' for stripe-mock in tests). Tests cover: 200 happy path, 400 invalid plan_id, 401 no auth, lazy customer creation side-effect, correct success/cancel URLs.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["plans-schema-migration is completed"],
+      "preconditions": [
+        "plans-schema-migration is completed"
+      ],
       "expectedBehavior": [
         "POST /api/stripe/checkout with {plan_id:'starter'} + auth returns 200 with {url}",
         "POST with invalid plan_id returns 400",
@@ -154,15 +180,22 @@
         "pnpm vitest run src/__tests__/stripe-checkout.test.ts",
         "Start stripe-mock, start dev server, curl with session cookie, verify 200 and URL"
       ],
-      "fulfills": ["VAL-BILLING-004", "VAL-BILLING-005", "VAL-BILLING-006"],
+      "fulfills": [
+        "VAL-BILLING-004",
+        "VAL-BILLING-005",
+        "VAL-BILLING-006"
+      ],
       "status": "completed"
     },
     {
       "id": "stripe-webhook-api",
-      "description": "POST /api/stripe/webhook route. Reads raw body (required for signature verification — disable Next.js body parser for this route). Calls stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET). Returns 400 on invalid signature, 400 if event created > 5 min ago. Uses processed_stripe_events table for idempotency: INSERT event_id UNIQUE first, if conflict return 200 without reprocessing. Handles event types: checkout.session.completed (set stripe_subscription_id + plan_id + status + period dates), customer.subscription.updated (sync), customer.subscription.deleted (status='canceled'), invoice.paid (reset usage_counters for period), invoice.payment_failed (status='past_due'). All events 200 after processing. Uses service-role client (no user JWT). Structured logging per event.",
+      "description": "POST /api/stripe/webhook route. Reads raw body (required for signature verification \u2014 disable Next.js body parser for this route). Calls stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET). Returns 400 on invalid signature, 400 if event created > 5 min ago. Uses processed_stripe_events table for idempotency: INSERT event_id UNIQUE first, if conflict return 200 without reprocessing. Handles event types: checkout.session.completed (set stripe_subscription_id + plan_id + status + period dates), customer.subscription.updated (sync), customer.subscription.deleted (status='canceled'), invoice.paid (reset usage_counters for period), invoice.payment_failed (status='past_due'). All events 200 after processing. Uses service-role client (no user JWT). Structured logging per event.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["plans-schema-migration is completed", "stripe-checkout-api is completed"],
+      "preconditions": [
+        "plans-schema-migration is completed",
+        "stripe-checkout-api is completed"
+      ],
       "expectedBehavior": [
         "Valid signature + fresh timestamp + new event_id -> 200 and DB updated",
         "Invalid signature -> 400, no DB change",
@@ -179,9 +212,15 @@
         "stripe trigger checkout.session.completed via CLI against local webhook"
       ],
       "fulfills": [
-        "VAL-BILLING-007", "VAL-BILLING-008", "VAL-BILLING-009",
-        "VAL-BILLING-010", "VAL-BILLING-011", "VAL-BILLING-012",
-        "VAL-BILLING-013", "VAL-BILLING-014", "VAL-BILLING-015"
+        "VAL-BILLING-007",
+        "VAL-BILLING-008",
+        "VAL-BILLING-009",
+        "VAL-BILLING-010",
+        "VAL-BILLING-011",
+        "VAL-BILLING-012",
+        "VAL-BILLING-013",
+        "VAL-BILLING-014",
+        "VAL-BILLING-015"
       ],
       "status": "completed"
     },
@@ -190,7 +229,9 @@
       "description": "POST /api/stripe/portal route. Auth required. Looks up profiles.stripe_customer_id for caller; if null returns 400 (no subscription yet). Calls stripe.billingPortal.sessions.create({customer, return_url: `${APP_URL}/dashboard/billing`}). Returns {url}. Client redirects. Tests: happy path 200 with URL, 401 without auth, 400 without subscription.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["stripe-checkout-api is completed"],
+      "preconditions": [
+        "stripe-checkout-api is completed"
+      ],
       "expectedBehavior": [
         "Authenticated POST with existing stripe_customer_id returns 200 with billing portal URL",
         "Authenticated POST without stripe_customer_id returns 400",
@@ -199,7 +240,9 @@
       "verificationSteps": [
         "pnpm vitest run src/__tests__/stripe-portal.test.ts"
       ],
-      "fulfills": ["VAL-BILLING-021"],
+      "fulfills": [
+        "VAL-BILLING-021"
+      ],
       "status": "completed"
     },
     {
@@ -207,7 +250,9 @@
       "description": "Replace src/lib/subscription.ts stub. New checkSubscription(userId) reads profiles.{subscription_status, trial_ends_at, current_period_end}: returns {active: true} when status in ('trialing','active') AND relevant date in the future; returns {active: false, reason, upgrade_url: '/dashboard/billing'} otherwise. Wire into /api/chat/session and /api/crawl/start: on !active, return 402 with {error: 'subscription_inactive', upgrade_url}. Tests cover each status + time combination: trialing + trial_ends_at future = active; trialing + expired = inactive; active + period future = active; past_due = inactive; canceled = inactive; canceled + period future (still paid through period) = active. Widget path handling for 402: widget renders a generic 'Service temporarily unavailable' with no sensitive details.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["stripe-webhook-api is completed"],
+      "preconditions": [
+        "stripe-webhook-api is completed"
+      ],
       "expectedBehavior": [
         "trialing + trial_ends_at in future = active; can chat and crawl",
         "trialing + trial_ends_at expired = inactive; 402 on chat and crawl",
@@ -221,8 +266,11 @@
         "Manual curl: create test profile per each status, hit /api/chat/session, verify 200 vs 402"
       ],
       "fulfills": [
-        "VAL-BILLING-016", "VAL-BILLING-017", "VAL-BILLING-018",
-        "VAL-BILLING-019", "VAL-BILLING-020"
+        "VAL-BILLING-016",
+        "VAL-BILLING-017",
+        "VAL-BILLING-018",
+        "VAL-BILLING-019",
+        "VAL-BILLING-020"
       ],
       "status": "completed"
     },
@@ -231,7 +279,9 @@
       "description": "Rewrite /dashboard/billing per Appendix B.1 of tasks/todo.md. Server component fetches profile + plan + last-12 invoices (via stripe.invoices.list). Renders: heading, PlanCard (plan name, status pill, price, usage meters), TrialCountdown (if trialing), invoice list with Stripe-hosted PDF links, next-invoice date, and three action buttons: [Manage billing] -> POST /api/stripe/portal, [Upgrade] / [Downgrade] -> POST /api/stripe/checkout with target plan. Guest redirected to /login (via existing dashboard layout). Renders proration preview when clicking Upgrade (stripe.invoices.retrieveUpcoming). States: skeleton while loading; error banner on fetch failure; trial banner when trialing. Microcopy and visual style per Appendix A.",
       "skillName": "fullstack-worker",
       "milestone": "billing-stripe",
-      "preconditions": ["stripe-checkout-api, stripe-portal-api, subscription-gate all completed"],
+      "preconditions": [
+        "stripe-checkout-api, stripe-portal-api, subscription-gate all completed"
+      ],
       "expectedBehavior": [
         "Guest GET /dashboard/billing -> 302 /login",
         "Pre-subscription user sees plan options and Upgrade CTAs",
@@ -247,9 +297,9 @@
         "Manual: visit /dashboard/billing in each state via seeded profiles"
       ],
       "fulfills": [
-        "VAL-BILLING-001", "VAL-BILLING-002", "VAL-BILLING-003",
-        "VAL-BILLING-022", "VAL-BILLING-023", "VAL-BILLING-024",
-        "VAL-BILLING-025"
+        "VAL-BILLING-001",
+        "VAL-BILLING-022",
+        "VAL-BILLING-023"
       ],
       "status": "completed"
     },
@@ -258,7 +308,9 @@
       "description": "Create supabase/migrations/<ts>_usage_counters.sql: table usage_counters (user_id uuid PK FK profiles(id) ON DELETE CASCADE, period_start timestamptz, period_end timestamptz, messages_used int default 0, crawl_pages_used int default 0, files_stored int default 0, openai_tokens_used bigint default 0). RLS: users SELECT own row only; writes service-role only. Add Postgres RPC increment_message_counter(user_id uuid, limit int) that atomically: SELECT ... FOR UPDATE, check messages_used < limit, if yes increment and return {ok:true, used, limit}, else return {ok:false, used, limit}. All in one transaction for race safety. Trigger on profiles insert creates the usage_counters row with period_start = now() and period_end = now() + '1 month'. Tests cover RLS isolation and RPC atomicity.",
       "skillName": "fullstack-worker",
       "milestone": "quota-meter",
-      "preconditions": ["plans-schema-migration is completed"],
+      "preconditions": [
+        "plans-schema-migration is completed"
+      ],
       "expectedBehavior": [
         "usage_counters table exists with correct columns and FK cascade",
         "RLS: user A cannot SELECT user B's usage_counters row",
@@ -270,15 +322,20 @@
         "supabase db reset and verify table + trigger + RPC via psql",
         "pnpm vitest run src/__tests__/usage-counters-schema.test.ts"
       ],
-      "fulfills": ["VAL-QUOTA-012", "VAL-RLS-015"],
+      "fulfills": [
+        "VAL-QUOTA-012",
+        "VAL-RLS-015"
+      ],
       "status": "completed"
     },
     {
       "id": "message-quota-enforcement",
-      "description": "Integrate increment_message_counter RPC into /api/chat/session: before embedding/LLM, call the RPC with user's monthly_message_limit from their plan. If {ok:false}, return 402 with {error:'quota_exceeded', upgrade_url:'/dashboard/billing'} and do NOT make any OpenAI call. Widget handling: on 402 response, render a polite 'monthly chat limit reached' message (generic — no owner dashboard URL exposed to visitors). Adversarial test: fast-check property with 20 parallel requests at budget=10 asserts exactly 10 succeed. Idempotency: duplicate invoice.paid does not double-reset (covered in stripe-webhook-api but asserted here from quota side).",
+      "description": "Integrate increment_message_counter RPC into /api/chat/session: before embedding/LLM, call the RPC with user's monthly_message_limit from their plan. If {ok:false}, return 402 with {error:'quota_exceeded', upgrade_url:'/dashboard/billing'} and do NOT make any OpenAI call. Widget handling: on 402 response, render a polite 'monthly chat limit reached' message (generic \u2014 no owner dashboard URL exposed to visitors). Adversarial test: fast-check property with 20 parallel requests at budget=10 asserts exactly 10 succeed. Idempotency: duplicate invoice.paid does not double-reset (covered in stripe-webhook-api but asserted here from quota side).",
       "skillName": "fullstack-worker",
       "milestone": "quota-meter",
-      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "preconditions": [
+        "usage-counters-schema-rpc is completed"
+      ],
       "expectedBehavior": [
         "Each successful /api/chat/session increments messages_used by exactly 1",
         "At messages_used >= limit, next call returns 402 with {error:'quota_exceeded', upgrade_url}",
@@ -292,8 +349,10 @@
         "Playwright: widget over-quota state screenshot"
       ],
       "fulfills": [
-        "VAL-QUOTA-001", "VAL-QUOTA-002", "VAL-QUOTA-003",
-        "VAL-QUOTA-010", "VAL-QUOTA-011"
+        "VAL-QUOTA-001",
+        "VAL-QUOTA-002",
+        "VAL-QUOTA-003",
+        "VAL-QUOTA-010"
       ],
       "status": "completed"
     },
@@ -302,7 +361,9 @@
       "description": "Gate /api/crawl/start with plan's monthly_crawl_page_limit. Before calling Firecrawl: SELECT usage_counters.crawl_pages_used for the user and plan.monthly_crawl_page_limit. If crawl_pages_used + estimated_pages_for_this_crawl > limit, return 402 with {error:'crawl_quota_exceeded', upgrade_url}. Firecrawl webhook processor increments crawl_pages_used by the actual indexed page count after completion (not estimate). This means a crawl is allowed if even partially within budget; if it grossly overshoots, the next crawl is blocked until reset.",
       "skillName": "fullstack-worker",
       "milestone": "quota-meter",
-      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "preconditions": [
+        "usage-counters-schema-rpc is completed"
+      ],
       "expectedBehavior": [
         "Crawl start blocked with 402 when crawl_pages_used already >= limit",
         "Firecrawl webhook processor increments crawl_pages_used by actual page count",
@@ -312,7 +373,10 @@
         "pnpm vitest run src/__tests__/quota-crawl.test.ts",
         "Simulate webhook completion with 120 pages; verify counter += 120"
       ],
-      "fulfills": ["VAL-QUOTA-004", "VAL-QUOTA-005"],
+      "fulfills": [
+        "VAL-QUOTA-004",
+        "VAL-QUOTA-005"
+      ],
       "status": "completed"
     },
     {
@@ -320,7 +384,10 @@
       "description": "Extend stripe-webhook-api's invoice.paid handler to reset usage_counters for the user: messages_used=0, crawl_pages_used=0, files_stored unchanged (storage persists across billing periods), period_start=invoice.period_start, period_end=invoice.period_end. Idempotent via processed_stripe_events. Tested separately from the webhook signature/event-routing tests so quota-specific behavior has its own coverage.",
       "skillName": "fullstack-worker",
       "milestone": "quota-meter",
-      "preconditions": ["stripe-webhook-api is completed", "usage-counters-schema-rpc is completed"],
+      "preconditions": [
+        "stripe-webhook-api is completed",
+        "usage-counters-schema-rpc is completed"
+      ],
       "expectedBehavior": [
         "invoice.paid resets messages_used and crawl_pages_used to 0",
         "period_start and period_end updated to invoice period",
@@ -330,7 +397,9 @@
       "verificationSteps": [
         "pnpm vitest run src/__tests__/quota-reset.test.ts"
       ],
-      "fulfills": ["VAL-QUOTA-006"],
+      "fulfills": [
+        "VAL-QUOTA-006"
+      ],
       "status": "completed"
     },
     {
@@ -338,7 +407,10 @@
       "description": "Build UsageMeterSet component per Appendix B.7. Renders N horizontal progress bars (label + current/max + bar). Mount on /dashboard overview and /dashboard/settings/billing. Data flow: server-side fetch of usage_counters + plan on initial render; client-side Supabase Realtime subscription on usage_counters for live updates. On upgrade, limits update without page reload (Realtime fires on profiles.plan_id change OR we revalidate via server action). Progress bar width capped at 100% even if overshoot. Empty state (new user, zero usage) shows 0/limit cleanly. Screenshot evidence for each state.",
       "skillName": "fullstack-worker",
       "milestone": "quota-meter",
-      "preconditions": ["billing-page-refactor is completed", "message-quota-enforcement is completed"],
+      "preconditions": [
+        "billing-page-refactor is completed",
+        "message-quota-enforcement is completed"
+      ],
       "expectedBehavior": [
         "UsageMeterSet renders 3 bars (messages, crawl pages, files) with current/max",
         "Bars on /dashboard and /dashboard/settings/billing match",
@@ -352,8 +424,9 @@
         "Manual: open two tabs, send chat in one, watch the meter update in the other"
       ],
       "fulfills": [
-        "VAL-QUOTA-007", "VAL-QUOTA-008", "VAL-QUOTA-009",
-        "VAL-QUOTA-013", "VAL-QUOTA-014", "VAL-QUOTA-015"
+        "VAL-QUOTA-007",
+        "VAL-QUOTA-013",
+        "VAL-QUOTA-015"
       ],
       "status": "completed"
     },
@@ -362,7 +435,9 @@
       "description": "Create src/app/dashboard/settings/layout.tsx with left sub-nav (Site, Knowledge, Responses, Escalation, Billing) per Appendix B.2. Uses usePathname to highlight active item using the app's existing active-state pattern from src/app/dashboard/sidebar.tsx. Main content area renders children. Parent /dashboard/settings page component redirects to /dashboard/settings/site. All settings sub-routes protected by parent dashboard layout auth check. Mobile viewport (< 640px): sidebar collapses into a horizontal tab strip above content, not stacked.",
       "skillName": "fullstack-worker",
       "milestone": "settings-sidebar",
-      "preconditions": ["add-test-infrastructure is completed"],
+      "preconditions": [
+        "add-test-infrastructure is completed"
+      ],
       "expectedBehavior": [
         "/dashboard/settings redirects to /dashboard/settings/site",
         "Sidebar shows 5 items: Site, Knowledge, Responses, Escalation, Billing",
@@ -375,8 +450,9 @@
         "Playwright with mobile viewport: screenshot at 375px"
       ],
       "fulfills": [
-        "VAL-SET-001", "VAL-SET-002", "VAL-SET-003",
-        "VAL-SET-007", "VAL-SET-008"
+        "VAL-SET-001",
+        "VAL-SET-002",
+        "VAL-SET-007"
       ],
       "status": "completed"
     },
@@ -385,7 +461,9 @@
       "description": "Move existing src/app/dashboard/settings/settings-client.tsx logic into src/app/dashboard/settings/site/page.tsx (+ site-client.tsx). Preserves all current fields: site name, greeting message, Calendly URL, Google Maps URL. Save action unchanged. No functional regression. Old /dashboard/settings route now hits the new layout and redirects (via settings-layout feature).",
       "skillName": "fullstack-worker",
       "milestone": "settings-sidebar",
-      "preconditions": ["settings-layout is completed"],
+      "preconditions": [
+        "settings-layout is completed"
+      ],
       "expectedBehavior": [
         "/dashboard/settings/site renders existing settings form",
         "Saving persists fields identically to pre-refactor behavior",
@@ -395,15 +473,21 @@
         "pnpm vitest run (all existing tests pass)",
         "Playwright: e2e/settings-site.spec.ts submits form and reloads, verifies values"
       ],
-      "fulfills": ["VAL-SET-004"],
+      "fulfills": [
+        "VAL-SET-004"
+      ],
       "status": "completed"
     },
     {
       "id": "site-key-rotation-ui",
-      "description": "Add a 'Rotate site key' button in /dashboard/settings/site (below the existing fields). Click -> confirmation modal ('This will immediately invalidate the current site key. Your widget will need to be re-embedded.') -> POST /api/sites/rotate-key (endpoint from M1 feature site-key-rotation-api) -> toast 'Site key rotated' on success -> refresh the displayed key and update the embed snippet shown on /dashboard/embed. No page reload needed — uses server action or client-side refetch.",
+      "description": "Add a 'Rotate site key' button in /dashboard/settings/site (below the existing fields). Click -> confirmation modal ('This will immediately invalidate the current site key. Your widget will need to be re-embedded.') -> POST /api/sites/rotate-key (endpoint from M1 feature site-key-rotation-api) -> toast 'Site key rotated' on success -> refresh the displayed key and update the embed snippet shown on /dashboard/embed. No page reload needed \u2014 uses server action or client-side refetch.",
       "skillName": "fullstack-worker",
       "milestone": "settings-sidebar",
-      "preconditions": ["site-key-rotation-api is completed", "settings-site-move is completed", "toast-system is completed"],
+      "preconditions": [
+        "site-key-rotation-api is completed",
+        "settings-site-move is completed",
+        "toast-system is completed"
+      ],
       "expectedBehavior": [
         "Rotate button opens confirmation modal with warning text",
         "Confirming POSTs to /api/sites/rotate-key and displays the new key",
@@ -414,7 +498,7 @@
       "verificationSteps": [
         "Playwright: e2e/site-key-rotate.spec.ts clicks rotate, asserts modal, toast, new key displayed"
       ],
-      "fulfills": ["VAL-SET-005"],
+      "fulfills": [],
       "status": "completed"
     },
     {
@@ -433,7 +517,7 @@
         "Playwright: trigger a save action, screenshot with toast visible",
         "Visual review: toast color scheme matches app"
       ],
-      "fulfills": ["VAL-SET-006"],
+      "fulfills": [],
       "status": "completed"
     },
     {
@@ -454,7 +538,10 @@
         "Playwright: e2e/tos-signup.spec.ts covers check/uncheck, submission, DB assertion",
         "pnpm vitest run src/__tests__/tos-acceptance.test.ts"
       ],
-      "fulfills": ["VAL-TOS-001", "VAL-TOS-002", "VAL-TOS-003", "VAL-TOS-004"],
+      "fulfills": [
+        "VAL-TOS-003",
+        "VAL-TOS-004"
+      ],
       "status": "completed"
     },
     {
@@ -462,7 +549,9 @@
       "description": "Create supabase/migrations/<ts>_supplementary_files.sql: table supplementary_files (id uuid PK default gen_random_uuid(), site_id uuid FK sites(id) ON DELETE CASCADE, filename text NOT NULL, storage_path text NOT NULL, bytes int NOT NULL CHECK (bytes > 0), content_hash text NOT NULL, status text CHECK (status IN ('queued','processing','ready','failed')) default 'queued', error_message text, chunks_count int default 0, created_at timestamptz default now(), UNIQUE(site_id, content_hash)). Index on site_id and status. RLS: authenticated user SELECT/DELETE their own site's files (via site_id -> sites.user_id chain); widget cannot access (server-only). Create Supabase Storage bucket 'knowledge-files' with policy: authenticated user can SELECT/INSERT/DELETE objects under their own user_id folder (storage.foldername(name))[1]::uuid = auth.uid(). Service role bypasses.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["usage-counters-schema-rpc is completed"],
+      "preconditions": [
+        "usage-counters-schema-rpc is completed"
+      ],
       "expectedBehavior": [
         "supplementary_files table with correct schema, constraints, and indexes",
         "UNIQUE(site_id, content_hash) enforces dedupe at DB level",
@@ -479,10 +568,12 @@
     },
     {
       "id": "file-upload-api-limits",
-      "description": "POST /api/files route accepting multipart/form-data. Auth required. Pipeline: (1) stream the body with 25MB cap — abort stream if exceeded, return 413; (2) compute magic-byte sniff on first N bytes, compare against allow-list (PDF %PDF-, DOCX/PPTX/XLSX PK zip magic, plain text heuristic, CSV = text with commas); reject MIME spoofing; (3) compute SHA-256 content_hash; (4) sanitize filename (strip path separators, limit to 255 chars, no leading dots); (5) check plan file cap by SELECT count FROM supplementary_files WHERE site_id = ... — if >= plan.supplementary_file_limit, reject with 403; (6) dedupe: INSERT ... ON CONFLICT (site_id, content_hash) DO NOTHING RETURNING id — if conflict, return 200 with {duplicate:true, existing_id}; (7) upload to Storage at `${user_id}/${file_id}.${ext}`; (8) INSERT row with status='queued'; (9) trigger background processor (next feature). Reject 0-byte files. Return 200 with file_id on success.",
+      "description": "POST /api/files route accepting multipart/form-data. Auth required. Pipeline: (1) stream the body with 25MB cap \u2014 abort stream if exceeded, return 413; (2) compute magic-byte sniff on first N bytes, compare against allow-list (PDF %PDF-, DOCX/PPTX/XLSX PK zip magic, plain text heuristic, CSV = text with commas); reject MIME spoofing; (3) compute SHA-256 content_hash; (4) sanitize filename (strip path separators, limit to 255 chars, no leading dots); (5) check plan file cap by SELECT count FROM supplementary_files WHERE site_id = ... \u2014 if >= plan.supplementary_file_limit, reject with 403; (6) dedupe: INSERT ... ON CONFLICT (site_id, content_hash) DO NOTHING RETURNING id \u2014 if conflict, return 200 with {duplicate:true, existing_id}; (7) upload to Storage at `${user_id}/${file_id}.${ext}`; (8) INSERT row with status='queued'; (9) trigger background processor (next feature). Reject 0-byte files. Return 200 with file_id on success.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["supplementary-files-schema-storage is completed"],
+      "preconditions": [
+        "supplementary-files-schema-storage is completed"
+      ],
       "expectedBehavior": [
         "Files >25MB rejected with 413 before full upload",
         "MIME spoofing detected via magic bytes: .exe labeled as application/pdf -> rejected",
@@ -497,17 +588,23 @@
         "curl with 26MB file -> 413; with .exe-as-pdf -> 400; with valid PDF -> 200"
       ],
       "fulfills": [
-        "VAL-FILE-010", "VAL-FILE-011", "VAL-FILE-012",
-        "VAL-FILE-018", "VAL-FILE-019", "VAL-FILE-021"
+        "VAL-FILE-010",
+        "VAL-FILE-011",
+        "VAL-FILE-012",
+        "VAL-FILE-018",
+        "VAL-FILE-019",
+        "VAL-FILE-021"
       ],
       "status": "completed"
     },
     {
       "id": "file-parsers-pipeline",
-      "description": "Background processor (Next.js route POST /api/files/process invoked by a queue or directly via after() from upload) that: (1) sets status='processing'; (2) downloads file from Storage; (3) routes to parser by extension — pdf-parse for PDF (reject if encrypted with owner password), mammoth for DOCX (strips macros), officeparser or pptx2json for PPTX, xlsx for XLSX+CSV (sheet-aware), native text read for TXT/MD; (4) extracts text + detects suspicious size (zip bomb: if decompressed > 100MB -> fail with clear error; PDF-bomb similarly); (5) handles non-UTF8 via TextDecoder('utf-8', {fatal:false}) with fallback; (6) reuses existing src/lib/crawl/chunk.ts chunkMarkdown() to split; (7) embeds via text-embedding-3-small; (8) inserts into embeddings with source_type='file', source_url='file://<filename>', file_id FK. Sets status='ready' (or 'failed' with error_message). Adds embeddings.source_type column if not present. Status transitions observable.",
+      "description": "Background processor (Next.js route POST /api/files/process invoked by a queue or directly via after() from upload) that: (1) sets status='processing'; (2) downloads file from Storage; (3) routes to parser by extension \u2014 pdf-parse for PDF (reject if encrypted with owner password), mammoth for DOCX (strips macros), officeparser or pptx2json for PPTX, xlsx for XLSX+CSV (sheet-aware), native text read for TXT/MD; (4) extracts text + detects suspicious size (zip bomb: if decompressed > 100MB -> fail with clear error; PDF-bomb similarly); (5) handles non-UTF8 via TextDecoder('utf-8', {fatal:false}) with fallback; (6) reuses existing src/lib/crawl/chunk.ts chunkMarkdown() to split; (7) embeds via text-embedding-3-small; (8) inserts into embeddings with source_type='file', source_url='file://<filename>', file_id FK. Sets status='ready' (or 'failed' with error_message). Adds embeddings.source_type column if not present. Status transitions observable.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["file-upload-api-limits is completed"],
+      "preconditions": [
+        "file-upload-api-limits is completed"
+      ],
       "expectedBehavior": [
         "PDF, DOCX, PPTX, XLSX, CSV, TXT, MD each extract text correctly and reach status='ready'",
         "Encrypted PDF (owner password) -> status='failed' with clear error_message",
@@ -522,20 +619,25 @@
         "Playwright: upload each type, assert status chip reaches 'Ready'"
       ],
       "fulfills": [
-        "VAL-FILE-003", "VAL-FILE-004", "VAL-FILE-005",
-        "VAL-FILE-006", "VAL-FILE-007", "VAL-FILE-008",
-        "VAL-FILE-009", "VAL-FILE-014", "VAL-FILE-016",
-        "VAL-FILE-017", "VAL-FILE-020", "VAL-FILE-022",
+        "VAL-FILE-003",
+        "VAL-FILE-006",
+        "VAL-FILE-007",
+        "VAL-FILE-008",
+        "VAL-FILE-009",
+        "VAL-FILE-014",
+        "VAL-FILE-020",
         "VAL-FILE-023"
       ],
       "status": "completed"
     },
     {
       "id": "file-delete-cascade",
-      "description": "DELETE /api/files/{id} route. Auth required, RLS-checked (user can only delete own site's files). Pipeline: (1) fetch the row; (2) delete the Storage object at file.storage_path; (3) delete embeddings WHERE file_id = ... (cascades if FK configured ON DELETE CASCADE — set this up in supplementary-files-schema-storage); (4) delete the supplementary_files row. Decrement usage_counters.files_stored by 1. Return 200. Test: upload, verify embeddings inserted, delete, verify embeddings gone + row gone + storage object gone.",
+      "description": "DELETE /api/files/{id} route. Auth required, RLS-checked (user can only delete own site's files). Pipeline: (1) fetch the row; (2) delete the Storage object at file.storage_path; (3) delete embeddings WHERE file_id = ... (cascades if FK configured ON DELETE CASCADE \u2014 set this up in supplementary-files-schema-storage); (4) delete the supplementary_files row. Decrement usage_counters.files_stored by 1. Return 200. Test: upload, verify embeddings inserted, delete, verify embeddings gone + row gone + storage object gone.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["file-parsers-pipeline is completed"],
+      "preconditions": [
+        "file-parsers-pipeline is completed"
+      ],
       "expectedBehavior": [
         "DELETE /api/files/{id} auth'd as owner returns 200",
         "embeddings rows with file_id = id are deleted",
@@ -547,7 +649,9 @@
       "verificationSteps": [
         "pnpm vitest run src/__tests__/file-delete.test.ts"
       ],
-      "fulfills": ["VAL-FILE-013"],
+      "fulfills": [
+        "VAL-FILE-013"
+      ],
       "status": "completed"
     },
     {
@@ -555,7 +659,9 @@
       "description": "Update match_chunks() RPC (or equivalent retrieval path) to include file-sourced embeddings alongside crawled-page embeddings for the site. Add source_type to returned rows. Update src/lib/chat/system-prompt.ts to cite file sources with their filename (e.g., `[3] (Source: file://product-manual.pdf)`) distinct from URL sources. Widget renders file citations with a document icon vs. link icon for URL sources. Asserts: a chat query answerable only by a PDF returns an answer citing the PDF.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["file-parsers-pipeline is completed"],
+      "preconditions": [
+        "file-parsers-pipeline is completed"
+      ],
       "expectedBehavior": [
         "match_chunks returns file-sourced chunks alongside URL-sourced chunks for the site",
         "System prompt cites file sources with `file://<filename>`",
@@ -566,15 +672,20 @@
         "pnpm vitest run src/__tests__/chat-file-retrieval.test.ts",
         "Playwright: e2e/file-rag.spec.ts uploads a PDF with unique content, asks a question, asserts the citation"
       ],
-      "fulfills": ["VAL-FILE-024"],
+      "fulfills": [],
       "status": "completed"
     },
     {
       "id": "knowledge-ui",
-      "description": "Build /dashboard/settings/knowledge page per Appendix B.4. react-dropzone DragDropZone accepting 7 extensions + size hint 'Max 25MB per file'. FileRow component with status chip (queued/processing/ready/failed) styled per Appendix A. StorageMeter component showing 'X / N files · Y MB / Z MB'. Retry button on failed files re-queues processing. Delete button confirms and calls DELETE /api/files/{id}. Empty state per standard convention. Error state if /api/files list fetch fails. Rejected file types (e.g., .exe) show inline error. Supabase Realtime subscription on supplementary_files for live status updates.",
+      "description": "Build /dashboard/settings/knowledge page per Appendix B.4. react-dropzone DragDropZone accepting 7 extensions + size hint 'Max 25MB per file'. FileRow component with status chip (queued/processing/ready/failed) styled per Appendix A. StorageMeter component showing 'X / N files \u00b7 Y MB / Z MB'. Retry button on failed files re-queues processing. Delete button confirms and calls DELETE /api/files/{id}. Empty state per standard convention. Error state if /api/files list fetch fails. Rejected file types (e.g., .exe) show inline error. Supabase Realtime subscription on supplementary_files for live status updates.",
       "skillName": "fullstack-worker",
       "milestone": "knowledge-uploads",
-      "preconditions": ["settings-layout is completed", "file-upload-api-limits is completed", "file-parsers-pipeline is completed", "file-delete-cascade is completed"],
+      "preconditions": [
+        "settings-layout is completed",
+        "file-upload-api-limits is completed",
+        "file-parsers-pipeline is completed",
+        "file-delete-cascade is completed"
+      ],
       "expectedBehavior": [
         "Drop zone accepts .pdf .docx .pptx .xlsx .csv .txt .md; rejects others with inline error",
         "FileRow status chip reflects DB status with correct colors",
@@ -587,9 +698,7 @@
         "Playwright: e2e/knowledge-ui.spec.ts drops each file type, asserts row + chip + Realtime transition",
         "Visual check: states (empty, uploading, ready, failed) match Appendix A tokens"
       ],
-      "fulfills": [
-        "VAL-FILE-001", "VAL-FILE-002", "VAL-FILE-015", "VAL-FILE-025"
-      ],
+      "fulfills": [],
       "status": "completed"
     },
     {
@@ -597,7 +706,9 @@
       "description": "Create supabase/migrations/<ts>_custom_responses.sql: table custom_responses (id uuid PK, site_id uuid FK sites(id) ON DELETE CASCADE, trigger_type text CHECK (trigger_type IN ('keyword','intent')), triggers text[] NOT NULL, response text NOT NULL, priority int default 0, is_active boolean default true, created_at timestamptz default now()). Index on (site_id, is_active, priority DESC). RLS: owner reads/writes their site's rules; widget cannot access directly (runtime matching happens server-side with service role).",
       "skillName": "fullstack-worker",
       "milestone": "custom-responses",
-      "preconditions": ["supplementary-files-schema-storage is completed"],
+      "preconditions": [
+        "supplementary-files-schema-storage is completed"
+      ],
       "expectedBehavior": [
         "custom_responses table exists with correct schema + constraints + index",
         "RLS: user A cannot read user B's rules; service role reads all",
@@ -611,15 +722,17 @@
     },
     {
       "id": "responses-matcher-runtime",
-      "description": "Create src/lib/chat/response-matcher.ts: pure functions for keyword matching and (conditionally) intent classification. Keyword matcher: normalize message (lowercase, Unicode NFD + strip combining marks for diacritic-insensitivity), split on word-boundary regex, check each keyword against tokens. Returns best match by priority DESC, tie-break by created_at ASC. Intent classifier (only invoked if any intent-type rule exists for the site): tiny gpt-4o-mini call with schema-constrained JSON output {intent: string}, cached per session_id. Wire into /api/chat/session BEFORE embedding/LLM call: (1) fetch active rules for site_id; (2) try keyword match first — if hit, skip LLM, save canned response to conversations, return directly; (3) if intent rules exist and no keyword hit, run classifier; (4) if intent match, skip LLM, return canned response; (5) otherwise proceed with normal RAG. Tests: case, diacritics, word boundaries, priority, no-LLM-call assertions via mock.",
+      "description": "Create src/lib/chat/response-matcher.ts: pure functions for keyword matching and (conditionally) intent classification. Keyword matcher: normalize message (lowercase, Unicode NFD + strip combining marks for diacritic-insensitivity), split on word-boundary regex, check each keyword against tokens. Returns best match by priority DESC, tie-break by created_at ASC. Intent classifier (only invoked if any intent-type rule exists for the site): tiny gpt-4o-mini call with schema-constrained JSON output {intent: string}, cached per session_id. Wire into /api/chat/session BEFORE embedding/LLM call: (1) fetch active rules for site_id; (2) try keyword match first \u2014 if hit, skip LLM, save canned response to conversations, return directly; (3) if intent rules exist and no keyword hit, run classifier; (4) if intent match, skip LLM, return canned response; (5) otherwise proceed with normal RAG. Tests: case, diacritics, word boundaries, priority, no-LLM-call assertions via mock.",
       "skillName": "fullstack-worker",
       "milestone": "custom-responses",
-      "preconditions": ["custom-responses-schema is completed"],
+      "preconditions": [
+        "custom-responses-schema is completed"
+      ],
       "expectedBehavior": [
         "Keyword match bypasses main LLM call (OpenAI mock call count = 0 for chat completion)",
         "Case-insensitive: 'Help' matches 'help me', 'HELP', 'Help?'",
         "Word-boundary: 'help' does not match 'helper' or 'alphelp'",
-        "Diacritic-insensitive: 'café' matches 'cafe'",
+        "Diacritic-insensitive: 'caf\u00e9' matches 'cafe'",
         "Priority tiebreaker: higher priority wins, ties by older created_at",
         "Intent classifier only invoked when site has intent-type rules",
         "Matched canned response saved to conversations like a normal message"
@@ -629,8 +742,11 @@
         "pnpm vitest run src/__tests__/responses-integration.test.ts (fastpath LLM bypass)"
       ],
       "fulfills": [
-        "VAL-RESP-007", "VAL-RESP-008", "VAL-RESP-009",
-        "VAL-RESP-010", "VAL-RESP-011"
+        "VAL-RESP-007",
+        "VAL-RESP-008",
+        "VAL-RESP-009",
+        "VAL-RESP-010",
+        "VAL-RESP-011"
       ],
       "status": "completed"
     },
@@ -639,7 +755,11 @@
       "description": "Build /dashboard/settings/responses page per Appendix B.5. ResponseTable component: columns for trigger type, triggers (as chips via ChipInput), response preview (truncated), priority, active toggle, actions (edit/test/delete). ResponseModal: form with trigger_type dropdown (keyword|intent), ChipInput for triggers, textarea for response, priority slider (0-10), active toggle. Uses zod + react-hook-form for validation. TestDrawer side panel: sample message input + Run button -> calls a new POST /api/responses/test endpoint that runs the matcher against the site's rules, returns {matched, rule_id, confidence, response}. Toast on save/delete. Add POST /api/responses (create), PATCH /api/responses/{id} (update), DELETE /api/responses/{id}. Auth + RLS enforced.",
       "skillName": "fullstack-worker",
       "milestone": "custom-responses",
-      "preconditions": ["settings-layout is completed", "responses-matcher-runtime is completed", "toast-system is completed"],
+      "preconditions": [
+        "settings-layout is completed",
+        "responses-matcher-runtime is completed",
+        "toast-system is completed"
+      ],
       "expectedBehavior": [
         "Empty state renders for new user",
         "Add Response modal validates: triggers and response required",
@@ -653,11 +773,7 @@
         "Playwright: e2e/responses-crud.spec.ts covers create/edit/delete/test",
         "pnpm vitest run src/__tests__/responses-api.test.ts"
       ],
-      "fulfills": [
-        "VAL-RESP-001", "VAL-RESP-002", "VAL-RESP-003",
-        "VAL-RESP-004", "VAL-RESP-005", "VAL-RESP-006",
-        "VAL-RESP-012"
-      ],
+      "fulfills": [],
       "status": "completed"
     },
     {
@@ -665,7 +781,9 @@
       "description": "Create supabase/migrations/<ts>_escalation_rules.sql: table escalation_rules (id uuid PK, site_id uuid FK sites(id) ON DELETE CASCADE, rule_type text CHECK (rule_type IN ('turn_count','keyword','intent')), config jsonb NOT NULL, action text CHECK (action IN ('ask_email','ask_phone','show_form','calendly_link','handoff')), action_config jsonb default '{}', priority int default 0, is_active boolean default true, created_at timestamptz default now()). Also extend conversations table: ADD COLUMN needs_human boolean default false (for the handoff action). Index on (site_id, is_active, priority DESC). RLS owner-scoped.",
       "skillName": "fullstack-worker",
       "milestone": "escalation",
-      "preconditions": ["custom-responses-schema is completed"],
+      "preconditions": [
+        "custom-responses-schema is completed"
+      ],
       "expectedBehavior": [
         "escalation_rules table exists with correct schema",
         "conversations.needs_human column exists with default false",
@@ -682,7 +800,10 @@
       "description": "Create src/lib/chat/escalation.ts: evaluates escalation rules against session context AFTER the main LLM response (or custom-response fast-path) completes. Inputs: {site_id, message, message_count, intent (if classified)}. For each rule (ordered by priority DESC): rule_type='turn_count' -> match if message_count >= config.turns; 'keyword' -> match if normalized message contains any config.keywords (reusing the matcher from responses-matcher-runtime); 'intent' -> match if intent matches any config.intents. First matching rule wins. Attach {pending_action: {action, action_config}} to the session state. /api/chat/stream's onFinish includes pending_action in the emitted end-of-stream event (JSON metadata). For 'handoff' action, UPDATE conversations SET needs_human = true. Tests cover each rule type firing + priority order.",
       "skillName": "fullstack-worker",
       "milestone": "escalation",
-      "preconditions": ["escalation-rules-schema is completed", "responses-matcher-runtime is completed"],
+      "preconditions": [
+        "escalation-rules-schema is completed",
+        "responses-matcher-runtime is completed"
+      ],
       "expectedBehavior": [
         "turn_count rule fires at configured N turns",
         "keyword rule fires on normalized match (reusing matcher)",
@@ -696,8 +817,11 @@
         "Integration: send a message sequence triggering turn_count, verify stream metadata"
       ],
       "fulfills": [
-        "VAL-ESCAL-006", "VAL-ESCAL-007", "VAL-ESCAL-008",
-        "VAL-ESCAL-009", "VAL-ESCAL-010"
+        "VAL-ESCAL-006",
+        "VAL-ESCAL-007",
+        "VAL-ESCAL-008",
+        "VAL-ESCAL-009",
+        "VAL-ESCAL-010"
       ],
       "status": "completed"
     },
@@ -706,7 +830,10 @@
       "description": "Build /dashboard/settings/escalation page per Appendix B.6. RuleCard component (drag handle, rule summary text, action pill, priority, active toggle, edit/delete buttons). RuleList with HTML5 drag-drop reordering updating priority in DB (server action). EscalationModal form: rule_type dropdown with conditional config fields (turn_count shows a number input for turns; keyword shows ChipInput; intent shows ChipInput with intent labels); action dropdown with 5 options; action_config conditional fields (calendly_link shows URL input; show_form shows ChipInput for field names; others have no extra config). Uses zod + react-hook-form. POST /api/escalation-rules (create), PATCH (update + reorder via single endpoint accepting rule list), DELETE. Empty state per convention.",
       "skillName": "fullstack-worker",
       "milestone": "escalation",
-      "preconditions": ["settings-layout is completed", "escalation-runtime-trigger-eval is completed"],
+      "preconditions": [
+        "settings-layout is completed",
+        "escalation-runtime-trigger-eval is completed"
+      ],
       "expectedBehavior": [
         "Empty state renders for new user",
         "Add rule modal supports turn_count / keyword / intent triggers",
@@ -719,10 +846,7 @@
         "Playwright: e2e/escalation-crud.spec.ts covers create/edit/reorder/delete",
         "pnpm vitest run src/__tests__/escalation-api.test.ts"
       ],
-      "fulfills": [
-        "VAL-ESCAL-001", "VAL-ESCAL-002", "VAL-ESCAL-003",
-        "VAL-ESCAL-004", "VAL-ESCAL-005"
-      ],
+      "fulfills": [],
       "status": "completed"
     },
     {
@@ -730,7 +854,9 @@
       "description": "Extend widget/src/widget.tsx to render escalation UIs inline when stream finish event carries pending_action. Five action renderers per Appendix B.8: ask_email (email input + Send -> POST /api/leads with source='escalation'); ask_phone (tel input + Request Call -> POST /api/leads); show_form (dynamic fields from action_config.fields[] -> POST /api/leads); calendly_link (iframe src=action_config.url at 100% x 600px); handoff (animated dots + 'A team member will be with you shortly' + already-set needs_human flag). Add .rc-escalation* styles in shadow DOM CSS. Dashboard conversations page shows a flag icon next to conversations with needs_human=true.",
       "skillName": "widget-worker",
       "milestone": "escalation",
-      "preconditions": ["escalation-runtime-trigger-eval is completed"],
+      "preconditions": [
+        "escalation-runtime-trigger-eval is completed"
+      ],
       "expectedBehavior": [
         "ask_email renders email input + Send button, posts to /api/leads",
         "ask_phone renders tel input + Request Call, posts to /api/leads",
@@ -744,8 +870,7 @@
         "Visual: each action type screenshots match Appendix B.8 style"
       ],
       "fulfills": [
-        "VAL-ESCAL-011", "VAL-ESCAL-012", "VAL-ESCAL-013",
-        "VAL-ESCAL-014", "VAL-ESCAL-015"
+        "VAL-ESCAL-015"
       ],
       "status": "completed"
     },
@@ -754,7 +879,9 @@
       "description": "Replace src/lib/chat/rate-limit.ts in-memory Map implementation with @upstash/ratelimit + @upstash/redis. Keep the current per-IP 3-second window on widget /api/chat/session. Add /api/crawl/start rate-limit (5/hour per user). Add /api/files upload rate-limit (60/hour per user). All 429 responses include Retry-After header. Remove the unused ioredis dependency (redis-server is not needed in Vercel production). Keep local Redis in services.yaml for dev-only convenience; production uses Upstash REST API.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["message-quota-enforcement is completed"],
+      "preconditions": [
+        "message-quota-enforcement is completed"
+      ],
       "expectedBehavior": [
         "Rate limit state persists across Vercel cold starts (Upstash-backed)",
         "429 responses include Retry-After header",
@@ -767,7 +894,10 @@
         "pnpm vitest run src/__tests__/rate-limit-upstash.test.ts",
         "Manual: hammer endpoint, verify 429 with Retry-After"
       ],
-      "fulfills": ["VAL-HARD-001", "VAL-HARD-002"],
+      "fulfills": [
+        "VAL-HARD-001",
+        "VAL-HARD-002"
+      ],
       "status": "completed"
     },
     {
@@ -786,12 +916,14 @@
         "Trigger a test error route; check Sentry dashboard for the event",
         "pnpm vitest run src/__tests__/sentry-tags.test.ts"
       ],
-      "fulfills": ["VAL-HARD-010"],
+      "fulfills": [
+        "VAL-HARD-010"
+      ],
       "status": "completed"
     },
     {
       "id": "legal-pages",
-      "description": "Create /privacy, /terms, /dpa pages as React server components with the app's layout (header/footer only, no dashboard chrome). Content: start from a standard SaaS template (e.g., Termly-generated or hand-written) and customize with RubyCrawl specifics: data stored (site content via Firecrawl, uploaded files, chat transcripts, email leads), processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry), retention policies, GDPR/CCPA language, contact email. /dpa covers processor relationships per GDPR Art. 28. All three linked from footer. Do NOT use AI to generate legal text verbatim — structure from template, Brandon reviews text.",
+      "description": "Create /privacy, /terms, /dpa pages as React server components with the app's layout (header/footer only, no dashboard chrome). Content: start from a standard SaaS template (e.g., Termly-generated or hand-written) and customize with RubyCrawl specifics: data stored (site content via Firecrawl, uploaded files, chat transcripts, email leads), processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry), retention policies, GDPR/CCPA language, contact email. /dpa covers processor relationships per GDPR Art. 28. All three linked from footer. Do NOT use AI to generate legal text verbatim \u2014 structure from template, Brandon reviews text.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
       "preconditions": [],
@@ -805,7 +937,11 @@
         "curl /privacy /terms /dpa; check response size",
         "Brandon reviews text before launch"
       ],
-      "fulfills": ["VAL-HARD-003", "VAL-HARD-004", "VAL-HARD-005"],
+      "fulfills": [
+        "VAL-HARD-003",
+        "VAL-HARD-004",
+        "VAL-HARD-005"
+      ],
       "status": "completed"
     },
     {
@@ -813,7 +949,10 @@
       "description": "Install resend + react-email. Create emails/ directory with React components: WelcomeEmail, TrialEndingEmail, QuotaWarningEmail, PaymentFailedEmail. Create src/lib/email.ts with sendEmail(to, template, props) using Resend SDK. Wire triggers: (1) signup -> welcome (hook into Supabase auth via DB trigger or webhook); (2) Vercel Cron (daily) -> find trials ending in 3 days, send once per user (idempotency via a sent_emails table with UNIQUE(user_id, template, period)); (3) message-quota-enforcement at 80% threshold -> one-time warning per period; (4) stripe-webhook-api invoice.payment_failed -> payment-failed email. All emails use app branding, plain CTAs, and List-Unsubscribe header. Resend test mode in CI.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["stripe-webhook-api is completed", "message-quota-enforcement is completed"],
+      "preconditions": [
+        "stripe-webhook-api is completed",
+        "message-quota-enforcement is completed"
+      ],
       "expectedBehavior": [
         "Signup triggers welcome email (visible in Resend logs)",
         "Cron sends trial-ending email 3 days before trial_ends_at; idempotent on re-run",
@@ -826,8 +965,10 @@
         "Manual: trigger each scenario in dev, verify Resend logs"
       ],
       "fulfills": [
-        "VAL-HARD-006", "VAL-HARD-007",
-        "VAL-HARD-008", "VAL-HARD-009"
+        "VAL-HARD-006",
+        "VAL-HARD-007",
+        "VAL-HARD-008",
+        "VAL-HARD-009"
       ],
       "status": "completed"
     },
@@ -836,7 +977,10 @@
       "description": "Finalize .github/workflows/test.yml from the M1 skeleton. Runs on push and pull_request. Jobs: (1) unit-integration: postgres service container, pnpm install frozen, pnpm lint, pnpm typecheck, pnpm vitest run --coverage, codecov upload; (2) e2e: needs unit-integration, pnpm playwright install chromium, pnpm playwright test, upload playwright-report artifact on failure. Secrets: SUPABASE_TEST_* from GitHub secrets. Target run time < 10 min. Gate main branch behind required checks in GitHub settings.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["add-test-infrastructure is completed", "all other milestones substantially complete"],
+      "preconditions": [
+        "add-test-infrastructure is completed",
+        "all other milestones substantially complete"
+      ],
       "expectedBehavior": [
         ".github/workflows/test.yml exists with unit-integration + e2e jobs",
         "Push triggers the workflow; status appears on the PR",
@@ -849,7 +993,9 @@
         "Open a PR and observe Actions tab",
         "Check codecov.io for coverage report"
       ],
-      "fulfills": ["VAL-HARD-011"],
+      "fulfills": [
+        "VAL-HARD-011"
+      ],
       "status": "completed"
     },
     {
@@ -857,7 +1003,9 @@
       "description": "Create scripts/reset-my-data.sql: parametrized on a single :user_id. Deletes rows in dependency order from chat_sessions, conversations, leads, embeddings, pages, supplementary_files, usage_counters, custom_responses, escalation_rules, sites WHERE user_id = :user_id (or via site_id chain). Preserves the profiles row (and its Stripe relationship). Also deletes Storage objects under that user's folder. Wrapped in a transaction. Add a safety check: raises exception if :user_id is NULL. Add scripts/reset-my-data.sh wrapper that requires env var CONFIRM_USER_ID to match the SQL param. Brandon runs manually when he's ready to start clean before onboarding real customers.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["all-schema-migrations-complete"],
+      "preconditions": [
+        "all-schema-migrations-complete"
+      ],
       "expectedBehavior": [
         "Running reset-my-data.sh with CONFIRM_USER_ID=<brandon_id> truncates all his user-scoped data",
         "profiles row preserved",
@@ -868,7 +1016,9 @@
       "verificationSteps": [
         "pnpm vitest run src/__tests__/reset-my-data.test.ts (seeded 2 users, run script for one, assert the other is intact)"
       ],
-      "fulfills": ["VAL-CROSS-010"],
+      "fulfills": [
+        "VAL-CROSS-010"
+      ],
       "status": "completed"
     },
     {
@@ -876,7 +1026,9 @@
       "description": "End-to-end Playwright specs covering the user journeys in VAL-CROSS-001..009. One spec file per journey in e2e/: signup-to-chat.spec.ts, subscription-lifecycle.spec.ts, lead-capture.spec.ts, quota-exhaustion.spec.ts, file-retrieval.spec.ts, responses-plus-escalation.spec.ts, settings-navigation.spec.ts, auth-gates-dashboard.spec.ts, auth-gates-api.spec.ts. Each spec stubs external services via page.route (OpenAI, Firecrawl, Stripe via stripe-mock). Seeds test users via the M1 createTestSessionViaAdmin helper. Captures screenshots at key steps to .factory/validation/hardening-launch/evidence/. Assertions map 1:1 to VAL-CROSS-001 through VAL-CROSS-009.",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["all prior milestones at least implementation-complete"],
+      "preconditions": [
+        "all prior milestones at least implementation-complete"
+      ],
       "expectedBehavior": [
         "e2e/signup-to-chat.spec.ts covers full new-user journey (VAL-CROSS-001)",
         "e2e/subscription-lifecycle.spec.ts covers trial->expired->paid (VAL-CROSS-002)",
@@ -892,38 +1044,54 @@
         "pnpm playwright test",
         "Screenshots archived in .factory/validation/hardening-launch/evidence/"
       ],
-      "fulfills": [
-        "VAL-CROSS-001", "VAL-CROSS-002", "VAL-CROSS-003",
-        "VAL-CROSS-004", "VAL-CROSS-005", "VAL-CROSS-006",
-        "VAL-CROSS-007", "VAL-CROSS-008", "VAL-CROSS-009"
-      ],
-      "status": "pending"
+      "fulfills": [],
+      "status": "superseded",
+      "supersededBy": [
+        "e2e-signup-to-chat",
+        "e2e-subscription-lifecycle",
+        "e2e-lead-capture",
+        "e2e-quota-exhaustion",
+        "e2e-knowledge-upload",
+        "e2e-responses-plus-escalation",
+        "e2e-settings-navigation",
+        "e2e-auth-gates"
+      ]
     },
     {
       "id": "widget-graceful-degradation",
-      "description": "Update widget loader (widget/src/loader.ts) with a pre-flight check: GET /api/widget/config?site_key=X (new lightweight route returning {site_key_valid, site_ready, api_version}). If it fails (network error, timeout > 3s, 5xx) or returns site_ready=false, bubble does not render. Loader re-tries once per 60s silently. When the check succeeds, bubble appears without a page reload. Also: if POST /api/chat/session returns 402 (subscription inactive), widget hides the bubble permanently for that page-view — visitor never sees 'service unavailable' (protects site-owner reputation). Logger warns once in console (not repeatedly).",
+      "description": "Update widget loader (widget/src/loader.ts) with a pre-flight check: GET /api/widget/config?site_key=X (new lightweight route returning {site_key_valid, site_ready, api_version}). If it fails (network error, timeout > 3s, 5xx) or returns site_ready=false, bubble does not render. Loader re-tries once per 60s silently. When the check succeeds, bubble appears without a page reload. Also: if POST /api/chat/session returns 402 (subscription inactive), widget hides the bubble permanently for that page-view \u2014 visitor never sees 'service unavailable' (protects site-owner reputation). Logger warns once in console (not repeatedly).",
       "skillName": "widget-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["subscription-gate is completed"],
+      "preconditions": [
+        "subscription-gate is completed"
+      ],
       "expectedBehavior": [
         "Widget bubble hidden when pre-flight fails (5xx / network / timeout)",
         "Bubble appears automatically after API recovers (60s polling)",
-        "Bubble hidden on 402 subscription inactive — no error shown to visitor",
+        "Bubble hidden on 402 subscription inactive \u2014 no error shown to visitor",
         "Console warns once, not repeatedly (no log spam)"
       ],
       "verificationSteps": [
         "Playwright: e2e/widget-degradation.spec.ts with page.route toggling 500 / 200",
         "Manual: stop dev server, load test page, assert no bubble"
       ],
-      "fulfills": ["VAL-DEGRADE-001", "VAL-DEGRADE-002", "VAL-DEGRADE-003"],
+      "fulfills": [
+        "VAL-DEGRADE-001",
+        "VAL-DEGRADE-002",
+        "VAL-DEGRADE-003"
+      ],
       "status": "completed"
     },
     {
       "id": "gdpr-account-deletion",
-      "description": "Self-serve account deletion. Add DELETE /api/account route: (1) fetch profile + stripe_customer_id; (2) cancel Stripe subscription immediately (stripe.subscriptions.cancel, NOT cancel_at_period_end — immediate); (3) delete Storage objects under user's folder; (4) delete all user-scoped rows (reuse fresh-start-wipe-script logic but extended to also delete profiles row); (5) call supabase.auth.admin.deleteUser(user_id); (6) clear session cookies; (7) return 200. On /dashboard/settings/site add a 'Delete account' section at the bottom with red destructive-action button. Confirmation modal requires typing user's email. Client redirects to / with a confirmation toast after success. Email confirmation sent (via Resend transactional-email feature) post-deletion with 30-day recovery window note (optional — decide at M8 scope review).",
+      "description": "Self-serve account deletion. Add DELETE /api/account route: (1) fetch profile + stripe_customer_id; (2) cancel Stripe subscription immediately (stripe.subscriptions.cancel, NOT cancel_at_period_end \u2014 immediate); (3) delete Storage objects under user's folder; (4) delete all user-scoped rows (reuse fresh-start-wipe-script logic but extended to also delete profiles row); (5) call supabase.auth.admin.deleteUser(user_id); (6) clear session cookies; (7) return 200. On /dashboard/settings/site add a 'Delete account' section at the bottom with red destructive-action button. Confirmation modal requires typing user's email. Client redirects to / with a confirmation toast after success. Email confirmation sent (via Resend transactional-email feature) post-deletion with 30-day recovery window note (optional \u2014 decide at M8 scope review).",
       "skillName": "fullstack-worker",
       "milestone": "hardening-launch",
-      "preconditions": ["stripe-webhook-api is completed", "fresh-start-wipe-script is completed", "settings-sidebar milestone complete"],
+      "preconditions": [
+        "stripe-webhook-api is completed",
+        "fresh-start-wipe-script is completed",
+        "settings-sidebar milestone complete"
+      ],
       "expectedBehavior": [
         "Settings site page has Delete account section with red button",
         "Modal requires typing user's exact email to enable the Delete button",
@@ -940,8 +1108,366 @@
         "pnpm vitest run src/__tests__/gdpr-delete-account.test.ts (seeded 2 users, delete one, assert other untouched)",
         "Playwright: e2e/gdpr-delete.spec.ts walks the full flow"
       ],
-      "fulfills": ["VAL-GDPR-001", "VAL-GDPR-002", "VAL-GDPR-003"],
+      "fulfills": [
+        "VAL-GDPR-003"
+      ],
       "status": "completed"
+    },
+    {
+      "id": "playwright-auth-helper",
+      "description": "Foundational Playwright fixtures: session-cookie injection that produces an authenticated browser context without round-tripping the Supabase OTP mail flow, plus shared route-stub helpers for OpenAI / Firecrawl / Stripe. The helper signs an HS256 JWT the same way src/tests/helpers/supabase.ts does, then writes the @supabase/ssr cookies (sb-<project-ref>-auth-token) into page.context() so the very first navigation reaches /dashboard authenticated. Also standardizes test-data seeding (createSeededUser + seedSiteWithEmbeddings) for the specs that follow.",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "ci-workflow is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/fixtures/auth.ts exports a Playwright fixture test that yields { authedPage, user } pre-authenticated against the local Supabase",
+        "e2e/fixtures/stubs.ts exposes stubOpenAI, stubFirecrawl, stubStripe helpers that install page.route interceptors",
+        "e2e/fixtures/seed.ts exposes seedSiteReady, seedSiteWithEmbeddings, seedLeadsForSite so specs don't recreate chain mocks each time",
+        "Auth helper writes the two Supabase SSR cookies in the format @supabase/ssr expects \u2014 base64-encoded session object",
+        "Smoke test proves an authenticated fixture page lands on /dashboard without hitting /login"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/fixtures.spec.ts"
+      ],
+      "fulfills": [],
+      "status": "completed"
+    },
+    {
+      "id": "e2e-auth-gates",
+      "description": "Playwright coverage for the authenticated session lifecycle. Unauthenticated /dashboard/* redirects to /login (VAL-CROSS-008), API auth boundaries (VAL-CROSS-009), browser session hits dashboard with email visible (VAL-AUTH-007), refresh preserves session (VAL-AUTH-008), sign-out returns to /login (VAL-AUTH-010).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/auth-gates.spec.ts: unauthenticated \u2192 /login for 12 protected routes",
+        "e2e/auth-gates.spec.ts: authed page reaches /dashboard, email visible in sidebar, screenshot captured",
+        "e2e/auth-gates.spec.ts: reload preserves the session and stays on /dashboard",
+        "e2e/auth-gates.spec.ts: sign-out clears sb-* cookies and redirects to /login",
+        "e2e/auth-gates.spec.ts: API auth boundaries (curl-equivalent via request fixture) verified"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/auth-gates.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-AUTH-007",
+        "VAL-AUTH-008",
+        "VAL-AUTH-010",
+        "VAL-CROSS-008",
+        "VAL-CROSS-009"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-tos-signup",
+      "description": "Playwright coverage for ToS acceptance at signup. Submit disabled without checkbox (VAL-TOS-001), Terms link opens /terms in a new tab (VAL-TOS-002).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/tos-signup.spec.ts: submit button disabled until checkbox checked",
+        "e2e/tos-signup.spec.ts: attempting submit without checkbox shows inline error; no network request made",
+        "e2e/tos-signup.spec.ts: clicking 'Terms of Service' opens /terms in a new browser tab"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/tos-signup.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-TOS-001",
+        "VAL-TOS-002"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-settings-navigation",
+      "description": "Playwright sweep of the settings sidebar: active-state highlight (VAL-SET-003), site-key rotation UI flow (VAL-SET-005), save toast (VAL-SET-006), mobile viewport fallback (VAL-SET-008), and the cross-journey that hits all 5 sub-routes (VAL-CROSS-007).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/settings-navigation.spec.ts: visits /dashboard/settings/{site,knowledge,responses,escalation,billing} and verifies active-nav highlight on each",
+        "e2e/settings-navigation.spec.ts: clicks Rotate site key \u2192 confirms toast + new key displayed + embed snippet updated",
+        "e2e/settings-navigation.spec.ts: saves site settings \u2192 toast('Saved') visible",
+        "e2e/settings-navigation.spec.ts: at 375px viewport the sidebar collapses (doesn't stack awkwardly over content)"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/settings-navigation.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-SET-003",
+        "VAL-SET-005",
+        "VAL-SET-006",
+        "VAL-SET-008",
+        "VAL-CROSS-007"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-subscription-lifecycle",
+      "description": "Trial \u2192 active \u2192 past_due \u2192 recovered flow. Covers VAL-CROSS-002 plus billing-page render variants (VAL-BILLING-002/003/024/025).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/subscription-lifecycle.spec.ts: trialing user sees countdown banner + plan selector",
+        "e2e/subscription-lifecycle.spec.ts: active user sees plan name + status pill",
+        "e2e/subscription-lifecycle.spec.ts: trial expires \u2192 chat 402; completing checkout (stubbed) \u2192 chat 200",
+        "e2e/subscription-lifecycle.spec.ts: past invoices table renders with up to 12 rows",
+        "e2e/subscription-lifecycle.spec.ts: next-invoice date rendered from current_period_end"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/subscription-lifecycle.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-002",
+        "VAL-BILLING-002",
+        "VAL-BILLING-003",
+        "VAL-BILLING-024",
+        "VAL-BILLING-025"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-quota-exhaustion",
+      "description": "Usage meter + quota enforcement cross-journey. VAL-CROSS-004 plus meter-UI assertions (VAL-QUOTA-008/009/011/014).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/quota-exhaustion.spec.ts: new user sees 0 / plan-cap empty state (VAL-QUOTA-014)",
+        "e2e/quota-exhaustion.spec.ts: seeded at limit, 2001st chat returns 402; widget renders upgrade prompt (VAL-QUOTA-011)",
+        "e2e/quota-exhaustion.spec.ts: after simulated upgrade webhook, cap updates to Pro without reload (VAL-QUOTA-009)",
+        "e2e/quota-exhaustion.spec.ts: two-tab live meter update within 3s via Realtime (VAL-QUOTA-008)"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/quota-exhaustion.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-004",
+        "VAL-QUOTA-008",
+        "VAL-QUOTA-009",
+        "VAL-QUOTA-011",
+        "VAL-QUOTA-014"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-knowledge-upload",
+      "description": "File upload CRUD + retrieval journey (VAL-CROSS-005) + knowledge-UI assertions (VAL-FILE-001/002/015/024/025).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/knowledge-upload.spec.ts: empty state visible when no files exist",
+        "e2e/knowledge-upload.spec.ts: drop-zone accepts the 7 allowed types; rejects .exe",
+        "e2e/knowledge-upload.spec.ts: uploaded file shows queued\u2192processing\u2192ready status chips",
+        "e2e/knowledge-upload.spec.ts: failed file shows error + Retry button re-queues",
+        "e2e/knowledge-upload.spec.ts: chat query whose answer is only in an uploaded PDF returns the content with a citation"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/knowledge-upload.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-005",
+        "VAL-FILE-001",
+        "VAL-FILE-002",
+        "VAL-FILE-015",
+        "VAL-FILE-024",
+        "VAL-FILE-025"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-responses-crud",
+      "description": "Custom-responses dashboard CRUD (VAL-RESP-001..006, VAL-RESP-012).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/responses-crud.spec.ts: empty state visible",
+        "e2e/responses-crud.spec.ts: add-response modal validates required fields",
+        "e2e/responses-crud.spec.ts: keyword rule creation persists + appears in table",
+        "e2e/responses-crud.spec.ts: intent rule creation persists",
+        "e2e/responses-crud.spec.ts: triggers render as chips",
+        "e2e/responses-crud.spec.ts: test drawer shows matched rule + canned response",
+        "e2e/responses-crud.spec.ts: delete removes the rule from UI + DB"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/responses-crud.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-RESP-001",
+        "VAL-RESP-002",
+        "VAL-RESP-003",
+        "VAL-RESP-004",
+        "VAL-RESP-005",
+        "VAL-RESP-006",
+        "VAL-RESP-012"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-escalation-crud",
+      "description": "Escalation rules dashboard CRUD + drag-reorder (VAL-ESCAL-001..005).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/escalation-crud.spec.ts: empty state visible",
+        "e2e/escalation-crud.spec.ts: turn_count rule creation persists",
+        "e2e/escalation-crud.spec.ts: keyword rule creation persists",
+        "e2e/escalation-crud.spec.ts: intent rule creation persists",
+        "e2e/escalation-crud.spec.ts: drag reorder updates priorities in the DB"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/escalation-crud.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-ESCAL-001",
+        "VAL-ESCAL-002",
+        "VAL-ESCAL-003",
+        "VAL-ESCAL-004",
+        "VAL-ESCAL-005"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-lead-capture",
+      "description": "Widget escalation-action renderers + full lead-capture journey (VAL-CROSS-003, VAL-ESCAL-011..014).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/lead-capture.spec.ts: visitor hits turn_count=3 \u2192 widget renders ask_email form \u2192 POST /api/leads with source=escalation",
+        "e2e/lead-capture.spec.ts: ask_phone variant renders tel input + Request Call",
+        "e2e/lead-capture.spec.ts: show_form renders dynamic fields from action_config.fields",
+        "e2e/lead-capture.spec.ts: calendly_link embeds iframe at 100% x 600px",
+        "e2e/lead-capture.spec.ts: lead visible on /dashboard/leads; CSV export contains it"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/lead-capture.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-003",
+        "VAL-ESCAL-011",
+        "VAL-ESCAL-012",
+        "VAL-ESCAL-013",
+        "VAL-ESCAL-014"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-responses-plus-escalation",
+      "description": "Combined matcher + escalation journey (VAL-CROSS-006). Proves keyword response bypasses LLM and still counts toward turn_count escalation.",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/responses-plus-escalation.spec.ts: keyword rule hits without an OpenAI call (mock count = 0)",
+        "e2e/responses-plus-escalation.spec.ts: subsequent messages still tick turn_count; 3rd turn fires ask_email form",
+        "e2e/responses-plus-escalation.spec.ts: submitted lead lands in DB with source=escalation"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/responses-plus-escalation.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-006"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-signup-to-chat",
+      "description": "The full new-user journey (VAL-CROSS-001). Signup \u2192 confirm \u2192 setup \u2192 crawl \u2192 embed snippet \u2192 widget on a test page \u2192 ask a question \u2192 receive cited answer.",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed",
+        "e2e-knowledge-upload is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/signup-to-chat.spec.ts: seeded signup \u2192 dashboard \u2192 setup URL form",
+        "e2e/signup-to-chat.spec.ts: simulated crawl webhook \u2192 sites.crawl_status='ready'",
+        "e2e/signup-to-chat.spec.ts: /dashboard/embed snippet visible + copyable",
+        "e2e/signup-to-chat.spec.ts: widget test page loads \u2192 asks question \u2192 receives citation"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/signup-to-chat.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-CROSS-001"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "e2e-gdpr-delete",
+      "description": "/dashboard/settings/site Delete-account UI + modal (VAL-GDPR-001, VAL-GDPR-002).",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/gdpr-delete.spec.ts: red 'Delete my account' section visible + screenshot captured",
+        "e2e/gdpr-delete.spec.ts: clicking button opens modal; Delete is disabled until typed email matches",
+        "e2e/gdpr-delete.spec.ts: Cancel closes the modal with zero DB side-effects"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/gdpr-delete.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-GDPR-001",
+        "VAL-GDPR-002"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "adversarial-file-fixtures",
+      "description": "Adversarial file-upload fixtures: zip-bomb, PDF-bomb, macro-laden DOCX, encrypted PDF, and real DOCX/PPTX parse. Covers VAL-FILE-004/005/016/017/022.",
+      "skillName": "fullstack-worker",
+      "milestone": "playwright-sweep",
+      "preconditions": [
+        "playwright-auth-helper is completed"
+      ],
+      "expectedBehavior": [
+        "e2e/fixtures/files/ \u2014 real .docx + .pptx fixtures generated offline",
+        "e2e/adversarial-files.spec.ts: zip-bomb rejected during extraction with a clear error; no disk fill",
+        "e2e/adversarial-files.spec.ts: PDF-bomb (>100MB decompressed) rejected",
+        "e2e/adversarial-files.spec.ts: macro DOCX parsed as plain text; no macro execution or persistence",
+        "e2e/adversarial-files.spec.ts: real DOCX ends in status=ready with extracted body",
+        "e2e/adversarial-files.spec.ts: real PPTX ends in status=ready with extracted body"
+      ],
+      "verificationSteps": [
+        "pnpm exec playwright test e2e/adversarial-files.spec.ts"
+      ],
+      "fulfills": [
+        "VAL-FILE-004",
+        "VAL-FILE-005",
+        "VAL-FILE-016",
+        "VAL-FILE-017",
+        "VAL-FILE-022"
+      ],
+      "status": "pending"
     }
   ]
 }
