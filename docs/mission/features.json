@@ -1394,7 +1394,7 @@
       "fulfills": [
         "VAL-CROSS-006"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-signup-to-chat",

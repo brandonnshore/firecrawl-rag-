@@ -1,0 +1,45 @@
+{
+  "feature": "e2e-responses-plus-escalation",
+  "milestone": "playwright-sweep",
+  "status": "completed",
+  "whatWasImplemented": "Playwright spec e2e/responses-plus-escalation.spec.ts with 5 tests covering VAL-CROSS-006. Seeds a keyword custom_response ('price' → 'Our pricing is $49/mo.') and a turn_count=3 escalation rule, then simulates widget chat via POST /api/chat/session + GET /api/chat/stream?sid=... The canned path of /api/chat/stream emits the raw response text with the PENDING_ACTION_SENTINEL (U+001E) + pending_action JSON trailer when escalation fires — proving the matcher short-circuits the RAG path while the escalation runtime still evaluates. A follow-up POST /api/leads with source=escalation is verified to land with source=escalation in the leads table scoped to the seeded site_id.",
+  "whatWasLeftUndone": "",
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm exec playwright test e2e/responses-plus-escalation.spec.ts — 5/5 passing (15.0s)",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      {
+        "action": "Seed keyword response + turn_count=3 escalation, POST chat/session message=\"what's the price?\" history=[]",
+        "expected": "Stream body contains canned text, no PENDING_ACTION_SENTINEL (turn 1 < 3)",
+        "observed": "Canned text emitted; sentinel absent."
+      },
+      {
+        "action": "POST chat/session message=\"and the price?\" history=[2 user-assistant turns] so userMessageCount=3",
+        "expected": "Stream body = canned text + \\x1E + JSON {pending_action:{action:'ask_email',via:'turn_count'}}",
+        "observed": "Trailer parsed; action=ask_email, via=turn_count."
+      },
+      {
+        "action": "POST /api/leads {site_key, email, source:'escalation'} after escalation surfaced",
+        "expected": "201 success; leads row persisted with source='escalation' and site_id=<seeded>",
+        "observed": "Lead row present with matching source + site_id."
+      },
+      {
+        "action": "Message 'help me with price' with keyword-type escalation rule on 'help'",
+        "expected": "Canned response text + sentinel with via='keyword', action='ask_email'",
+        "observed": "via=keyword, action=ask_email."
+      },
+      {
+        "action": "Two keyword response rules (priority 1 and 99) both match 'price'",
+        "expected": "Higher-priority response wins (response text = 'Winning answer')",
+        "observed": "Only higher-priority response present in stream body."
+      }
+    ]
+  },
+  "filesChanged": [
+    "e2e/responses-plus-escalation.spec.ts (created)",
+    "docs/mission/features.json (M9F12 status → completed)",
+    "docs/mission/validation-state.json (VAL-CROSS-006 → passed)"
+  ]
+}

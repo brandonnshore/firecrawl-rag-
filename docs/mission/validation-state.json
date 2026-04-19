@@ -623,7 +623,9 @@
       "note": "Playwright knowledge-upload.spec.ts 5/5 green"
     },
     "VAL-CROSS-006": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-responses-plus-escalation",
+      "note": "Playwright responses-plus-escalation.spec.ts 5/5 green"
     },
     "VAL-CROSS-007": {
       "status": "passed",
