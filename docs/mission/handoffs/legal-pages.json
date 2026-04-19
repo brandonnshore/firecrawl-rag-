@@ -1,0 +1,42 @@
+{
+  "feature": "legal-pages",
+  "milestone": "hardening-launch",
+  "status": "completed",
+  "completedAt": "2026-04-19",
+  "fulfills": ["VAL-HARD-003", "VAL-HARD-004", "VAL-HARD-005"],
+  "whatWasImplemented": [
+    "src/components/legal/LegalFooter.tsx — shared footer with links to /privacy, /terms, /dpa + mailto:brandon@rubycrawl.app. Exports LEGAL_CONTACT_EMAIL constant so page bodies interpolate the same address.",
+    "src/app/privacy/page.tsx — 7-section Privacy Policy (what we collect / processors / use / retention / rights / contact). Lists all seven processors (Supabase, OpenAI, Firecrawl, Stripe, Upstash, Resend, Sentry) as required by contract.",
+    "src/app/terms/page.tsx — rewrote previous stub. 7 sections covering scope, acceptable use, billing, content rights, warranties, termination, contact. Cross-links to /privacy for deletion behavior.",
+    "src/app/dpa/page.tsx — GDPR Art. 28 Data Processing Addendum. 7 sections: roles, scope, security measures, authorised sub-processors (all 7 named), international transfers, data-subject requests, breach notification.",
+    "src/__tests__/legal-pages.test.ts — 11 tests: each route renders >1KB of markup; footer links to the other two; privacy + DPA list every processor; contact email present on all three."
+  ],
+  "whatWasLeftUndone": [
+    "Brandon's review of the final legal text before general-availability launch. Current copy is faithful to the product's actual processor topology but is not counsel-reviewed.",
+    "Footer on marketing / landing page does not yet link to /privacy + /terms + /dpa. The existing landing (src/app/landing.tsx) is untouched in this feature — follow-on."
+  ],
+  "discoveredIssues": [
+    "The pre-existing /terms stub was only 400 bytes and would have failed VAL-HARD-004. M8F3's rewrite brings it past the 1KB threshold and matches the new privacy/DPA layout.",
+    "No shared legal layout yet — each page mounts its own <main> + LegalFooter. Fine for three static routes; extract a layout.tsx if we add more."
+  ],
+  "verification": {
+    "testsRun": "pnpm vitest run — 587 passing / 1 skipped / 70 files (+11 legal-pages tests).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "renderToStaticMarkup(PrivacyPage())", "expected": "> 1024 chars, contains all 7 processors, footer links to /terms + /dpa, contact email shown", "observed": "pass" },
+      { "action": "renderToStaticMarkup(TermsPage())", "expected": "> 1024 chars, footer links to /privacy + /dpa, contact email shown", "observed": "pass" },
+      { "action": "renderToStaticMarkup(DpaPage())", "expected": "> 1024 chars, footer links to /privacy + /terms, contact email shown, all 7 processors listed", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "src/components/legal/LegalFooter.tsx (created)",
+    "src/app/privacy/page.tsx (created)",
+    "src/app/terms/page.tsx (rewrote — was a 400-byte stub)",
+    "src/app/dpa/page.tsx (created)",
+    "src/__tests__/legal-pages.test.ts (created — 11 tests)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/validation-state.json (VAL-HARD-003/004/005 passed)",
+    "docs/mission/handoffs/legal-pages.json (created)"
+  ]
+}

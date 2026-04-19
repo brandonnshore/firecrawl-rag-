@@ -806,7 +806,7 @@
         "Brandon reviews text before launch"
       ],
       "fulfills": ["VAL-HARD-003", "VAL-HARD-004", "VAL-HARD-005"],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "transactional-email",
