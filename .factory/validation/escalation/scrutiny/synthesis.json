@@ -1,0 +1,64 @@
+{
+  "milestone": "escalation",
+  "mission": "prod-saas",
+  "completedAt": "2026-04-18",
+  "phase": "scrutiny",
+  "summary": "M7 (escalation) scrutiny pass clean. Four features shipped: escalation-rules-schema, escalation-runtime-trigger-eval, escalation-ui-dashboard, escalation-widget-actions. Automated validators green.",
+  "automatedValidators": {
+    "testSuite": "pnpm vitest run — 555 passed / 1 skipped / 67 files (+64 new across the milestone).",
+    "typecheck": "zero errors (tsc --noEmit)",
+    "lint": "clean (eslint)"
+  },
+  "features": [
+    {
+      "id": "escalation-rules-schema",
+      "review": {
+        "correctness": "pass — table + RLS + cascade + conversations.needs_human. CHECK constraints cover three rule_types + five actions + jsonb_typeof object-only for config/action_config.",
+        "security": "pass — four owner-scoped RLS policies; widget never reads directly; runtime evaluator uses service-role.",
+        "quality": "pass — compound index (site_id, is_active, priority DESC, created_at ASC) mirrors M6F1 pattern; partial index on needs_human keeps scans tight.",
+        "consistency": "pass — migration style matches M6F1.",
+        "testing": "pass — 14 integration tests including all 5 actions, CHECK violations, peer isolation, cascade, needs_human persistence."
+      }
+    },
+    {
+      "id": "escalation-runtime-trigger-eval",
+      "review": {
+        "correctness": "pass — evaluator iterates by priority DESC, created_at ASC; turn_count / keyword / intent all covered; classifier fires at most once per evaluation; preClassifiedIntent feed-forward prevents redundant gpt-4o-mini calls when the response matcher already classified.",
+        "security": "pass — pure evaluator; no new secrets; session route already auths.",
+        "quality": "pass — self-contained module with exported types; \\x1E trailer protocol is a minimal addition with zero breaking changes to existing text-stream behavior.",
+        "consistency": "pass — reuses M6F2 triggerMatches so keyword semantics are identical to response rules.",
+        "testing": "pass — 14 unit tests (including turn_count non-numeric config, classifier-once-for-multiple-intent-rules) + 5 stream-integration tests proving canned + RAG trailers and handoff needs_human flag."
+      }
+    },
+    {
+      "id": "escalation-ui-dashboard",
+      "review": {
+        "correctness": "pass — validateRuleBody enforces per-rule-type config shape and per-action action_config shape; PATCH merges with the existing row before re-validating; reorder endpoint assigns descending priorities matching the runtime order-by.",
+        "security": "pass — RLS gates all CRUD; reorder's bulk update silently no-ops on invisible ids.",
+        "quality": "pass — DraftRule is a wide typed view so switching trigger/action types preserves form state across toggles; toast feedback on every mutation.",
+        "consistency": "pass — follows M6F3 UI layout + patterns.",
+        "testing": "pass — 18 API unit tests covering every validation branch + three happy-path creates mapping to VAL-ESCAL-002/003/004."
+      }
+    },
+    {
+      "id": "escalation-widget-actions",
+      "review": {
+        "correctness": "pass — stream parsing strips \\x1E trailer live; pending_action dispatches to the right renderer; show_form promotes email/phone/name while preserving extra_fields. leads route handles phone-only + escalation source correctly.",
+        "security": "pass — calendly iframe guards against non-http URLs; widget honeypot preserved; leads route validates email format + source enum.",
+        "quality": "pass — pure helpers (parseStream, buildShowFormPayload) extracted to widget/src/escalation-protocol.ts for testability; CSS respects prefers-reduced-motion.",
+        "consistency": "pass — CSS tokens match the existing widget style; new .rc-escalation-* classes follow the naming convention.",
+        "testing": "pass — 8 protocol helper tests + 5 extended leads route tests covering source + phone-only insert + extra_fields preservation."
+      }
+    }
+  ],
+  "blockingIssues": [],
+  "libraryUpdates": [
+    "architecture.md unchanged — escalation slots into the existing chat request path between RAG and conversation-save. environment.md unchanged — no new env vars.",
+    "leads table schema change documented in the M7F4 handoff; dashboard conversations view now surfaces needs_human."
+  ],
+  "conventionsAdded": [
+    "Stream trailer protocol: \\x1E (ASCII Record Separator) delimits the optional JSON trailer carrying {pending_action}. Consumers split on the last \\x1E and parse the rest as JSON; malformed JSON is a non-fatal warning.",
+    "leads.email NULLable with a partial unique index WHERE email IS NOT NULL — convention for optional-identifier columns going forward."
+  ],
+  "exitCriteriaMet": true
+}
