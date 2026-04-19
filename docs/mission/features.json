@@ -675,7 +675,7 @@
         "supabase db reset; pnpm vitest run src/__tests__/escalation-schema.test.ts"
       ],
       "fulfills": [],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "escalation-runtime-trigger-eval",

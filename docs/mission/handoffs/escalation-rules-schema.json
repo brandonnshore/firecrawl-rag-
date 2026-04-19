@@ -1,0 +1,34 @@
+{
+  "feature": "escalation-rules-schema",
+  "milestone": "escalation",
+  "status": "completed",
+  "completedAt": "2026-04-18",
+  "fulfills": [],
+  "whatWasImplemented": [
+    "supabase/migrations/20260419070000_escalation_rules.sql — escalation_rules table with FK cascade from sites, rule_type CHECK ('turn_count'|'keyword'|'intent'), config jsonb with jsonb_typeof CHECK object-only, action CHECK ('ask_email'|'ask_phone'|'show_form'|'calendly_link'|'handoff'), action_config jsonb object-only, priority int default 0, is_active boolean default true.",
+    "Compound index (site_id, is_active, priority DESC, created_at ASC) mirrors M6F1's custom_responses hot-path index — same runtime ordering.",
+    "Four owner-scoped RLS policies (SELECT/INSERT/UPDATE/DELETE) resolve through sites.user_id = auth.uid(). Widget never reads directly; runtime evaluator uses service-role client.",
+    "conversations.needs_human boolean column added with default false. Partial index conversations_needs_human_idx on (site_id) WHERE needs_human IS TRUE keeps the flag scan fast for the dashboard conversation list without inflating the full table index.",
+    "src/__tests__/escalation-schema.test.ts — 14 integration tests: defaults, rule_type / action CHECK violations, all 5 actions accepted, keyword + intent rule types, owner SELECT/INSERT/UPDATE, peer isolation (A can't pwn B's priority), anon reads zero, ON DELETE CASCADE from sites, needs_human default + UPDATE persists."
+  ],
+  "whatWasLeftUndone": [
+    "No assertions fulfilled directly — foundation for M7F2/F3/F4."
+  ],
+  "discoveredIssues": [],
+  "verification": {
+    "testsRun": "pnpm vitest run — 506 passed / 1 skipped / 63 files (+14 new).",
+    "typecheckClean": true,
+    "lintClean": true,
+    "manualChecks": [
+      { "action": "INSERT each of 5 actions", "expected": "all accepted", "observed": "pass" },
+      { "action": "User A UPDATE of user B's rule priority", "expected": "B's priority unchanged", "observed": "pass" },
+      { "action": "UPDATE conversations.needs_human=true", "expected": "persists + default was false", "observed": "pass" }
+    ]
+  },
+  "filesChanged": [
+    "supabase/migrations/20260419070000_escalation_rules.sql (created)",
+    "src/__tests__/escalation-schema.test.ts (created)",
+    "docs/mission/features.json (status updated)",
+    "docs/mission/handoffs/escalation-rules-schema.json (created)"
+  ]
+}
