@@ -1,0 +1,107 @@
+{
+  "milestone": "hardening-launch",
+  "mission": "prod-saas",
+  "completedAt": "2026-04-19",
+  "phase": "scrutiny",
+  "summary": "M8 (hardening-launch) scrutiny pass clean. Eight features shipped: upstash-rate-limiter, sentry-integration, legal-pages, transactional-email, account-deletion-gdpr, graceful-widget-degradation, ci-workflow, fresh-start-wipe-script. Automated validators green end-to-end.",
+  "automatedValidators": {
+    "testSuite": "pnpm vitest run — 642 passing / 1 skipped / 78 files (+87 new across the milestone).",
+    "typecheck": "zero errors (tsc --noEmit)",
+    "lint": "clean (eslint)"
+  },
+  "features": [
+    {
+      "id": "upstash-rate-limiter",
+      "review": {
+        "correctness": "pass — three named async limiters (chat 1/3s, crawl 5/hr, file 60/hr). Upstash sliding-window when env vars set; Map-based fallback otherwise. Retry-After computed from reset timestamp.",
+        "security": "pass — no shared keys across limiter scopes (rl:chat / rl:crawl / rl:file prefixes). ioredis dep removed.",
+        "quality": "pass — single module, single checkWithRule primitive, explicit back-compat alias for legacy callers.",
+        "consistency": "pass — all four rate-limit sites (chat/session, leads, crawl/start, files) now emit 429 + Retry-After.",
+        "testing": "pass — 14 new tests covering each limiter's happy path, window rollover, key isolation, and the fallback's process-shared state."
+      }
+    },
+    {
+      "id": "sentry-integration",
+      "review": {
+        "correctness": "pass — captureApiError wraps withScope so tags don't leak between concurrent requests. resolveRequestId picks the right header precedence.",
+        "security": "pass — init gated on SENTRY_DSN so dev/CI never emit events; withSentryConfig is only applied when DSN is present.",
+        "quality": "pass — instrumentation.ts per-runtime dispatch follows Next 16 conventions; per-runtime config files are minimal and symmetric.",
+        "consistency": "pass — pattern matches Sentry Next.js v8+ docs.",
+        "testing": "pass — 8 unit tests: environment fallback chain, VERCEL_ENV override, anonymous-safe user_id omission, request_id generation, header precedence."
+      }
+    },
+    {
+      "id": "legal-pages",
+      "review": {
+        "correctness": "pass — each page > 1KB of markup, all 7 processors listed where relevant, contact email present, footer cross-links verified in the test.",
+        "security": "pass — static content only, no auth surface.",
+        "quality": "pass — shared LegalFooter component, single source of truth for contact email constant.",
+        "consistency": "pass — CSS variables match the rest of the app (var(--ink-primary), var(--border-hairline) etc.).",
+        "testing": "pass — 11 tests render each page to static markup and assert content invariants."
+      }
+    },
+    {
+      "id": "transactional-email",
+      "review": {
+        "correctness": "pass — sendOnce is insert-first so the unique index gates duplicate sends. Four trigger paths (signup/cron/chat/webhook) encode their own period key correctly.",
+        "security": "pass — sendEmail no-ops without RESEND_API_KEY. Cron endpoint requires Bearer CRON_SECRET when configured. No user-controllable template strings.",
+        "quality": "pass — templates are pure functions; send layer is a thin Resend wrapper with List-Unsubscribe header for inbox placement.",
+        "consistency": "pass — uses existing @/lib/supabase/service + stripe-webhook handler patterns.",
+        "testing": "pass — 15 transactional unit tests + 5 cron tests; total 20. Covers idempotency, transport failure, window arithmetic, unauthenticated cron rejects."
+      }
+    },
+    {
+      "id": "gdpr-account-deletion",
+      "review": {
+        "correctness": "pass — orchestrator cancels Stripe sub, wipes Storage folder, deletes auth.users which cascades to every downstream table via existing FK ON DELETE CASCADE. Structured log lets the UI render a single toast even on partial failure.",
+        "security": "pass — email-retype confirm is case-insensitive + trimmed on both ends; modal enforces match before enabling button. Session signOut after delete. Injectable deleteAuthUser keeps the production admin-API path default and test override explicit.",
+        "quality": "pass — pure lib + thin route + contained UI component.",
+        "consistency": "pass — follows existing route-under-app/api and client-component-under-app/dashboard/settings patterns.",
+        "testing": "pass — 4 integration tests prove full cascade + cross-user untouched; 6 route tests cover auth/validation/case-insensitivity/500 paths."
+      }
+    },
+    {
+      "id": "widget-graceful-degradation",
+      "review": {
+        "correctness": "pass — preflight maps 200→ready, 402/404→silent, 5xx/network/AbortError→degraded. Loader warns once on degrade, schedules 60s polls, mounts bubble on recovery.",
+        "security": "pass — 402 routed to silent so visitors never see billing status. 404 silent so typo'd keys don't surface errors on the customer's page.",
+        "quality": "pass — pure preflightWidgetConfig helper keeps the loader small. AbortController + clearTimeout cleanup is right.",
+        "consistency": "pass — reuses widget's existing Shadow DOM + loader-then-panel pattern.",
+        "testing": "pass — 12 tests across the preflight helper (incl. abort path) and the config route (400/402/404/503/200)."
+      }
+    },
+    {
+      "id": "ci-workflow",
+      "review": {
+        "correctness": "pass — three-job graph (static → unit → e2e). Env placeholders on unit so SDK-importing modules don't crash. Concurrency cancel-in-progress guards CI minutes.",
+        "security": "pass — frozen-lockfile prevents supply-chain surprises; only Codecov + playwright-report artifacts uploaded; no secrets echoed.",
+        "quality": "pass — needs: static ensures fast feedback on trivial regressions.",
+        "consistency": "pass — job naming matches the M1 skeleton.",
+        "testing": "pass — 10 YAML invariant tests pin the workflow shape so regressions show up in vitest before burning an Actions run."
+      }
+    },
+    {
+      "id": "fresh-start-wipe-script",
+      "review": {
+        "correctness": "pass — transactional, safety-gated on NULL + missing user_id; preserves profiles row while clearing billing linkage and zeroing counters.",
+        "security": "pass — psql bind parameter prevents injection at the invocation boundary; test harness validates UUID shape before string-substituting.",
+        "quality": "pass — header comment explicitly disambiguates from GDPR delete so future Brandon doesn't reach for the wrong tool.",
+        "consistency": "pass — uses same cascade semantics that M8F5 relies on.",
+        "testing": "pass — 3 integration tests: wipe scope, cross-user untouched, safety gate on missing user."
+      }
+    }
+  ],
+  "crossMilestoneObservations": [
+    "The chat/session route picked up two new wiring points (sentry captureApiError in the catch block, maybeSendQuotaWarning after increment). Each is guarded by env / ledger so test fixtures that didn't know about them stayed green.",
+    "Stripe webhook now fires sendPaymentFailedEmail inside the existing invoice.payment_failed handler; integration-style test suite exercises the full path via the real local Supabase so no new mocks were required.",
+    "Three new modules (email, sentry, account/delete) all accept their external side-effects as injected dependencies — matches the M2-M7 pattern and keeps tests from needing network.",
+    "sent_emails migration adds a ledger table that the fresh-start script (M8F8) must clear. Both features added in the same milestone — covered by the cross-reference in reset-my-data.sql."
+  ],
+  "blockingIssues": [],
+  "nonBlockingFollowUps": [
+    "Brandon: add UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN to Vercel env before launch so the rate limiter moves from in-memory fallback to production persistence.",
+    "Brandon: add SENTRY_DSN, SENTRY_ORG, SENTRY_PROJECT, SENTRY_AUTH_TOKEN to Vercel env for source-map upload.",
+    "Brandon: add RESEND_API_KEY + CRON_SECRET to Vercel env + configure daily cron for /api/cron/trial-ending.",
+    "Brandon: first PR push to observe CI workflow run in GitHub Actions; configure branch protection to gate main on these checks."
+  ]
+}

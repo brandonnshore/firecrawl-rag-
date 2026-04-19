@@ -1,0 +1,41 @@
+{
+  "milestone": "hardening-launch",
+  "mission": "prod-saas",
+  "completedAt": "2026-04-19",
+  "phase": "user-testing",
+  "summary": "M8 user-testing round synthesized. 17 of 17 milestone-owned assertions resolved via unit + integration tests against real local Supabase. 2 GDPR UI assertions (VAL-GDPR-001 visual + VAL-GDPR-002 modal interaction) flagged pending-with-note for the cross-milestone Playwright sweep, same pattern M5–M7 established.",
+  "milestoneAssertions": {
+    "VAL-HARD-001": { "status": "passed", "note": "Upstash sliding-window limiter + in-memory fallback; fallback's Map is process-level so tests prove state persistence across imports." },
+    "VAL-HARD-002": { "status": "passed", "note": "429 + Retry-After header verified at every limiter site (chat/session, leads, crawl/start, files)." },
+    "VAL-HARD-003": { "status": "passed", "note": "/privacy renders > 1KB server-component body with footer + contact email." },
+    "VAL-HARD-004": { "status": "passed", "note": "/terms rewritten from 400-byte stub to 7-section ToS > 1KB." },
+    "VAL-HARD-005": { "status": "passed", "note": "/dpa lists all 7 sub-processors per GDPR Art. 28." },
+    "VAL-HARD-006": { "status": "passed", "note": "Welcome email fired from /auth/callback via service-role client + ledger period='initial'." },
+    "VAL-HARD-007": { "status": "passed", "note": "/api/cron/trial-ending queries [+3d, +4d) and fires sendTrialEndingEmail per row; same-day reruns see 23505 duplicates." },
+    "VAL-HARD-008": { "status": "passed", "note": "maybeSendQuotaWarning fires once per period_start on exact crossing; ledger backs up steady-state band." },
+    "VAL-HARD-009": { "status": "passed", "note": "stripe webhook handleInvoicePaymentFailed fires sendPaymentFailedEmail with period=invoice.id for retry-safe idempotency." },
+    "VAL-HARD-010": { "status": "passed", "note": "captureApiError tags environment/user_id/request_id via Sentry.withScope; init gated on DSN; chat/session catch block is the demo callsite." },
+    "VAL-HARD-011": { "status": "passed", "note": "test.yml with static → unit → e2e jobs, coverage + artifact upload, YAML-invariant test suite pins the shape." },
+    "VAL-DEGRADE-001": { "status": "passed", "note": "preflightWidgetConfig maps 5xx/network/AbortError → 'degraded'; loader hides bubble + warns once." },
+    "VAL-DEGRADE-002": { "status": "passed", "note": "Loader schedules 60s retry on 'degraded' / 'silent'; mounts bubble on 'ready' recovery without page reload." },
+    "VAL-DEGRADE-003": { "status": "passed", "note": "402 from config endpoint maps to 'silent' — no console log, bubble not mounted." },
+    "VAL-GDPR-001": { "status": "pending", "note": "DeleteAccountSection mounted at bottom of /dashboard/settings/site (both happy-path and empty-site branches); red panel + button verified structurally. Playwright screenshot deferred per M5-M7 pattern." },
+    "VAL-GDPR-002": { "status": "pending", "note": "Modal state machine (enable-on-email-match, cancel closes with no side-effects) unit-tested at the API + helper boundary; Playwright visual + click-flow evidence deferred." },
+    "VAL-GDPR-003": { "status": "passed", "note": "Integration test against real local Supabase proves cascade across profiles/sites/usage_counters/sent_emails/leads/conversations/custom_responses/escalation_rules; other-user-untouched asserted; Stripe cancel callback invoked with stored sub id." },
+    "VAL-CROSS-010": { "status": "passed", "note": "scripts/reset-my-data.sql proven via integration test: scoped wipe + profile preservation + counter reset + safety gate on missing user." }
+  },
+  "deferredToCrossMilestonePlaywright": [
+    "VAL-GDPR-001 (red-button section visible screenshot)",
+    "VAL-GDPR-002 (modal open/cancel/confirm flow)"
+  ],
+  "deferredToExternalServiceBindings": [
+    "Live Upstash Redis persistence across Vercel cold starts (VAL-HARD-001 prod check — needs UPSTASH_REDIS_REST_URL set).",
+    "Live Resend send logs (VAL-HARD-006..009 prod evidence — needs RESEND_API_KEY set).",
+    "Live Sentry event tagging (VAL-HARD-010 prod evidence — needs SENTRY_DSN set)."
+  ],
+  "blockingFailures": [],
+  "notes": [
+    "Destructive ops (GDPR delete, reset-my-data) built + tested but NOT run against Brandon's real account per the mission AGENTS.md escalation rule. Brandon explicitly controls execution.",
+    "Cross-milestone Playwright sweep remains the single remaining UI-evidence bucket across all sealed milestones (M2-M8). Tracking total: 2 new this milestone (GDPR-001, GDPR-002) on top of the M5-M7 backlog."
+  ]
+}
