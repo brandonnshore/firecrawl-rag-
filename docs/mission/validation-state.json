@@ -91,7 +91,7 @@
     "VAL-FILE-010": { "status": "passed", "feature": "file-upload-api-limits" },
     "VAL-FILE-011": { "status": "passed", "feature": "file-upload-api-limits" },
     "VAL-FILE-012": { "status": "passed", "feature": "file-upload-api-limits" },
-    "VAL-FILE-013": { "status": "pending" },
+    "VAL-FILE-013": { "status": "passed", "feature": "file-delete-cascade" },
     "VAL-FILE-014": { "status": "passed", "feature": "file-parsers-pipeline", "note": "queued->processing->ready transitions proven via files-process.test.ts." },
     "VAL-FILE-015": { "status": "pending" },
     "VAL-FILE-016": { "status": "pending", "feature": "file-parsers-pipeline", "note": "MAX_EXTRACTED_BYTES cap wired via assertBelowCap; real zip-bomb fixture deferred." },
@@ -102,7 +102,7 @@
     "VAL-FILE-021": { "status": "passed", "feature": "file-upload-api-limits" },
     "VAL-FILE-022": { "status": "pending", "feature": "file-parsers-pipeline", "note": "mammoth.extractRawText skips VBA by design; real macro-laden DOCX fixture deferred." },
     "VAL-FILE-023": { "status": "passed", "feature": "file-parsers-pipeline", "note": "decodeText fatal-to-replacement fallback unit-tested with Latin-1 CSV." },
-    "VAL-FILE-024": { "status": "pending" },
+    "VAL-FILE-024": { "status": "pending", "feature": "file-rag-integration", "note": "match_chunks + system-prompt wired for file citations; Playwright end-to-end (upload PDF -> chat -> citation in widget) deferred." },
     "VAL-FILE-025": { "status": "pending" },
 
     "VAL-RESP-001": { "status": "pending" },
