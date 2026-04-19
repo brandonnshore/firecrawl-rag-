@@ -35,6 +35,16 @@ vi.mock('@/lib/supabase/service', () => ({
   })),
 }))
 
+// Stub next/server after() so the upload route's post-response hook
+// doesn't try to run the real background processor during tests.
+vi.mock('next/server', () => ({
+  after: vi.fn(),
+}))
+
+vi.mock('@/lib/files/process', () => ({
+  processFile: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { POST } from '@/app/api/files/route'
 
 interface SetupOpts {

@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
@@ -7,6 +8,7 @@ import {
   verifyMagicBytes,
   sanitizeTraversalFilename,
 } from '@/lib/files/validate'
+import { processFile } from '@/lib/files/process'
 
 const STARTER_FILE_LIMIT_FALLBACK = 25
 
@@ -226,6 +228,17 @@ export async function POST(request: Request): Promise<Response> {
     .from('usage_counters')
     .update({ files_stored: current + 1, updated_at: new Date().toISOString() })
     .eq('user_id', user.id)
+
+  // 13. Kick off background parsing. `after()` runs post-response, so the
+  // client gets the file_id immediately; the UI subscribes to the row
+  // via Realtime to follow queued -> processing -> ready.
+  after(async () => {
+    try {
+      await processFile(fileId)
+    } catch (err) {
+      console.error('[files.route] after(processFile) threw', err)
+    }
+  })
 
   return Response.json({
     file_id: fileId,
