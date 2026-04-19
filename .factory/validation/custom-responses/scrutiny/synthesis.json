@@ -1,0 +1,53 @@
+{
+  "milestone": "custom-responses",
+  "mission": "prod-saas",
+  "completedAt": "2026-04-18",
+  "phase": "scrutiny",
+  "summary": "M6 (custom-responses) scrutiny pass clean. Three features shipped: custom-responses-schema, responses-matcher-runtime, responses-ui. All automated validators green.",
+  "automatedValidators": {
+    "testSuite": "pnpm vitest run — 492 passed / 1 skipped / 62 files (+60 new across the milestone).",
+    "typecheck": "zero errors (tsc --noEmit)",
+    "lint": "clean (eslint)"
+  },
+  "features": [
+    {
+      "id": "custom-responses-schema",
+      "review": {
+        "correctness": "pass — table shape matches spec; cardinality() CHECK correctly rejects empty trigger arrays where array_length() was permissive; compound index (site_id, is_active, priority DESC, created_at ASC) mirrors the hot-path query.",
+        "security": "pass — four owner-scoped RLS policies resolve through sites.user_id; widget never reads the table; service-role used by chat-session as documented.",
+        "quality": "pass — 14 integration tests cover defaults, CHECK violations, cross-user isolation, anon blocked, INSERT/UPDATE/DELETE across owner + cross-user, ON DELETE CASCADE.",
+        "consistency": "pass — migration filename pattern (YYYYMMDDHHMMSS_name.sql) + RLS policy style matches supplementary_files from M5F1.",
+        "testing": "pass — table-driven pattern matches existing RLS tests in the suite."
+      }
+    },
+    {
+      "id": "responses-matcher-runtime",
+      "review": {
+        "correctness": "pass — matcher correctness proven by 26 unit tests (case, diacritics, word boundary, regex metachar escape, phrase matching, priority DESC, created_at ASC tiebreak). Integration tests prove /api/chat/session skips embed + generateObject + rewriteQuery on keyword hit (VAL-RESP-007) and skips classifier when no intent rules exist (VAL-RESP-011).",
+        "security": "pass — matcher is a pure-data path; no new secrets; session route already auths via site_key and owner subscription gate. Canned responses stored verbatim but treated as plain text by the widget.",
+        "quality": "pass — matcher is a self-contained module with named pure helpers (normalize, triggerMatches, matchKeywordRule, matchIntentRule, classifyIntent, matchResponse); no any types. Session + stream routes gained a single clean branch each, guarded by cannedResponse field.",
+        "consistency": "pass — uses the AI SDK's jsonSchema helper (not zod — not a dep) which is the same pattern as query-rewrite.ts. ChatSession interface extended conservatively with an optional field.",
+        "testing": "pass — matcher tests isolate the generateObject mock; integration tests use table-routed Supabase mocks (new pattern, adopted also by chat-session.test.ts)."
+      }
+    },
+    {
+      "id": "responses-ui",
+      "review": {
+        "correctness": "pass — server page loads user's site + rules with the same ordering the runtime matcher uses; UI CRUD flows round-trip through owner RLS; PATCH merges with existing row so partial updates honor invariants; DELETE pre-lookups so RLS-hidden rows surface as 404. Test drawer uses the same matcher the widget uses.",
+        "security": "pass — all four API routes require auth; RLS enforces ownership; validateRuleBody rejects malformed bodies before the DB; response field capped at 2000 chars; no HTML rendering of user-supplied response text (treated as plain text).",
+        "quality": "pass — shared validateRuleBody in POST + PATCH; manual form validation mirrors server errors exactly; TestDrawer dialog has aria-labelledby + aria-modal; EditModal chips-input handles Enter/comma/blur + X-remove with dedupe.",
+        "consistency": "pass — styling + layout follow knowledge-client.tsx; toast usage via @/lib/toast wrapper; page auth redirect via parent /dashboard layout.",
+        "testing": "pass — 17 API unit tests cover all 4 routes + all validation branches + auth + ownership."
+      }
+    }
+  ],
+  "blockingIssues": [],
+  "libraryUpdates": [
+    "No new library files required. architecture.md unchanged — matcher fits the existing chat request path documented for /api/chat/session. environment.md unchanged — matcher uses the existing OPENAI_API_KEY for intent classification; no new env vars."
+  ],
+  "conventionsAdded": [
+    "Table-routed Supabase mocks (fromBuilder pattern): when a route hits multiple tables with different chain shapes, route .from(table) to table-specific builders rather than a single global mock. Adopted by chat-session.test.ts and responses-integration.test.ts.",
+    "AI SDK mocks now include jsonSchema identity passthrough (<T>(s) => s as T). Any test that imports a module that calls jsonSchema() needs this — applies transitively through /api/chat/session and /api/responses/test."
+  ],
+  "exitCriteriaMet": true
+}
