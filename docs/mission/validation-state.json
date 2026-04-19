@@ -216,14 +216,14 @@
       "note": "3-bar UsageMeterSet mounted on /dashboard and /dashboard/billing; logic unit-tested; browser screenshot pending Playwright."
     },
     "VAL-QUOTA-008": {
-      "status": "pending",
-      "feature": "usage-meter-ui",
-      "note": "Realtime subscription wired via Supabase channel; cross-tab live update needs Playwright to confirm the <3s SLA in a browser context."
+      "status": "passed",
+      "feature": "e2e-quota-exhaustion",
+      "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-QUOTA-009": {
-      "status": "pending",
-      "feature": "usage-meter-ui",
-      "note": "Limits refresh via Realtime UPDATE on usage_counters today; full plan-change-without-reload scenario needs Playwright verification."
+      "status": "passed",
+      "feature": "e2e-quota-exhaustion",
+      "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-QUOTA-010": {
       "status": "passed",
@@ -231,9 +231,9 @@
       "note": "Inherits idempotency from M2F3 processed_stripe_events gate; full usage_counters reset test lands with M3F4."
     },
     "VAL-QUOTA-011": {
-      "status": "pending",
-      "feature": "message-quota-enforcement",
-      "note": "API contract (402 + upgrade_url) complete; widget UI rendering of the generic message deferred."
+      "status": "passed",
+      "feature": "e2e-quota-exhaustion",
+      "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-QUOTA-012": {
       "status": "passed",
@@ -245,9 +245,9 @@
       "note": "UsageMeterSet mounted on /dashboard/billing inside the plan card."
     },
     "VAL-QUOTA-014": {
-      "status": "pending",
-      "feature": "usage-meter-ui",
-      "note": "Empty-state logic unit-tested (0 / cap); Playwright pending for screenshot."
+      "status": "passed",
+      "feature": "e2e-quota-exhaustion",
+      "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-QUOTA-015": {
       "status": "passed",
@@ -611,7 +611,9 @@
       "status": "pending"
     },
     "VAL-CROSS-004": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-quota-exhaustion",
+      "note": "Playwright quota-exhaustion.spec.ts 5/5 green"
     },
     "VAL-CROSS-005": {
       "status": "pending"
