@@ -636,14 +636,14 @@
       "note": "Integration test seeds 2 users, runs scripts/reset-my-data.sql against one, asserts all site-scoped + user-scoped rows zero for that user with profile + usage_counters row preserved; other user untouched. Safety gate on NULL + missing user_id."
     },
     "VAL-TOS-001": {
-      "status": "pending",
-      "feature": "tos-acceptance-signup",
-      "note": "Checkbox disables submit; handleSubmit returns early without network if bypassed. Playwright screenshot of disabled state pending."
+      "status": "passed",
+      "feature": "e2e-tos-signup",
+      "note": "Playwright tos-signup.spec.ts 4/4 green"
     },
     "VAL-TOS-002": {
-      "status": "pending",
-      "feature": "tos-acceptance-signup",
-      "note": "<Link target='_blank' rel='noopener'> to /terms wired; Playwright click-to-new-tab test pending."
+      "status": "passed",
+      "feature": "e2e-tos-signup",
+      "note": "Playwright tos-signup.spec.ts 4/4 green"
     },
     "VAL-TOS-003": {
       "status": "passed",
