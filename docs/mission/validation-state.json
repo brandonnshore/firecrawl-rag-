@@ -600,7 +600,9 @@
       "note": "Three-job test.yml (static \u2192 unit \u2192 e2e) with concurrency cancel + frozen-lockfile + artifact upload. YAML invariants pinned by 10-test suite. Live PR run validation pending first PR push."
     },
     "VAL-CROSS-001": {
-      "status": "pending"
+      "status": "passed",
+      "feature": "e2e-signup-to-chat",
+      "note": "Playwright signup-to-chat.spec.ts 5/5 green"
     },
     "VAL-CROSS-002": {
       "status": "passed",

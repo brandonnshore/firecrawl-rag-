@@ -1417,7 +1417,7 @@
       "fulfills": [
         "VAL-CROSS-001"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "e2e-gdpr-delete",
