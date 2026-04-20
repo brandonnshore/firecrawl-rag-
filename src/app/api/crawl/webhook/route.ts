@@ -51,10 +51,14 @@ export async function POST(request: Request) {
   }
 
   const siteId = site.id
-  const eventType = payload.type
+  // Normalize Firecrawl event type names. Firecrawl v1 API used dotted
+  // names ('crawl.completed', 'crawl.failed'); SDK v4 / API v2 uses
+  // bare names ('completed', 'failed', 'page', 'started'). Strip the
+  // optional 'crawl.' prefix so the handler works against both.
+  const eventType = (payload.type ?? '').replace(/^crawl\./, '')
 
   // Handle different event types
-  if (eventType === 'crawl.failed') {
+  if (eventType === 'failed') {
     const errorMsg = payload.error ?? 'Crawl failed for unknown reason'
 
     after(async () => {
@@ -68,7 +72,7 @@ export async function POST(request: Request) {
     return Response.json({ received: true })
   }
 
-  if (eventType === 'crawl.completed') {
+  if (eventType === 'completed') {
     // The webhook payload may or may not include page data — Firecrawl
     // doesn't guarantee it.  Always fetch results via checkCrawlStatus
     // to get the full dataset reliably.
