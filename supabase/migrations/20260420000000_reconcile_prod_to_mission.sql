@@ -334,6 +334,11 @@ create policy "Users manage own knowledge-files folder (delete)"
 -- columns change.
 -- ============================================================
 
+-- Qualify the vector type as extensions.vector so the DROP resolves
+-- regardless of search_path. Production's existing match_chunks was
+-- originally created with extensions.vector, and on a prod push the
+-- CLI runs with search_path=public, so bare "vector" would not resolve.
+drop function if exists match_chunks(extensions.vector, text, uuid, double precision, integer);
 drop function if exists match_chunks(vector, text, uuid, double precision, integer);
 
 create function match_chunks(
