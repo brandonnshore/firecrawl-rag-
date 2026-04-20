@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { toast } from '@/lib/toast'
+import { Portal } from '@/components/portal'
 
 export interface ResponseRuleRow {
   id: string
@@ -290,6 +291,7 @@ function EditModal({
   )
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
@@ -429,6 +431,7 @@ function EditModal({
         </div>
       </form>
     </div>
+    </Portal>
   )
 }
 
@@ -466,6 +469,7 @@ function TestDrawer({ onClose }: { onClose: () => void }) {
   }, [message])
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30">
       <aside
         role="dialog"
@@ -540,5 +544,6 @@ function TestDrawer({ onClose }: { onClose: () => void }) {
         )}
       </aside>
     </div>
+    </Portal>
   )
 }

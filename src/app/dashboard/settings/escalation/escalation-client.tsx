@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { toast } from '@/lib/toast'
+import { Portal } from '@/components/portal'
 
 export type RuleType = 'turn_count' | 'keyword' | 'intent'
 export type ActionType =
@@ -432,6 +433,7 @@ function EditModal({
   )
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
@@ -636,6 +638,7 @@ function EditModal({
         </div>
       </form>
     </div>
+    </Portal>
   )
 }
 

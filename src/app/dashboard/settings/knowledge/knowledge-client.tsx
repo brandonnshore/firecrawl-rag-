@@ -95,12 +95,38 @@ export function KnowledgeClient({
         toast.error(`${file.name}: ${body.error ?? 'upload failed'}`)
         return
       }
-      const body: { duplicate?: boolean } = await res.json().catch(() => ({}))
+      const body: {
+        duplicate?: boolean
+        file_id?: string
+        filename?: string
+        status?: FileStatus
+      } = await res.json().catch(() => ({}))
       if (body.duplicate) {
         toast.success(`${file.name} already uploaded`)
-      } else {
-        toast.success(`${file.name} queued`)
+        return
       }
+      // Optimistically show the row immediately so the user sees upload
+      // land in "Uploaded files" without waiting for the Realtime INSERT
+      // event (which can lag or miss if the channel isn't fully subscribed).
+      // The Realtime UPDATE stream still drives the queued -> processing
+      // -> ready transitions. The INSERT-dedupe check above prevents a
+      // duplicate row if Realtime does also deliver the INSERT.
+      if (body.file_id) {
+        const optimistic: FileRow = {
+          id: body.file_id,
+          filename: body.filename ?? file.name,
+          bytes: file.size,
+          status: body.status ?? 'queued',
+          error_message: null,
+          chunks_count: 0,
+          created_at: new Date().toISOString(),
+        }
+        setFiles((prev) => {
+          if (prev.some((f) => f.id === optimistic.id)) return prev
+          return [optimistic, ...prev]
+        })
+      }
+      toast.success(`${file.name} queued`)
     },
     []
   )
