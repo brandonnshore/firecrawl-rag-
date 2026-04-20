@@ -1353,11 +1353,11 @@ function DoneForYouCard() {
             <p className="flex items-baseline gap-1 font-mono tracking-tight text-[color:var(--ink-primary)]">
               <span className="text-5xl">$0</span>
               <span className="text-sm text-[color:var(--ink-tertiary)]">
-                setup fee
+                consultation
               </span>
             </p>
             <p className="text-xs text-[color:var(--ink-tertiary)] md:text-right">
-              Monthly plan still required afterwards.
+              Setup &amp; monthly plan quoted on the call.
             </p>
             <Link
               href="/contact"
