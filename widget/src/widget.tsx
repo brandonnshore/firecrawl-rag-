@@ -73,11 +73,16 @@ function ChatPanel({
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [actionComplete, setActionComplete] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    dialogRef.current?.showModal()
+    // Plain div + CSS positioning. We used to render a <dialog> and
+    // call showModal(), but dialog + shadow DOM is fragile (top-layer
+    // semantics inside a shadow root are inconsistent across browsers)
+    // and showModal gives us a full-viewport modal backdrop we don't
+    // want for a corner chat bubble. The .rc-panel CSS already pins
+    // bottom-right; just focus the input.
     inputRef.current?.focus()
   }, [])
 
@@ -214,11 +219,13 @@ function ChatPanel({
   }
 
   return (
-    <dialog
-      ref={dialogRef}
+    <div
+      ref={panelRef}
       class="rc-panel"
-      onKeyDown={handleKeyDown}
+      role="dialog"
       aria-label="Chat with us"
+      aria-modal="false"
+      onKeyDown={handleKeyDown}
     >
       <div class="rc-header">
         <span>Chat with us</span>
@@ -273,7 +280,7 @@ function ChatPanel({
           Powered by RubyCrawl
         </a>
       </div>
-    </dialog>
+    </div>
   )
 }
 
