@@ -57,6 +57,32 @@ export async function POST(request: Request) {
   // optional 'crawl.' prefix so the handler works against both.
   const eventType = (payload.type ?? '').replace(/^crawl\./, '')
 
+  // Live progress: Firecrawl fires one `page` event per scraped page
+  // BEFORE the final `completed` event. Bump crawl_page_count so the
+  // setup page can show a live counter instead of a frozen "0 pages"
+  // all the way through. We don't persist anything else from the page
+  // payload here — the authoritative page + markdown data is still
+  // pulled in bulk via getCrawlStatus on the `completed` event.
+  if (eventType === 'page') {
+    after(async () => {
+      try {
+        const { data: current } = await supabase
+          .from('sites')
+          .select('crawl_page_count')
+          .eq('id', siteId)
+          .maybeSingle<{ crawl_page_count: number }>()
+        const next = (current?.crawl_page_count ?? 0) + 1
+        await supabase
+          .from('sites')
+          .update({ crawl_page_count: next, updated_at: new Date().toISOString() })
+          .eq('id', siteId)
+      } catch (err) {
+        console.error('[webhook] page-event increment failed:', err)
+      }
+    })
+    return Response.json({ received: true })
+  }
+
   // Handle different event types
   if (eventType === 'failed') {
     const errorMsg = payload.error ?? 'Crawl failed for unknown reason'
