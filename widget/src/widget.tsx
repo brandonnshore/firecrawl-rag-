@@ -536,7 +536,7 @@ function getStyles(): string {
   `
 }
 
-function mount(
+export function mount(
   container: HTMLElement,
   config: WidgetConfig,
   shadow: ShadowRoot
@@ -548,4 +548,11 @@ function mount(
   render(<ChatPanel config={config} onClose={onClose} />, container)
 }
 
-window.RubyCrawlWidget = { mount, getStyles }
+// Keep getStyles as a named export so Vite's IIFE lib build attaches
+// it to window.RubyCrawlWidget alongside mount. The old approach of
+// assigning `window.RubyCrawlWidget = { mount, getStyles }` after the
+// IIFE set up exports got clobbered: Vite's lib IIFE returns a module
+// object containing only named exports, and that return value is what
+// the `name` config assigns to window — overwriting our manual set
+// with `{ EscalationView }` only, causing `getStyles is not a function`.
+export { getStyles }
