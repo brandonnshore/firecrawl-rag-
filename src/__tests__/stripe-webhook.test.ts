@@ -294,6 +294,176 @@ describe.skipIf(!hasSupabaseTestEnv())('POST /api/stripe/webhook', () => {
     })
   })
 
+  describe('Stripe API 2025+ payload shape (regression: Apr 2026 live incident)', () => {
+    // Real bug found in prod: Stripe SDK v22 / API 2025-09+ moved the
+    // authoritative current_period_{start,end} from the subscription
+    // top-level to subscription.items.data[0]. Our handler crashed on
+    // toIsoFromSeconds(undefined) and silently left profile.plan_id
+    // null. Rebuild a per-item-shaped event to lock the fix in.
+    it('subscription.updated: reads current_period from items.data[0] when top-level absent', async () => {
+      const admin = serviceRoleClient()
+      const testPriceId = `price_test_apiv25_${Date.now()}`
+      await admin.from('plans').update({ stripe_price_id: testPriceId }).eq('id', 'starter')
+
+      try {
+        const now = Math.floor(Date.now() / 1000)
+        const periodEnd = now + 28 * 86400
+        // Note: NO current_period_{start,end} on the subscription root.
+        const event = {
+          id: `evt_M2F3_${crypto.randomUUID()}`,
+          object: 'event',
+          api_version: '2025-09-30.clover',
+          created: now,
+          livemode: false,
+          pending_webhooks: 1,
+          request: { id: null, idempotency_key: null },
+          type: 'customer.subscription.updated',
+          data: {
+            object: {
+              id: subscriptionId,
+              object: 'subscription',
+              customer: customerId,
+              status: 'active',
+              cancel_at_period_end: false,
+              items: {
+                object: 'list',
+                data: [
+                  {
+                    id: 'si_test_apiv25',
+                    price: { id: testPriceId, object: 'price' },
+                    current_period_start: now,
+                    current_period_end: periodEnd,
+                  },
+                ],
+              },
+            },
+          },
+        }
+
+        const res = await POST(signedRequest(event))
+        expect(res.status).toBe(200)
+
+        const { data: profile } = await admin
+          .from('profiles')
+          .select(
+            'plan_id, subscription_status, current_period_start, current_period_end'
+          )
+          .eq('id', user.userId)
+          .single<{
+            plan_id: string | null
+            subscription_status: string
+            current_period_start: string | null
+            current_period_end: string | null
+          }>()
+
+        expect(profile?.plan_id).toBe('starter')
+        expect(profile?.subscription_status).toBe('active')
+        expect(profile?.current_period_end).not.toBeNull()
+        expect(new Date(profile!.current_period_end!).getTime()).toBe(periodEnd * 1000)
+      } finally {
+        await admin.from('plans').update({ stripe_price_id: null }).eq('id', 'starter')
+      }
+    })
+
+    it('subscription.updated: both shapes missing is handled gracefully (no crash)', async () => {
+      // If Stripe ever sends a subscription event with no period info at
+      // all (should not happen but we stay defensive), the handler
+      // should still set plan_id + status rather than crashing.
+      const admin = serviceRoleClient()
+      const testPriceId = `price_test_noperiod_${Date.now()}`
+      await admin.from('plans').update({ stripe_price_id: testPriceId }).eq('id', 'starter')
+
+      try {
+        const event = {
+          id: `evt_M2F3_${crypto.randomUUID()}`,
+          object: 'event',
+          api_version: '2025-09-30.clover',
+          created: Math.floor(Date.now() / 1000),
+          livemode: false,
+          pending_webhooks: 1,
+          request: { id: null, idempotency_key: null },
+          type: 'customer.subscription.updated',
+          data: {
+            object: {
+              id: subscriptionId,
+              object: 'subscription',
+              customer: customerId,
+              status: 'active',
+              items: {
+                object: 'list',
+                data: [{ id: 'si_noperiod', price: { id: testPriceId, object: 'price' } }],
+              },
+            },
+          },
+        }
+
+        const res = await POST(signedRequest(event))
+        expect(res.status).toBe(200)
+
+        const { data: profile } = await admin
+          .from('profiles')
+          .select('plan_id, subscription_status')
+          .eq('id', user.userId)
+          .single<{ plan_id: string | null; subscription_status: string }>()
+
+        // plan_id + status set despite period being null.
+        expect(profile?.plan_id).toBe('starter')
+        expect(profile?.subscription_status).toBe('active')
+      } finally {
+        await admin.from('plans').update({ stripe_price_id: null }).eq('id', 'starter')
+      }
+    })
+
+    it('invoice.paid: reads subscription from parent.subscription_details when top-level null', async () => {
+      const admin = serviceRoleClient()
+      await admin
+        .from('profiles')
+        .update({ stripe_subscription_id: subscriptionId })
+        .eq('id', user.userId)
+
+      const now = Math.floor(Date.now() / 1000)
+      const periodEnd = now + 30 * 86400
+      // Newer API shape: invoice.subscription = null, subscription
+      // lives under parent.subscription_details.subscription.
+      const event = {
+        id: `evt_M2F3_${crypto.randomUUID()}`,
+        object: 'event',
+        api_version: '2025-09-30.clover',
+        created: now,
+        livemode: false,
+        pending_webhooks: 1,
+        request: { id: null, idempotency_key: null },
+        type: 'invoice.paid',
+        data: {
+          object: {
+            id: `in_M2F3_${crypto.randomUUID()}`,
+            object: 'invoice',
+            customer: customerId,
+            subscription: null,
+            parent: {
+              type: 'subscription_details',
+              subscription_details: { subscription: subscriptionId },
+            },
+            period_start: now,
+            period_end: periodEnd,
+          },
+        },
+      }
+
+      const res = await POST(signedRequest(event))
+      expect(res.status).toBe(200)
+
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('current_period_end')
+        .eq('id', user.userId)
+        .single<{ current_period_end: string | null }>()
+
+      expect(profile?.current_period_end).not.toBeNull()
+      expect(new Date(profile!.current_period_end!).getTime()).toBe(periodEnd * 1000)
+    })
+  })
+
   describe('VAL-BILLING-011 / -012: customer.subscription.updated syncs', () => {
     it('writes stripe_subscription_id, plan_id, status, period dates', async () => {
       const admin = serviceRoleClient()

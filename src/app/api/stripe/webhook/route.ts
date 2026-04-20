@@ -116,11 +116,19 @@ interface SubscriptionLike {
   id: string
   customer: string | Stripe.Customer | Stripe.DeletedCustomer
   status: string
-  current_period_start: number
-  current_period_end: number
+  // Stripe API versions <=2024 exposed these at the subscription top level.
+  // In SDK v22 / API >=2025 Stripe moved the authoritative period window to
+  // subscription.items.data[0].current_period_{start,end}. Read both and
+  // prefer the item-level value — falls through cleanly for older payloads.
+  current_period_start?: number | null
+  current_period_end?: number | null
   cancel_at_period_end?: boolean
   items: {
-    data: Array<{ price: { id: string } }>
+    data: Array<{
+      price: { id: string }
+      current_period_start?: number | null
+      current_period_end?: number | null
+    }>
   }
 }
 
@@ -130,7 +138,25 @@ function customerIdOf(raw: SubscriptionLike['customer']): string | null {
   return raw.id ?? null
 }
 
-function toIsoFromSeconds(epochSec: number): string {
+/**
+ * Read the subscription's current billing window, preferring the
+ * per-item fields from API 2025+ and falling back to the top-level
+ * fields from older API versions. Returns null if Stripe sent
+ * neither (shouldn't happen for a normal subscription, but we stay
+ * defensive so the handler never crashes).
+ */
+function subscriptionPeriod(sub: SubscriptionLike): {
+  start: number | null
+  end: number | null
+} {
+  const item = sub.items?.data?.[0]
+  const start = item?.current_period_start ?? sub.current_period_start ?? null
+  const end = item?.current_period_end ?? sub.current_period_end ?? null
+  return { start, end }
+}
+
+function toIsoFromSeconds(epochSec: number | null | undefined): string | null {
+  if (epochSec == null || !Number.isFinite(epochSec)) return null
   return new Date(epochSec * 1000).toISOString()
 }
 
@@ -196,14 +222,16 @@ async function handleSubscriptionUpdated(
   const planId = await planIdForPrice(admin, priceId)
   if (!planId) return
 
+  const period = subscriptionPeriod(sub)
+
   const update: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
     subscription_status: sub.status,
-    current_period_start: toIsoFromSeconds(sub.current_period_start),
-    current_period_end: toIsoFromSeconds(sub.current_period_end),
+    current_period_start: toIsoFromSeconds(period.start),
+    current_period_end: toIsoFromSeconds(period.end),
     cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    plan_id: planId,
   }
-  if (planId) update.plan_id = planId
 
   await admin.from('profiles').update(update).eq('id', userId)
 }
@@ -266,12 +294,48 @@ async function handleCheckoutSessionCompleted(
 interface InvoiceLike {
   id: string
   customer: string | Stripe.Customer | Stripe.DeletedCustomer
-  subscription: string | Stripe.Subscription | null
-  period_start: number
-  period_end: number
+  // Older APIs exposed subscription at the top level. Newer APIs
+  // (2025+) sometimes put it under parent.subscription_details or
+  // lines.data[0].subscription. Handled in invoiceSubscriptionId().
+  subscription?: string | Stripe.Subscription | null
+  parent?: {
+    subscription_details?: { subscription?: string | null } | null
+    type?: string
+  } | null
+  lines?: {
+    data?: Array<{
+      subscription?: string | null
+      period?: { start?: number | null; end?: number | null } | null
+    }> | null
+  } | null
+  period_start?: number | null
+  period_end?: number | null
   amount_due?: number
   currency?: string
   customer_email?: string | null
+}
+
+function invoiceSubscriptionId(invoice: InvoiceLike): string | null {
+  const topLevel = invoice.subscription
+  if (typeof topLevel === 'string') return topLevel
+  if (topLevel && typeof topLevel === 'object') return topLevel.id ?? null
+  const parentSub = invoice.parent?.subscription_details?.subscription
+  if (parentSub) return parentSub
+  const lineSub = invoice.lines?.data?.[0]?.subscription
+  if (lineSub) return lineSub
+  return null
+}
+
+function invoicePeriod(invoice: InvoiceLike): {
+  start: number | null
+  end: number | null
+} {
+  // Prefer per-line period when available (most accurate in 2025 API),
+  // otherwise use the top-level invoice period.
+  const linePeriod = invoice.lines?.data?.[0]?.period
+  const start = linePeriod?.start ?? invoice.period_start ?? null
+  const end = linePeriod?.end ?? invoice.period_end ?? null
+  return { start, end }
 }
 
 async function handleInvoicePaid(
@@ -290,33 +354,34 @@ async function handleInvoicePaid(
   // subscription this customer has on our shared Stripe account.
   // Only process if the invoice's subscription_id matches the
   // stripe_subscription_id we have on file for this profile.
-  const invoiceSubId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id ?? null
+  const invoiceSubId = invoiceSubscriptionId(invoice)
   const profileSubId = await findProfileSubscriptionId(admin, userId)
   if (!invoiceSubId || invoiceSubId !== profileSubId) return
 
-  await admin
-    .from('profiles')
-    .update({
-      current_period_start: toIsoFromSeconds(invoice.period_start),
-      current_period_end: toIsoFromSeconds(invoice.period_end),
-    })
-    .eq('id', userId)
+  const period = invoicePeriod(invoice)
+  const periodStartIso = toIsoFromSeconds(period.start)
+  const periodEndIso = toIsoFromSeconds(period.end)
+
+  const profileUpdate: Record<string, unknown> = {}
+  if (periodStartIso) profileUpdate.current_period_start = periodStartIso
+  if (periodEndIso) profileUpdate.current_period_end = periodEndIso
+  if (Object.keys(profileUpdate).length > 0) {
+    await admin.from('profiles').update(profileUpdate).eq('id', userId)
+  }
 
   // Reset usage counters for the new billing window. files_stored is NOT
   // reset — storage persists across billing periods. openai_tokens_used
   // is also preserved for long-term attribution / cost audits.
+  const counterUpdate: Record<string, unknown> = {
+    messages_used: 0,
+    crawl_pages_used: 0,
+    updated_at: new Date().toISOString(),
+  }
+  if (periodStartIso) counterUpdate.period_start = periodStartIso
+  if (periodEndIso) counterUpdate.period_end = periodEndIso
   await admin
     .from('usage_counters')
-    .update({
-      messages_used: 0,
-      crawl_pages_used: 0,
-      period_start: toIsoFromSeconds(invoice.period_start),
-      period_end: toIsoFromSeconds(invoice.period_end),
-      updated_at: new Date().toISOString(),
-    })
+    .update(counterUpdate)
     .eq('user_id', userId)
 }
 
@@ -335,10 +400,7 @@ async function handleInvoicePaymentFailed(
   // Cross-product safety — same check as handleInvoicePaid. Prevents
   // setting past_due on a RubyCrawl profile because a DIFFERENT
   // product's invoice failed to charge.
-  const invoiceSubId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id ?? null
+  const invoiceSubId = invoiceSubscriptionId(invoice)
   const profileSubId = await findProfileSubscriptionId(admin, userId)
   if (!invoiceSubId || invoiceSubId !== profileSubId) return
 
