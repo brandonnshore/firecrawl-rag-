@@ -8,12 +8,15 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - Static asset extensions
+     * Match all request paths except for:
+     * - _next/static, _next/image, favicon.ico and common static assets
+     * - /api/* — proxies re-wrap Response bodies and buffer streaming
+     *   responses, which corrupts the \x1E sentinel in /api/chat/stream.
+     *   API routes do their own auth via createClient(), they don't
+     *   need cookie refresh from the proxy.
+     * - /rubycrawl-*.js — widget loader + bundle are public statics
+     *   embedded on customer sites; no auth cookie work needed.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|rubycrawl-[^/]+\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

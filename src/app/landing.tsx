@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Script from 'next/script'
 import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -30,6 +31,18 @@ export default function Landing() {
       <DashboardTeaser />
       <Pricing />
       <Footer />
+      {/*
+        Dogfood: embed the RubyCrawl chat on our own marketing page so
+        every prod regression shows up immediately. Uses the site_key
+        for the rubycrawl.com site itself. Loader is served from the
+        same origin and picks up the widget bundle automatically.
+      */}
+      <Script
+        src="https://www.rubycrawl.com/rubycrawl-loader.js"
+        data-site-key="sk_5cf5dc5a787fe03c062d695e776144f1"
+        data-api-base="https://www.rubycrawl.com"
+        strategy="afterInteractive"
+      />
     </div>
   )
 }
