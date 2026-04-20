@@ -17,6 +17,32 @@ interface Message {
   content: string
 }
 
+// Match http(s) URLs in assistant messages so the LLM's Calendly / Google
+// Maps / plain link text renders as a real clickable anchor in the chat
+// bubble. Stops at whitespace and common HTML delimiters.
+const URL_REGEX = /(https?:\/\/[^\s<>"')]+)/g
+
+function renderWithLinks(text: string) {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) =>
+    // split() with a capturing group alternates: even indices = text,
+    // odd indices = captured URL.
+    i % 2 === 1 ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="rc-msg-link"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  )
+}
+
 declare global {
   interface Window {
     RubyCrawlWidget?: {
@@ -203,8 +229,11 @@ function ChatPanel({
       <div class="rc-messages" role="log" aria-live="polite">
         {messages.map((msg, i) => (
           <div key={i} class={`rc-msg rc-msg-${msg.role}`}>
-            {msg.content ||
-              (isStreaming && i === messages.length - 1 ? '...' : '')}
+            {msg.content
+              ? renderWithLinks(msg.content)
+              : isStreaming && i === messages.length - 1
+                ? '...'
+                : ''}
           </div>
         ))}
         {pendingAction && !actionComplete && (
@@ -442,6 +471,8 @@ function getStyles(): string {
     .rc-msg { margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
     .rc-msg-user { background: #6366f1; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
     .rc-msg-assistant { background: #f3f4f6; color: #1f2937; border-bottom-left-radius: 4px; }
+    .rc-msg-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+    .rc-msg-user .rc-msg-link { color: #ffffff; }
     .rc-input-area { display: flex; padding: 12px; border-top: 1px solid #e5e7eb; gap: 8px; }
     .rc-input-area input {
       flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px;
