@@ -22,15 +22,6 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
 }
 
-function isValidUrl(s: string): boolean {
-  try {
-    const u = new URL(s)
-    return u.protocol === 'http:' || u.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -72,9 +63,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!isValidEmail(email)) {
     return Response.json({ error: 'Valid email required' }, { status: 400 })
   }
-  if (!isValidUrl(website)) {
+  // Website is optional — people pasting "mysite.com" without a scheme
+  // is fine; we just cap the length so nobody stuffs the input.
+  if (website.length > 500) {
     return Response.json(
-      { error: 'Valid website URL required (https://…)' },
+      { error: 'Website is too long' },
       { status: 400 }
     )
   }
@@ -100,12 +93,28 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
+  // Normalize website for display in the email: link it when it looks
+  // like a URL, otherwise render as plain text.
+  const websiteHtml = website
+    ? (() => {
+        const href = /^https?:\/\//i.test(website)
+          ? website
+          : `https://${website}`
+        try {
+          new URL(href)
+          return `<a href="${escapeHtml(href)}">${escapeHtml(website)}</a>`
+        } catch {
+          return escapeHtml(website)
+        }
+      })()
+    : '<em>(not provided)</em>'
+
   const subject = `[RubyCrawl] Done-for-you setup request from ${name}`
   const plain =
     `New done-for-you setup request.\n\n` +
     `Name:    ${name}\n` +
     `Email:   ${email}\n` +
-    `Website: ${website}\n` +
+    `Website: ${website || '(not provided)'}\n` +
     `Source IP: ${ip}\n\n` +
     `Message:\n${message || '(no message provided)'}\n`
 
@@ -114,7 +123,7 @@ export async function POST(request: Request): Promise<Response> {
     `<p>` +
     `<b>Name:</b> ${escapeHtml(name)}<br>` +
     `<b>Email:</b> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a><br>` +
-    `<b>Website:</b> <a href="${escapeHtml(website)}">${escapeHtml(website)}</a><br>` +
+    `<b>Website:</b> ${websiteHtml}<br>` +
     `<b>Source IP:</b> ${escapeHtml(ip)}` +
     `</p>` +
     `<p><b>Message:</b></p>` +

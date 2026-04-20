@@ -102,11 +102,10 @@ export default function ContactPage() {
             placeholder="you@company.com"
           />
           <Field
-            label="Website URL"
+            label="Website"
             name="website"
-            type="url"
-            required
-            placeholder="https://yourbusiness.com"
+            type="text"
+            placeholder="yourbusiness.com"
           />
           <div>
             <label
