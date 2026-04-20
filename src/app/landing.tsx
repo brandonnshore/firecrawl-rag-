@@ -163,7 +163,7 @@ function Hero() {
             href="/login"
             className="btn-press focus-ring group inline-flex items-center gap-2 rounded-full bg-[color:var(--ink-primary)] px-5 py-3 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
           >
-            <span>Start free trial</span>
+            <span>Get started</span>
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
               <IconArrowRight
                 width={13}
@@ -183,7 +183,7 @@ function Hero() {
           data-hero-meta
           className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink-tertiary)]"
         >
-          7-day trial · No credit card · Cancel anytime
+          Live in ~3 minutes · Cancel anytime
         </p>
       </div>
     </section>
@@ -1253,7 +1253,7 @@ function Pricing() {
           </span>
         </h2>
         <p className="mt-4 text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
-          7-day free trial on every plan. Cancel anytime.
+          Cancel anytime. No long-term contract.
         </p>
       </div>
 
@@ -1309,7 +1309,7 @@ function PlanCard({ plan }: { plan: Plan }) {
         }`}
       >
         <IconSparkle width={14} height={14} />
-        <span>Start free trial</span>
+        <span>Get started</span>
         <IconArrowRight
           width={14}
           height={14}
