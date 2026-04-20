@@ -11,7 +11,25 @@ const DASHBOARD_BYPASS_PREFIXES = [
   // Keep /dashboard/settings root reachable so the billing link in the
   // settings sidebar doesn't 404 when the sidebar itself renders.
   '/dashboard/settings',
+  // Stripe's Checkout return URL points here (it's a shim that
+  // redirect()s to /dashboard/settings/billing). Needs to pass the
+  // gate so the shim can run — otherwise the paywall catches users
+  // on their way back from a successful payment while the webhook
+  // is still flipping subscription_status to 'active'.
+  '/dashboard/billing',
 ]
+
+/**
+ * True when the request URL carries the ?checkout=success param. A
+ * user returning from a successful Stripe Checkout may land on any
+ * /dashboard page before the subscription webhook has processed — let
+ * them through once, since the paying intent is proven by the query
+ * param (Stripe only populates it on a completed checkout session).
+ * Subsequent navigations re-check the subscription normally.
+ */
+function hasCheckoutSuccessFlag(url: NextRequest['nextUrl']): boolean {
+  return url.searchParams.get('checkout') === 'success'
+}
 
 function pathBypassesGate(pathname: string): boolean {
   return DASHBOARD_BYPASS_PREFIXES.some(
@@ -114,7 +132,8 @@ export async function updateSession(request: NextRequest) {
   if (
     user &&
     pathname.startsWith('/dashboard') &&
-    !pathBypassesGate(pathname)
+    !pathBypassesGate(pathname) &&
+    !hasCheckoutSuccessFlag(request.nextUrl)
   ) {
     const { data: profile } = await supabase
       .from('profiles')

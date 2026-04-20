@@ -101,8 +101,14 @@ export async function POST(request: Request) {
     customer: customerId,
     client_reference_id: user.id,
     line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-    success_url: `${appUrl}/dashboard/billing?checkout=success`,
-    cancel_url: `${appUrl}/dashboard/billing?checkout=canceled`,
+    // After a successful subscription, land on /dashboard/setup so the
+    // user can immediately paste a URL and build their chatbot. The
+    // ?checkout=success flag tells the proxy to let them through even
+    // if the subscription webhook hasn't flipped status=active yet.
+    success_url: `${appUrl}/dashboard/setup?checkout=success`,
+    // On cancel, send them back to /subscribe so they can retry or
+    // choose a different plan.
+    cancel_url: `${appUrl}/subscribe?checkout=canceled`,
   })
 
   return Response.json({ url: session.url })
