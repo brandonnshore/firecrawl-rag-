@@ -474,7 +474,7 @@ function getStyles(): string {
       color: #6b7280; padding: 4px 8px; border-radius: 4px;
     }
     .rc-close:hover { background: #f3f4f6; }
-    .rc-messages { flex: 1; overflow-y: auto; padding: 16px; }
+    .rc-messages { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
     .rc-msg { margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
     .rc-msg-user { background: #6366f1; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
     .rc-msg-assistant { background: #f3f4f6; color: #1f2937; border-bottom-left-radius: 4px; }
