@@ -9,6 +9,7 @@ import {
   IconArrowRight,
   IconCheck,
   IconCopy,
+  IconMail,
   IconSparkle,
 } from '@/components/icons'
 
@@ -1182,59 +1183,198 @@ function MockMetric({
    Pricing
    -------------------------------------------------------------------------- */
 
+interface Plan {
+  id: 'starter' | 'pro' | 'scale'
+  name: string
+  price: string
+  tagline: string
+  features: string[]
+  featured?: boolean
+}
+
+const PLANS: Plan[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: '$24.99',
+    tagline: 'For single-site owners getting started.',
+    features: [
+      '2,000 chat messages / month',
+      'Crawl up to 500 pages',
+      '25 knowledge-file uploads',
+      'Lead capture + CSV export',
+      'Calendly & Google Maps integrations',
+      'Embeddable widget (any platform)',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '$49.99',
+    tagline: 'For busier sites and growing lead volume.',
+    featured: true,
+    features: [
+      '7,500 chat messages / month',
+      'Crawl up to 1,500 pages',
+      '100 knowledge-file uploads',
+      'Everything in Starter',
+      'Priority chat model tier',
+      'Custom response rules',
+    ],
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    price: '$99',
+    tagline: 'For agencies and high-traffic storefronts.',
+    features: [
+      '25,000 chat messages / month',
+      'Crawl up to 5,000 pages',
+      '500 knowledge-file uploads',
+      'Everything in Pro',
+      'Escalation rules + human handoff',
+      'Higher per-minute rate limits',
+    ],
+  },
+]
+
 function Pricing() {
   return (
     <section className="relative px-6 py-40">
-      <div className="mx-auto max-w-xl text-center">
+      <div className="mx-auto max-w-2xl text-center">
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink-tertiary)]">
           Pricing
         </p>
         <h2 className="mt-4 text-[clamp(1.75rem,3.5vw,2.75rem)] font-semibold leading-[1.05] tracking-tight">
-          One plan.
+          Three plans.
           <br />
           <span className="text-[color:var(--ink-secondary)]">
-            Built for small businesses.
+            Pick the size that fits.
           </span>
         </h2>
+        <p className="mt-4 text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+          7-day free trial on every plan. Cancel anytime.
+        </p>
       </div>
 
-      <div className="surface-hairline mx-auto mt-14 max-w-md rounded-2xl p-8 shadow-[var(--shadow-md)]">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
-          RubyCrawl Standard
-        </p>
-        <p className="mt-3 flex items-baseline gap-1 font-mono tracking-tight text-[color:var(--ink-primary)]">
-          <span className="text-5xl">$24.99</span>
-          <span className="text-sm text-[color:var(--ink-tertiary)]">
-            /month
-          </span>
-        </p>
-        <p className="mt-1 text-xs text-[color:var(--ink-tertiary)]">
-          7-day free trial. Cancel anytime.
-        </p>
-
-        <ul className="mt-8 space-y-2.5 text-sm text-[color:var(--ink-secondary)]">
-          <Feat>Crawl up to 100 pages</Feat>
-          <Feat>500 chat messages / month</Feat>
-          <Feat>Lead capture + CSV export</Feat>
-          <Feat>Calendly & Google Maps integrations</Feat>
-          <Feat>Dashboard with live metrics</Feat>
-          <Feat>Embeddable widget (any platform)</Feat>
-        </ul>
-
-        <Link
-          href="/login"
-          className="btn-press focus-ring group mt-10 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--ink-primary)] px-5 py-3 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
-        >
-          <IconSparkle width={14} height={14} />
-          <span>Start free trial</span>
-          <IconArrowRight
-            width={14}
-            height={14}
-            className="transition-transform duration-200 group-hover:translate-x-0.5"
-          />
-        </Link>
+      <div className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-3">
+        {PLANS.map((plan) => (
+          <PlanCard key={plan.id} plan={plan} />
+        ))}
       </div>
+
+      <DoneForYouCard />
     </section>
+  )
+}
+
+function PlanCard({ plan }: { plan: Plan }) {
+  const featured = plan.featured === true
+  return (
+    <div
+      className={`surface-hairline relative flex flex-col rounded-2xl p-8 shadow-[var(--shadow-md)] ${
+        featured ? 'ring-2 ring-[color:var(--ink-primary)]' : ''
+      }`}
+    >
+      {featured && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[color:var(--ink-primary)] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--bg-surface)]">
+          Most popular
+        </span>
+      )}
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+        RubyCrawl {plan.name}
+      </p>
+      <p className="mt-3 flex items-baseline gap-1 font-mono tracking-tight text-[color:var(--ink-primary)]">
+        <span className="text-5xl">{plan.price}</span>
+        <span className="text-sm text-[color:var(--ink-tertiary)]">
+          /month
+        </span>
+      </p>
+      <p className="mt-1 text-xs text-[color:var(--ink-tertiary)]">
+        {plan.tagline}
+      </p>
+
+      <ul className="mt-8 flex-1 space-y-2.5 text-sm text-[color:var(--ink-secondary)]">
+        {plan.features.map((f) => (
+          <Feat key={f}>{f}</Feat>
+        ))}
+      </ul>
+
+      <Link
+        href={`/login?plan=${plan.id}`}
+        className={`btn-press focus-ring group mt-10 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium ${
+          featured
+            ? 'bg-[color:var(--ink-primary)] text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]'
+            : 'border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] text-[color:var(--ink-primary)] hover:bg-[color:var(--bg-subtle)]'
+        }`}
+      >
+        <IconSparkle width={14} height={14} />
+        <span>Start free trial</span>
+        <IconArrowRight
+          width={14}
+          height={14}
+          className="transition-transform duration-200 group-hover:translate-x-0.5"
+        />
+      </Link>
+    </div>
+  )
+}
+
+function DoneForYouCard() {
+  return (
+    <div className="mx-auto mt-10 max-w-5xl">
+      <div className="surface-hairline relative overflow-hidden rounded-2xl p-10 shadow-[var(--shadow-md)]">
+        <span className="absolute right-6 top-6 inline-flex items-center rounded-full border border-[color:var(--accent-success)]/30 bg-[color:var(--accent-success-bg)] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--accent-success)]">
+          New
+        </span>
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.4fr_1fr] md:items-center">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[color:var(--ink-tertiary)]">
+              White-glove setup
+            </p>
+            <h3 className="mt-3 text-[clamp(1.5rem,2.4vw,2rem)] font-semibold leading-[1.15] tracking-tight text-[color:var(--ink-primary)]">
+              Done for you.
+            </h3>
+            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--ink-secondary)]">
+              New to chatbots? We&apos;ll install it on your site, crawl your
+              content, and dial in your responses in under 24 hours.
+            </p>
+
+            <ul className="mt-6 space-y-2.5 text-sm text-[color:var(--ink-secondary)]">
+              <Feat>We install the widget on your website for you</Feat>
+              <Feat>Custom responses and escalation rules pre-configured</Feat>
+              <Feat>Crawl tuned to your site&apos;s structure</Feat>
+              <Feat>Live in under 24 hours, guaranteed</Feat>
+            </ul>
+          </div>
+
+          <div className="flex flex-col items-start gap-4 md:items-end">
+            <p className="flex items-baseline gap-1 font-mono tracking-tight text-[color:var(--ink-primary)]">
+              <span className="text-5xl">$0</span>
+              <span className="text-sm text-[color:var(--ink-tertiary)]">
+                setup fee
+              </span>
+            </p>
+            <p className="text-xs text-[color:var(--ink-tertiary)] md:text-right">
+              Monthly plan still required afterwards.
+            </p>
+            <Link
+              href="/contact"
+              className="btn-press focus-ring group inline-flex items-center gap-2 rounded-full bg-[color:var(--ink-primary)] px-5 py-3 text-sm font-medium text-[color:var(--bg-surface)] hover:bg-[color:var(--ink-secondary)]"
+            >
+              <IconMail width={14} height={14} />
+              <span>Contact us</span>
+              <IconArrowRight
+                width={14}
+                height={14}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
