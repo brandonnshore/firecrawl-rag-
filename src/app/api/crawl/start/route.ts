@@ -162,11 +162,18 @@ export async function POST(request: Request) {
 
   let crawlJobId: string
   try {
+    // Conservative crawl config — bill only for pages Firecrawl actually
+    // finds from real links on the seed page. `crawlEntireDomain: false`
+    // prevents variant probing (/en, /about, /index.html, etc.) which
+    // can silently balloon a credit count on single-page test sites.
+    // Depth 3 and limit 50 are plenty for typical small-business sites
+    // (menu / about / contact / hours). Users on Pro/Scale plans can
+    // request higher limits via the dashboard later.
     const crawlResult = await firecrawl.startCrawl(url, {
-      limit: 100,
-      maxDiscoveryDepth: 5,
-      crawlEntireDomain: true,
-      sitemap: 'include',
+      limit: 50,
+      maxDiscoveryDepth: 3,
+      crawlEntireDomain: false,
+      sitemap: 'skip',
       excludePaths: ['/sitemap.xml', '/robots.txt', '/404', '/cart', '/checkout'],
       scrapeOptions: {
         formats: ['markdown'],

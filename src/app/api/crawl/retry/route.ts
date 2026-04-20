@@ -83,11 +83,12 @@ export async function POST() {
 
   let crawlJobId: string
   try {
+    // Match /api/crawl/start's conservative config — same rationale.
     const crawlResult = await firecrawl.startCrawl(crawlUrl, {
-      limit: 100,
-      maxDiscoveryDepth: 5,
-      crawlEntireDomain: true,
-      sitemap: 'include',
+      limit: 50,
+      maxDiscoveryDepth: 3,
+      crawlEntireDomain: false,
+      sitemap: 'skip',
       excludePaths: ['/sitemap.xml', '/robots.txt', '/404', '/cart', '/checkout'],
       scrapeOptions: {
         formats: ['markdown'],
