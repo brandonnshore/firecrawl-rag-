@@ -147,6 +147,24 @@ async function findProfileIdByCustomer(
   return data?.id ?? null
 }
 
+/**
+ * Returns the profile's stripe_subscription_id if any. Used by invoice
+ * handlers to confirm an inbound invoice belongs to THIS user's
+ * RubyCrawl subscription — not a different product's subscription on a
+ * shared Stripe account.
+ */
+async function findProfileSubscriptionId(
+  admin: SupabaseClient,
+  profileId: string
+): Promise<string | null> {
+  const { data } = await admin
+    .from('profiles')
+    .select('stripe_subscription_id')
+    .eq('id', profileId)
+    .maybeSingle<{ stripe_subscription_id: string | null }>()
+  return data?.stripe_subscription_id ?? null
+}
+
 async function planIdForPrice(
   admin: SupabaseClient,
   priceId: string | null | undefined
@@ -169,8 +187,14 @@ async function handleSubscriptionUpdated(
   const userId = await findProfileIdByCustomer(admin, customerId)
   if (!userId) return
 
+  // Cross-product safety: the shared Stripe account may host other
+  // products' subscriptions. If the price isn't one of RubyCrawl's 3
+  // plans, ignore the event — overwriting subscription_status with an
+  // unrelated product's state would corrupt this user's RubyCrawl
+  // profile.
   const priceId = sub.items?.data?.[0]?.price?.id ?? null
   const planId = await planIdForPrice(admin, priceId)
+  if (!planId) return
 
   const update: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
@@ -192,6 +216,13 @@ async function handleSubscriptionDeleted(
   const customerId = customerIdOf(sub.customer)
   const userId = await findProfileIdByCustomer(admin, customerId)
   if (!userId) return
+
+  // Same cross-product safety as handleSubscriptionUpdated: only act on
+  // our own price IDs so another product on the shared account can't
+  // flip this user's subscription_status to canceled.
+  const priceId = sub.items?.data?.[0]?.price?.id ?? null
+  const planId = await planIdForPrice(admin, priceId)
+  if (!planId) return
 
   await admin
     .from('profiles')
@@ -255,6 +286,17 @@ async function handleInvoicePaid(
   const userId = await findProfileIdByCustomer(admin, customerId)
   if (!userId) return
 
+  // Cross-product safety: an invoice may belong to a DIFFERENT
+  // subscription this customer has on our shared Stripe account.
+  // Only process if the invoice's subscription_id matches the
+  // stripe_subscription_id we have on file for this profile.
+  const invoiceSubId =
+    typeof invoice.subscription === 'string'
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null
+  const profileSubId = await findProfileSubscriptionId(admin, userId)
+  if (!invoiceSubId || invoiceSubId !== profileSubId) return
+
   await admin
     .from('profiles')
     .update({
@@ -289,6 +331,16 @@ async function handleInvoicePaymentFailed(
       : invoice.customer?.id ?? null
   const userId = await findProfileIdByCustomer(admin, customerId)
   if (!userId) return
+
+  // Cross-product safety — same check as handleInvoicePaid. Prevents
+  // setting past_due on a RubyCrawl profile because a DIFFERENT
+  // product's invoice failed to charge.
+  const invoiceSubId =
+    typeof invoice.subscription === 'string'
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null
+  const profileSubId = await findProfileSubscriptionId(admin, userId)
+  if (!invoiceSubId || invoiceSubId !== profileSubId) return
 
   await admin
     .from('profiles')
