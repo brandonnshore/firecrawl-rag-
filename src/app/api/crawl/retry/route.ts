@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
+import { checkCrawlRateLimit } from '@/lib/chat/rate-limit'
 import { validateCrawlUrl } from '@/lib/crawl/validate-url'
 import Firecrawl from '@mendable/firecrawl-js'
 
@@ -11,6 +12,25 @@ export async function POST() {
 
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Share the 5-crawls-per-hour bucket with /api/crawl/start so a user
+  // can't bypass the limit by alternating start <-> retry. Each retry
+  // fires a fresh Firecrawl job (real cost), so spamming this button
+  // directly translates to burned credits without this gate.
+  const rate = await checkCrawlRateLimit(user.id)
+  if (!rate.allowed) {
+    return Response.json(
+      { error: 'rate_limited' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(
+            Math.ceil((rate.retryAfterMs ?? 3600_000) / 1000)
+          ),
+        },
+      }
+    )
   }
 
   const subscription = await checkSubscription(user.id)
