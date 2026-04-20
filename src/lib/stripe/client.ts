@@ -12,6 +12,21 @@ import Stripe from 'stripe'
  * sk_live_... (Vercel production).
  */
 
+/**
+ * Pinned Stripe API version. Webhook handlers expect the 2026+ shape
+ * where current_period_{start,end} live on subscription.items[0] and
+ * invoice.subscription may be null with the real id under
+ * parent.subscription_details.subscription. An unpinned SDK silently
+ * ratchets when `stripe` is upgraded — which is exactly how the
+ * Apr 20 2026 live-payment incident happened.
+ *
+ * Bump this string intentionally alongside any `stripe` package
+ * upgrade after re-verifying the webhook handlers + regression tests
+ * against the new shape. Source of current latest:
+ * node_modules/stripe/esm/apiVersion.js (ApiVersion constant).
+ */
+const STRIPE_API_VERSION = '2026-03-25.dahlia' as const
+
 let cached: Stripe | null = null
 
 export function stripeClient(): Stripe {
@@ -30,6 +45,7 @@ export function stripeClient(): Stripe {
     | undefined
 
   cached = new Stripe(apiKey, {
+    apiVersion: STRIPE_API_VERSION,
     ...(host ? { host } : {}),
     ...(port ? { port: Number(port) } : {}),
     ...(protocol ? { protocol } : {}),
