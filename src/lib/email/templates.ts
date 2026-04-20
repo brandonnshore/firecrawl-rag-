@@ -26,7 +26,15 @@ export interface PaymentFailedProps {
 }
 
 const BRAND = 'RubyCrawl'
-const BILLING_URL = 'https://rubycrawl.app/dashboard/billing'
+
+// Dashboard / billing links are derived from NEXT_PUBLIC_APP_URL so the
+// canonical domain never drifts between auth, checkout, and email links.
+// Default is the production canonical URL.
+const APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || 'https://www.rubycrawl.com'
+).replace(/\/+$/, '')
+const DASHBOARD_URL = `${APP_URL}/dashboard`
+const BILLING_URL = `${APP_URL}/dashboard/billing`
 
 function wrap(body: string): string {
   return `<!doctype html><html><body style="font:14px/1.5 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111;margin:0;padding:24px;">${body}<p style="margin-top:32px;color:#888;font-size:12px">— The ${BRAND} team</p></body></html>`
@@ -38,13 +46,13 @@ export function renderWelcome({ email }: WelcomeProps): EmailTemplate {
     `<h1 style="margin:0 0 16px">Welcome to ${BRAND}</h1>` +
       `<p>Thanks for signing up with <strong>${email}</strong>.</p>` +
       `<p>Paste your site URL in the dashboard and we'll build your AI assistant.</p>` +
-      `<p><a href="https://rubycrawl.app/dashboard">Open your dashboard</a></p>`
+      `<p><a href="${DASHBOARD_URL}">Open your dashboard</a></p>`
   )
   const text =
     `Welcome to ${BRAND}!\n\n` +
     `Thanks for signing up with ${email}.\n` +
     `Paste your site URL in the dashboard to get started:\n` +
-    `https://rubycrawl.app/dashboard`
+    `${DASHBOARD_URL}`
   return { subject, html, text }
 }
 

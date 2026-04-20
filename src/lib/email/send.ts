@@ -1,7 +1,10 @@
 import { Resend } from 'resend'
 import type { EmailTemplate } from './templates'
 
-const FROM_DEFAULT = 'RubyCrawl <noreply@rubycrawl.app>'
+// Default sender falls back to the .com domain — configurable via the
+// RESEND_FROM env var for domain changes without a redeploy.
+const FROM_DEFAULT = 'RubyCrawl <noreply@rubycrawl.com>'
+const UNSUBSCRIBE_DEFAULT = 'unsubscribe@rubycrawl.com'
 
 interface SendInput extends EmailTemplate {
   to: string
@@ -38,7 +41,9 @@ export async function sendEmail(input: SendInput): Promise<SendResult> {
       html: input.html,
       text: input.text,
       headers: {
-        'List-Unsubscribe': '<mailto:unsubscribe@rubycrawl.app>',
+        'List-Unsubscribe': `<mailto:${
+          process.env.RESEND_UNSUBSCRIBE_ADDRESS || UNSUBSCRIBE_DEFAULT
+        }>`,
       },
     })
     if (res.error) {
