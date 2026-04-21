@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
 import { checkCrawlRateLimit } from '@/lib/chat/rate-limit'
 import { validateCrawlUrl } from '@/lib/crawl/validate-url'
+import { getCrawlConfigForPlan } from '@/lib/crawl/plan-config'
 import Firecrawl from '@mendable/firecrawl-js'
 
 export async function POST() {
@@ -81,13 +82,20 @@ export async function POST() {
 
   const firecrawl = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY! })
 
+  // Plan-tier-driven crawl ceiling — matches /api/crawl/start.
+  const { data: profileForConfig } = await supabase
+    .from('profiles')
+    .select('plan_id')
+    .eq('id', user.id)
+    .maybeSingle<{ plan_id: string | null }>()
+  const crawlConfig = getCrawlConfigForPlan(profileForConfig?.plan_id)
+
   let crawlJobId: string
   try {
-    // Match /api/crawl/start's conservative config — same rationale.
     const crawlResult = await firecrawl.startCrawl(crawlUrl, {
-      limit: 50,
-      maxDiscoveryDepth: 3,
-      crawlEntireDomain: false,
+      limit: crawlConfig.limit,
+      maxDiscoveryDepth: crawlConfig.maxDiscoveryDepth,
+      crawlEntireDomain: crawlConfig.crawlEntireDomain,
       sitemap: 'skip',
       excludePaths: ['/sitemap.xml', '/robots.txt', '/404', '/cart', '/checkout'],
       scrapeOptions: {

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
 import { checkCrawlRateLimit } from '@/lib/chat/rate-limit'
 import { validateCrawlUrl } from '@/lib/crawl/validate-url'
+import { getCrawlConfigForPlan } from '@/lib/crawl/plan-config'
 import Firecrawl from '@mendable/firecrawl-js'
 import crypto from 'crypto'
 
@@ -160,19 +161,23 @@ export async function POST(request: Request) {
     apiKey: process.env.FIRECRAWL_API_KEY!,
   })
 
+  // Plan-tier-driven crawl ceiling. Starter stays tight (50 pages, depth
+  // 3, seed-only) so single-page sites don't burn credits on variant
+  // probing; Pro and Scale are wider (150/500 pages, deeper discovery,
+  // full-domain) because those tiers pay for real-business crawls.
+  const { data: profileForConfig } = await supabase
+    .from('profiles')
+    .select('plan_id')
+    .eq('id', user.id)
+    .maybeSingle<{ plan_id: string | null }>()
+  const crawlConfig = getCrawlConfigForPlan(profileForConfig?.plan_id)
+
   let crawlJobId: string
   try {
-    // Conservative crawl config — bill only for pages Firecrawl actually
-    // finds from real links on the seed page. `crawlEntireDomain: false`
-    // prevents variant probing (/en, /about, /index.html, etc.) which
-    // can silently balloon a credit count on single-page test sites.
-    // Depth 3 and limit 50 are plenty for typical small-business sites
-    // (menu / about / contact / hours). Users on Pro/Scale plans can
-    // request higher limits via the dashboard later.
     const crawlResult = await firecrawl.startCrawl(url, {
-      limit: 50,
-      maxDiscoveryDepth: 3,
-      crawlEntireDomain: false,
+      limit: crawlConfig.limit,
+      maxDiscoveryDepth: crawlConfig.maxDiscoveryDepth,
+      crawlEntireDomain: crawlConfig.crawlEntireDomain,
       sitemap: 'skip',
       excludePaths: ['/sitemap.xml', '/robots.txt', '/404', '/cart', '/checkout'],
       scrapeOptions: {

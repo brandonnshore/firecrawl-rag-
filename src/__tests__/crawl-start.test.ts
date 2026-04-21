@@ -333,8 +333,10 @@ describe('POST /api/crawl/start', () => {
     expect(mockStartCrawl).toHaveBeenCalledWith(
       expect.stringMatching(/^https:\/\/example\.com\/?$/),
       expect.objectContaining({
-        limit: 100,
-        maxDiscoveryDepth: 5,
+        // Starter tier per plan-config.ts
+        limit: 50,
+        maxDiscoveryDepth: 3,
+        crawlEntireDomain: false,
         scrapeOptions: expect.objectContaining({
           formats: ['markdown'],
         }),
